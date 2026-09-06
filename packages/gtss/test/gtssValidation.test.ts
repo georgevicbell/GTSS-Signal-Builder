@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateGTSSCompleteness } from '../src/gtssValidation';
 import type { Detector, Phase, Signal } from '../shared/schema';
+import { evaluateGTSSCompleteness } from '../src/gtssValidation';
 
 const signal = (signalId: string): Signal => ({
   id: signalId,
