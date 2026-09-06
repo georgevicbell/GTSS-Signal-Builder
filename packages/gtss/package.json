@@ -17,6 +17,7 @@
     ],
     "scripts": {
         "build": "esbuild index.ts schema/schema.ts --bundle --format=esm --platform=browser --packages=external --outdir=dist && tsc -p tsconfig.json",
+        "test": "vitest run --coverage",
         "prepublishOnly": "npm run build"
     },
     "dependencies": {
@@ -31,6 +32,10 @@
     "peerDependencies": {
         "@tanstack/react-query": "^5.60.5",
         "react": "^18.3.1"
+    },
+    "devDependencies": {
+        "@vitest/coverage-v8": "^3.2.4",
+        "vitest": "^3.2.4"
     },
     "publishConfig": {
         "access": "public"
