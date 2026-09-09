@@ -1,0 +1,12 @@
+node_modules
+dist
+build
+coverage
+
+# Generated
+package-lock.json
+
+# Binary / vendored assets
+attached_assets
+*.min.js
+*.min.css
