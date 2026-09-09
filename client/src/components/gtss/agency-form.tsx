@@ -176,6 +176,7 @@ export default function AgencyForm() {
 
   const handleSetDefault = (id: string) => {
     gtss.agencyListStorage.setDefaultId(id);
+    setAgency(gtss.agencyListStorage.get(id) || null);
     setDefaultAgencyId(id);
     toast({ title: "Default Set", description: "Default agency updated" });
   };
