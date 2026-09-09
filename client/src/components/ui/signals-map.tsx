@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo } from "react";
 import { MapContainer, Marker, Polyline, Popup, useMap } from "react-leaflet";
 import MapTileLayers from "./map-tile-layers";
+import { approachColorFor } from "@/components/gtss/approach-colors";
 
 // Fix for default markers in react-leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -67,17 +68,10 @@ function getApproachEndpoint(
   return [(lat2 * 180) / Math.PI, (lng2 * 180) / Math.PI];
 }
 
-// Approach arrow colors by index
-export const approachColors = [
-  "#3b82f6", // blue
-  "#22c55e", // green
-  "#f97316", // orange
-  "#8b5cf6", // purple
-  "#ef4444", // red
-  "#14b8a6", // teal
-  "#eab308", // yellow
-  "#ec4899", // pink
-];
+// Approach arrow colors by index. Defined in approach-colors so the detector
+// forms can share the palette without pulling Leaflet in; re-exported here
+// because existing callers import it from this module.
+export { approachColors } from "@/components/gtss/approach-colors";
 
 function MapBounds({ signals }: { signals: Signal[] }) {
   const map = useMap();
@@ -221,8 +215,11 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
 
         {/* Render approach arrows */}
         {approaches && signals.filter(signal => signal.latitude && signal.longitude).map((signal) => {
-          const signalApproaches = approaches.filter(a => a.signalId === signal.signalId && a.compassBearing !== null);
-          return signalApproaches.map((approach, idx) => {
+          // Color index counts every approach on the signal, matching the
+          // signal-details map; only the ones with a bearing get a line.
+          const allApproaches = approaches.filter(a => a.signalId === signal.signalId);
+          const signalApproaches = allApproaches.filter(a => a.compassBearing !== null);
+          return signalApproaches.map((approach) => {
             // Approach bearing indicates where traffic comes FROM, so add 180 to point the line toward the intersection
             const lineDirection = (approach.compassBearing! + 180) % 360;
             const endpoint = getApproachEndpoint(
@@ -231,7 +228,7 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
               lineDirection,
               60 // distance in meters
             );
-            const color = approachColors[idx % approachColors.length];
+            const color = approachColorFor(allApproaches, approach.approachId);
             return (
               <Polyline
                 key={approach.id}

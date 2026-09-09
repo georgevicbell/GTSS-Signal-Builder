@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { getSignalDisplayName, useDetectors, useGTSSStore } from "gtss";
 import { type Detector, type InsertDetector, insertDetectorSchema } from "gtss/schema";
+import { approachColorFor } from "./approach-colors";
 import { MapPin, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -401,12 +402,24 @@ export default function DetectorModal({ detector, onClose, preSelectedSignalId }
                           <SelectItem value={NO_APPROACH}>None</SelectItem>
                           {signalApproaches.map((approach) => {
                             const direction = bearingToDirection(approach.compassBearing);
-                            const label = [approach.approachId, approach.streetName, direction]
+                            // Same swatch color the approach map draws this leg in.
+                            const color = approachColorFor(signalApproaches, approach.approachId);
+                            const name = [approach.approachId, approach.streetName]
                               .filter(Boolean)
                               .join(" · ");
+                            const bearingLabel =
+                              approach.compassBearing != null
+                                ? ` (${approach.compassBearing}°${direction ? ` ${direction}` : ""})`
+                                : "";
                             return (
                               <SelectItem key={approach.approachId} value={approach.approachId}>
-                                {label}
+                                <span className="flex items-center gap-2">
+                                  <span
+                                    className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                                    style={{ backgroundColor: color ?? "transparent" }}
+                                  />
+                                  <span>{name}{bearingLabel}</span>
+                                </span>
                               </SelectItem>
                             );
                           })}

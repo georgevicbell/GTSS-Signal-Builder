@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getSignalDisplayName, useDetectors, useGTSSStore } from "gtss";
 import { AlertTriangle, Copy, Download, HelpCircle, Lock, Plus, Save, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { approachColorFor } from "./approach-colors";
 import DetectorDiagram from "./detector-diagram";
 
 // Detector purposes
@@ -169,6 +170,26 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
     if (!phase?.approachId) return "";
     const approach = signalApproaches.find(a => a.approachId === phase.approachId);
     return bearingToDirection(approach?.compassBearing ?? null);
+  };
+
+  // One approach option: a swatch in the same color the approach map draws it,
+  // then the ID and its compass bearing.
+  const approachOptionLabel = (approach: { approachId: string; compassBearing: number | null }) => {
+    const color = approachColorFor(signalApproaches, approach.approachId);
+    const direction = bearingToDirection(approach.compassBearing);
+    const bearingLabel =
+      approach.compassBearing != null
+        ? ` (${approach.compassBearing}°${direction ? ` ${direction}` : ""})`
+        : "";
+    return (
+      <span className="flex items-center gap-1.5">
+        <span
+          className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0"
+          style={{ backgroundColor: color ?? "transparent" }}
+        />
+        <span>{approach.approachId}{bearingLabel}</span>
+      </span>
+    );
   };
 
   // Direction for a row: its own approach wins, otherwise the phase's.
@@ -1017,7 +1038,7 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
                                 <SelectItem value={NO_APPROACH}>None</SelectItem>
                                 {signalApproaches.map(approach => (
                                   <SelectItem key={approach.approachId} value={approach.approachId}>
-                                    {approach.approachId}
+                                    {approachOptionLabel(approach)}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -1277,7 +1298,7 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
                                 <SelectItem value={NO_APPROACH}>None</SelectItem>
                                 {signalApproaches.map(approach => (
                                   <SelectItem key={approach.approachId} value={approach.approachId}>
-                                    {approach.approachId}
+                                    {approachOptionLabel(approach)}
                                   </SelectItem>
                                 ))}
                               </SelectContent>

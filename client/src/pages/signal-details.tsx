@@ -27,6 +27,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Download, Edit3, FileText, HelpCi
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { MapContainer, Marker, Polyline, useMap, useMapEvents } from "react-leaflet";
+import { approachColorFor } from "@/components/gtss/approach-colors";
 
 // Location picker component for interactive map editing
 function LocationPicker({ onLocationSelect }: { onLocationSelect: (lat: number, lon: number) => void }) {
@@ -78,14 +79,6 @@ function MapRecenter({ lat, lng }: { lat: number; lng: number }) {
   }, [lat, lng, map]);
   return null;
 }
-
-// Color palette for approach polylines (mirrors bulk-approach-modal.tsx)
-const approachColors = [
-  "#3b82f6", "#22c55e", "#ef4444", "#f97316",
-  "#8b5cf6", "#ec4899", "#14b8a6", "#eab308",
-  "#6366f1", "#84cc16", "#f43f5e", "#06b6d4",
-  "#a855f7", "#10b981", "#f59e0b", "#64748b",
-];
 
 // Compute endpoint for an approach polyline pointing in the direction
 // traffic comes FROM (opposite of bearing). ~200m at equator.
@@ -1064,14 +1057,14 @@ export default function SignalDetails() {
               {/* Approach polylines — shown on every tab, including Phases.
                   The phase diagram next to the map already conveys phase info,
                   so the map stays as a clean approach reference. */}
-              {signalApproaches.map((a, i) => {
+              {signalApproaches.map((a) => {
                 if (a.compassBearing == null || !signal.latitude || !signal.longitude) return null;
                 const endpoint = approachEndpoint(a.compassBearing, signal.latitude, signal.longitude);
                 return (
                   <Polyline
                     key={`approach-${a.id}`}
                     positions={[[signal.latitude, signal.longitude], endpoint]}
-                    color={approachColors[i % approachColors.length]}
+                    color={approachColorFor(signalApproaches, a.approachId)}
                     weight={4}
                     opacity={0.8}
                   />

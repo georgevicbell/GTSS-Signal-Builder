@@ -14,6 +14,7 @@ import "leaflet/dist/leaflet.css";
 import { MapPin, Minus, Plus, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { MapContainer, Marker, Polyline, useMapEvents } from "react-leaflet";
+import { approachColors } from "./approach-colors";
 import { StreetNameInput } from "./street-name-input";
 
 // Fix Leaflet default markers
@@ -66,12 +67,6 @@ const getDirectionFromBearing = (bearing: number): string => {
 };
 
 // Approach line colors (16 colors for up to 16 approaches)
-const approachColors = [
-  "#3b82f6", "#22c55e", "#ef4444", "#f97316", // blue, green, red, orange
-  "#8b5cf6", "#ec4899", "#14b8a6", "#eab308", // violet, pink, teal, yellow
-  "#6366f1", "#84cc16", "#f43f5e", "#06b6d4", // indigo, lime, rose, cyan
-  "#a855f7", "#10b981", "#f59e0b", "#64748b", // purple, emerald, amber, slate
-];
 
 export default function BulkApproachModal({ onClose, preSelectedSignalId, inline = false }: BulkApproachModalProps) {
   const { signals, approaches: existingApproaches } = useGTSSStore();

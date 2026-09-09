@@ -2,7 +2,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import SignalsMap, { approachColors } from "@/components/ui/signals-map";
+import SignalsMap from "@/components/ui/signals-map";
+import { approachColorFor } from "@/components/gtss/approach-colors";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Approach, getSignalDisplayName, useApproaches, useGTSSStore } from "gtss";
 import { ChevronDown, ChevronUp, MapPin, Plus } from "lucide-react";
@@ -257,10 +258,10 @@ export default function ApproachesTable({ triggerAdd, triggerBulk }: ApproachesT
                   </TableRow>
                 ) : (
                   (() => {
-                    const approachesWithBearing = filteredApproaches.filter(a => a.compassBearing !== null);
                     return getSortedApproaches().map((approach) => {
-                      const colorIndex = approachesWithBearing.findIndex(a => a.id === approach.id);
-                      const color = colorIndex >= 0 ? approachColors[colorIndex % approachColors.length] : undefined;
+                      // Sorting the table must not renumber the colors, so the
+                      // index comes from the unsorted list the map draws from.
+                      const color = approachColorFor(filteredApproaches, approach.approachId);
                       return (
                         <TableRow
                           key={approach.id}
