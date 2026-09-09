@@ -586,7 +586,7 @@ export function ImportPanel({ onImportComplete }: { onImportComplete?: () => voi
                 setShowConfirmDialog(true);
               }}
               data-testid="button-import-data"
-              disabled={parsedData.agency && selectedAgencyIds.length === 0}
+              disabled={!!parsedData.agency && selectedAgencyIds.length === 0}
             >
               Import Data
             </Button>
