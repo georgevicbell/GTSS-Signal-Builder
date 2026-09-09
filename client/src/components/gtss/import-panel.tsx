@@ -12,12 +12,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Agency, Approach, BasicTiming, Detector, importData, parseAgencyTXT, parseApproachesTXT, parseBasicTimingsTXT, parseDetectorsTXT, parsePhasesTXT, parseSignalsTXT, Phase, Signal } from 'gtss';
+import { importData, parseAgenciesTXT, parseApproachesTXT, parseBasicTimingsTXT, parseDetectorsTXT, parsePhasesTXT, parseSignalsTXT,} from 'gtss';
+import { Agency,Approach, BasicTiming, Detector, Phase, Signal } from "gtss/schema"
 import JSZip from 'jszip';
 import { AlertTriangle, CheckCircle, ClipboardPaste, FileText, Upload } from 'lucide-react';
 import { useState } from 'react';
@@ -29,7 +31,7 @@ type FileData = {
 };
 
 type ParsedData = {
-  agency?: Agency | null;
+  agency?: Agency | Agency[] | null;
   signals?: Signal[];
   approaches?: Approach[];
   phases?: Phase[];
@@ -46,6 +48,7 @@ export function ImportPanel({ onImportComplete }: { onImportComplete?: () => voi
   const [uploadedFiles, setUploadedFiles] = useState<FileData[]>([]);
   const [importMode, setImportMode] = useState<'replace' | 'merge'>('replace');
   const [parsedData, setParsedData] = useState<ParsedData>({});
+  const [selectedAgencyIds, setSelectedAgencyIds] = useState<string[]>([]);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -125,32 +128,39 @@ export function ImportPanel({ onImportComplete }: { onImportComplete?: () => voi
     files.forEach(file => {
       try {
         switch (file.type) {
-          case 'agency':
-            const agency = parseAgencyTXT(file.content);
-            if (agency) {
-              parsed.agency = agency;
+          case 'agency': {
+            const agencies = parseAgenciesTXT(file.content);
+            if (agencies && agencies.length > 0) {
+              if (!parsed.agency) parsed.agency = [];
+              if (Array.isArray(parsed.agency)) parsed.agency.push(...agencies);
             }
             break;
-          case 'signals':
+          }
+          case 'signals': {
             const signals = parseSignalsTXT(file.content);
-            parsed.signals = signals;
+            parsed.signals = [...(parsed.signals || []), ...signals];
             break;
-          case 'approaches':
+          }
+          case 'approaches': {
             const approaches = parseApproachesTXT(file.content);
-            parsed.approaches = approaches;
+            parsed.approaches = [...(parsed.approaches || []), ...approaches];
             break;
-          case 'phases':
+          }
+          case 'phases': {
             const phases = parsePhasesTXT(file.content);
-            parsed.phases = phases;
+            parsed.phases = [...(parsed.phases || []), ...phases];
             break;
-          case 'detectors':
+          }
+          case 'detectors': {
             const detectors = parseDetectorsTXT(file.content);
-            parsed.detectors = detectors;
+            parsed.detectors = [...(parsed.detectors || []), ...detectors];
             break;
-          case 'basic_timings':
+          }
+          case 'basic_timings': {
             const basicTimings = parseBasicTimingsTXT(file.content);
-            parsed.basicTimings = basicTimings;
+            parsed.basicTimings = [...(parsed.basicTimings || []), ...basicTimings];
             break;
+          }
           case 'unknown':
             errors.push({ file: file.name, message: 'Could not determine file type from filename. File should contain "agency", "signal", "approach", "phase", "detector", or "timing" in the name.' });
             break;
@@ -164,20 +174,59 @@ export function ImportPanel({ onImportComplete }: { onImportComplete?: () => voi
     });
 
     setParsedData(parsed);
+    // Initialize selected agencies to all parsed agencies
+    if (parsed.agency) {
+      if (Array.isArray(parsed.agency)) setSelectedAgencyIds(parsed.agency.map(a => a.id));
+      else setSelectedAgencyIds([parsed.agency.id]);
+    } else {
+      setSelectedAgencyIds([]);
+    }
     setValidationErrors(errors);
   };
 
   const handleImport = () => {
     try {
-      importData(parsedData, importMode);
+      // Build filtered payload based on selected agencies
+      const selectedAgencies: Agency[] = [];
+      if (parsedData.agency) {
+        if (Array.isArray(parsedData.agency)) {
+          for (const a of parsedData.agency) {
+            if (selectedAgencyIds.includes(a.id)) selectedAgencies.push(a);
+          }
+        } else {
+          // single parsed agency
+          if (selectedAgencyIds.length === 0 || selectedAgencyIds.includes(parsedData.agency.id)) {
+            selectedAgencies.push(parsedData.agency);
+          }
+        }
+      }
+
+      const allowedAgencyIds = selectedAgencies.map(a => a.agencyId);
+      const filteredSignals = (parsedData.signals || []).filter(s => allowedAgencyIds.includes(s.agencyId));
+      const filteredSignalIds = filteredSignals.map(s => s.signalId);
+      const filteredApproaches = (parsedData.approaches || []).filter(ap => filteredSignalIds.includes(ap.signalId));
+      const filteredPhases = (parsedData.phases || []).filter(ph => filteredSignalIds.includes(ph.signalId));
+      const filteredDetectors = (parsedData.detectors || []).filter(d => filteredSignalIds.includes(d.signalId));
+      const filteredBasicTimings = (parsedData.basicTimings || []).filter(bt => filteredSignalIds.includes(bt.signalId));
+
+      const payload: ParsedData = {
+        agency: selectedAgencies.length === 0 ? null : (selectedAgencies.length === 1 ? selectedAgencies[0] : selectedAgencies),
+        signals: filteredSignals,
+        approaches: filteredApproaches,
+        phases: filteredPhases,
+        detectors: filteredDetectors,
+        basicTimings: filteredBasicTimings,
+      };
+
+      importData(payload, importMode);
 
       const stats = {
-        agency: parsedData.agency ? 1 : 0,
-        signals: parsedData.signals?.length || 0,
-        approaches: parsedData.approaches?.length || 0,
-        phases: parsedData.phases?.length || 0,
-        detectors: parsedData.detectors?.length || 0,
-        basicTimings: parsedData.basicTimings?.length || 0,
+        agency: selectedAgencies.length,
+        signals: filteredSignals.length,
+        approaches: filteredApproaches.length,
+        phases: filteredPhases.length,
+        detectors: filteredDetectors.length,
+        basicTimings: filteredBasicTimings.length,
       };
 
       const importedItems = [
@@ -361,6 +410,31 @@ export function ImportPanel({ onImportComplete }: { onImportComplete?: () => voi
           </TabsContent>
         </Tabs>
 
+        {/* Agencies Selection (when multiple agency files parsed) */}
+        {parsedData.agency && Array.isArray(parsedData.agency) && (
+          <div>
+            <Label>Agencies Found</Label>
+            <div className="mt-2 space-y-2 max-h-48 overflow-auto p-2 border rounded bg-gray-50">
+              {parsedData.agency.map((a) => (
+                <div key={a.id} className="flex items-center space-x-3">
+                  <Checkbox
+                    id={`import-agency-${a.id}`}
+                    checked={selectedAgencyIds.includes(a.id)}
+                    onCheckedChange={(checked) => {
+                      setSelectedAgencyIds(prev => {
+                        if (checked) return Array.from(new Set([...prev, a.id]));
+                        return prev.filter(id => id !== a.id);
+                      });
+                    }}
+                  />
+                  <Label htmlFor={`import-agency-${a.id}`} className="text-sm">
+                    {a.agencyName} ({a.agencyId})
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {/* Uploaded Files List */}
         {uploadedFiles.length > 0 && (
           <div>
@@ -424,7 +498,7 @@ export function ImportPanel({ onImportComplete }: { onImportComplete?: () => voi
               <ul className="space-y-1 text-sm">
                 {parsedData.agency && (
                   <li data-testid="preview-agency">
-                    ✓ Agency: {parsedData.agency.agencyName}
+                    ✓ Agencies: {Array.isArray(parsedData.agency) ? parsedData.agency.length : 1}
                   </li>
                 )}
                 {parsedData.signals && parsedData.signals.length > 0 && (

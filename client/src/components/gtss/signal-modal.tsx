@@ -2,6 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { agencyListStorage } from 'gtss';
 import { MapPicker } from "@/components/ui/map";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,7 +27,16 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
     resolver: zodResolver(insertSignalSchema),
     defaultValues: {
       signalId: "",
-      agencyId: agency?.agencyId || "",
+      agencyId: agency?.agencyId || (() => {
+        try {
+          const def = agencyListStorage.getDefaultId();
+          const list = agencyListStorage.getAll();
+          const defAgency = list.find(a => a.id === def);
+          return defAgency?.agencyId || "";
+        } catch {
+          return "";
+        }
+      })(),
       streetName1: "",
       streetName2: "",
       latitude: 39.8283,
@@ -44,9 +55,16 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
         longitude: signal.longitude,
       });
     } else {
+      const def = (() => {
+        try {
+          const defId = agencyListStorage.getDefaultId();
+          const list = agencyListStorage.getAll();
+          return list.find(a => a.id === defId)?.agencyId || agency?.agencyId || "";
+        } catch { return agency?.agencyId || ""; }
+      })();
       form.reset({
         signalId: "",
-        agencyId: agency?.agencyId || "",
+        agencyId: def,
         streetName1: "",
         streetName2: "",
         latitude: 39.8283,
@@ -131,7 +149,16 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
                   <FormItem>
                     <FormLabel>Agency ID *</FormLabel>
                     <FormControl>
-                      <Input {...field} disabled />
+                      <Select value={field.value || ""} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select agency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {agencyListStorage.getAll().map(a => (
+                            <SelectItem key={a.id} value={a.agencyId}>{a.agencyName} ({a.agencyId})</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
