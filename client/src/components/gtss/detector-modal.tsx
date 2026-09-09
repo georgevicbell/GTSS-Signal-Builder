@@ -58,6 +58,13 @@ const incrementLastNumber = (value: string) => {
   return value.replace(/(\d+)(?!.*\d)/, nextValue);
 };
 
+// Radix Select can't carry an empty string as a value, so "no phase" / "no
+// approach" ride these sentinels and are converted to null on the way into the
+// form. A detector without a phase — a count detector, typically — is located
+// by its approach and distance from the stop bar instead.
+const NO_PHASE = "__none__";
+const NO_APPROACH = "__none__";
+
 const incrementAllNumbers = (value: string) => {
   if (!value) {
     return value;
@@ -94,6 +101,7 @@ export default function DetectorModal({ detector, onClose, preSelectedSignalId }
       technologyType: "Inductance Loop",
       length: undefined,
       stopbarSetbackDist: 0,
+      approachId: null,
     },
   });
 
@@ -110,6 +118,7 @@ export default function DetectorModal({ detector, onClose, preSelectedSignalId }
         technologyType: detector.technologyType,
         length: detector.length ?? undefined,
         stopbarSetbackDist: detector.stopbarSetbackDist ?? undefined,
+        approachId: detector.approachId ?? null,
       });
       setSelectedSignalId(detector.signalId);
       setIsDescriptionDirty(Boolean(detector.description));
@@ -145,6 +154,9 @@ export default function DetectorModal({ detector, onClose, preSelectedSignalId }
       if (!lockedValues.length) form.setValue('length', 25.0);
     } else {
       form.setValue('purpose', 'Count Detector');
+      // Count detectors report volume rather than calling a phase, so drop the
+      // phase and let the approach locate them.
+      form.setValue('phase', null);
       if (!lockedValues.stopbarSetback) form.setValue('stopbarSetbackDist', 500.0);
       if (!lockedValues.length) form.setValue('length', 6.0);
     }
@@ -221,6 +233,7 @@ export default function DetectorModal({ detector, onClose, preSelectedSignalId }
   const watchedPurpose = form.watch("purpose");
   const watchedPhase = form.watch("phase");
   const watchedLane = form.watch("lane");
+  const watchedApproachId = form.watch("approachId");
 
   useEffect(() => {
     if (isDescriptionDirty) {
@@ -229,16 +242,18 @@ export default function DetectorModal({ detector, onClose, preSelectedSignalId }
     const selectedPhase = phases.find(
       (phase) => phase.signalId === selectedSignalId && phase.phase === watchedPhase,
     );
-    // Get bearing from the phase's approach
-    const approach = selectedPhase?.approachId
-      ? approaches.find((a) => a.approachId === selectedPhase.approachId)
+    // Bearing comes from the detector's own approach when it has one (the only
+    // source for a phase-less count detector), otherwise from the phase's.
+    const approachId = watchedApproachId || selectedPhase?.approachId || null;
+    const approach = approachId
+      ? approaches.find((a) => a.approachId === approachId)
       : null;
     const direction = bearingToDirection(approach?.compassBearing ?? null);
     const formattedPurpose = formatPurposeForDescription(watchedPurpose ?? "");
     const laneValue = watchedLane?.toString().trim() ?? "";
     const description = buildDetectorDescription(direction, formattedPurpose, laneValue);
     form.setValue("description", description);
-  }, [form, isDescriptionDirty, phases, approaches, selectedSignalId, watchedLane, watchedPhase, watchedPurpose]);
+  }, [form, isDescriptionDirty, phases, approaches, selectedSignalId, watchedApproachId, watchedLane, watchedPhase, watchedPurpose]);
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -306,15 +321,11 @@ export default function DetectorModal({ detector, onClose, preSelectedSignalId }
                 const selectedSignalId = form.watch("signalId");
                 const signalPhases = selectedSignalId ? phases.filter(p => p.signalId === selectedSignalId).sort((a, b) => a.phase - b.phase) : [];
 
-                // Only show phase field if signal has phases
-                if (!selectedSignalId || signalPhases.length === 0) {
+                if (!selectedSignalId) {
                   return (
                     <div className="p-3 bg-warning-50 border border-warning-200 rounded-md">
                       <p className="text-sm text-warning-700">
-                        {!selectedSignalId
-                          ? "Please select a signal first to see available phases."
-                          : "No phases configured for this signal. Please add phases before creating detectors."
-                        }
+                        Please select a signal first to see available phases and approaches.
                       </p>
                     </div>
                   );
@@ -326,10 +337,12 @@ export default function DetectorModal({ detector, onClose, preSelectedSignalId }
                     name="phase"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phase *</FormLabel>
+                        <FormLabel>Phase</FormLabel>
                         <Select
-                          onValueChange={(value) => field.onChange(parseInt(value))}
-                          defaultValue={field.value?.toString()}
+                          onValueChange={(value) =>
+                            field.onChange(value === NO_PHASE ? null : parseInt(value))
+                          }
+                          value={field.value == null ? NO_PHASE : field.value.toString()}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -337,6 +350,7 @@ export default function DetectorModal({ detector, onClose, preSelectedSignalId }
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                            <SelectItem value={NO_PHASE}>No phase (count detector)</SelectItem>
                             {signalPhases.map((phase) => {
                               const approach = phase.approachId
                                 ? approaches.find((a) => a.approachId === phase.approachId)
@@ -351,12 +365,63 @@ export default function DetectorModal({ detector, onClose, preSelectedSignalId }
                             })}
                           </SelectContent>
                         </Select>
+                        <p className="text-xs text-grey-500">
+                          {signalPhases.length === 0
+                            ? "No phases configured for this signal — leave unassigned and pick an approach below."
+                            : "Optional. Leave unassigned for detectors that don't call a phase."}
+                        </p>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 );
               })()}
+
+              {/* Approach — the only thing locating a detector that has no
+                  phase, and an override for one that does. */}
+              <FormField
+                control={form.control}
+                name="approachId"
+                render={({ field }) => {
+                  const signalApproaches = approaches.filter(a => a.signalId === selectedSignalId);
+                  return (
+                    <FormItem>
+                      <FormLabel>Approach</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(value === NO_APPROACH ? null : value)}
+                        value={field.value || NO_APPROACH}
+                        disabled={!isSignalSelected}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select approach" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={NO_APPROACH}>None</SelectItem>
+                          {signalApproaches.map((approach) => {
+                            const direction = bearingToDirection(approach.compassBearing);
+                            const label = [approach.approachId, approach.streetName, direction]
+                              .filter(Boolean)
+                              .join(" · ");
+                            return (
+                              <SelectItem key={approach.approachId} value={approach.approachId}>
+                                {label}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-grey-500">
+                        {signalApproaches.length === 0
+                          ? "No approaches configured for this signal yet."
+                          : "Optional. Required to place a detector that has no phase."}
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
 
               <FormField
                 control={form.control}
@@ -494,7 +559,6 @@ export default function DetectorModal({ detector, onClose, preSelectedSignalId }
                       <Input
                         type="number"
                         step="0.1"
-                        min="0"
                         placeholder="0.0"
                         {...field}
                         disabled={!isSignalSelected}
@@ -507,6 +571,9 @@ export default function DetectorModal({ detector, onClose, preSelectedSignalId }
                         value={field.value !== null && field.value !== undefined ? field.value : ""}
                       />
                     </FormControl>
+                    <p className="text-xs text-grey-500">
+                      Distance from the stop bar: positive approaching it, negative past it.
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}

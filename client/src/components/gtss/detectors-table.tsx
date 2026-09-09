@@ -322,6 +322,7 @@ export default function DetectorsTable({ triggerAdd, triggerBulk }: DetectorsTab
                   <SortableHeader field="signalId">Signal ID</SortableHeader>
                   <SortableHeader field="channel">Channel</SortableHeader>
                   <SortableHeader field="phase">Phase</SortableHeader>
+                  <TableHead className="text-xs">Approach</TableHead>
                   <SortableHeader field="technologyType">Technology</SortableHeader>
                   <SortableHeader field="purpose">Purpose</SortableHeader>
                 </TableRow>
@@ -329,13 +330,13 @@ export default function DetectorsTable({ triggerAdd, triggerBulk }: DetectorsTab
               <TableBody>
                 {!selectedSignalId ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-4 text-xs text-grey-500">
+                    <TableCell colSpan={6} className="text-center py-4 text-xs text-grey-500">
                       Please select a signal above to view its detectors.
                     </TableCell>
                   </TableRow>
                 ) : filteredDetectors.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-4 text-xs text-grey-500">
+                    <TableCell colSpan={6} className="text-center py-4 text-xs text-grey-500">
                       No detectors configured for this signal. Add your first detector to get started.
                     </TableCell>
                   </TableRow>
@@ -348,7 +349,12 @@ export default function DetectorsTable({ triggerAdd, triggerBulk }: DetectorsTab
                     >
                       <TableCell className="font-medium text-grey-900 text-xs py-1.5 px-2">{detector.signalId}</TableCell>
                       <TableCell className="text-grey-600 text-xs py-1.5 px-2">{detector.channel}</TableCell>
-                      <TableCell className="text-grey-600 text-xs py-1.5 px-2">{detector.phase}</TableCell>
+                      <TableCell className="text-grey-600 text-xs py-1.5 px-2">
+                        {detector.phase ?? <span className="text-grey-400">&mdash;</span>}
+                      </TableCell>
+                      <TableCell className="text-grey-600 text-xs py-1.5 px-2">
+                        {detector.approachId ?? <span className="text-grey-400">&mdash;</span>}
+                      </TableCell>
                       <TableCell className="py-1.5 px-2">
                         <Badge variant="secondary" className="bg-purple-100 text-purple-800 text-xs py-0 px-1.5 h-4">
                           {detector.technologyType}

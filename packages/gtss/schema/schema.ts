@@ -79,14 +79,21 @@ export const detectors = pgTable("detectors", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   channel: text("channel").notNull(),
   signalId: text("signal_id").notNull(),
-  phase: integer("phase").notNull(),
+  // Optional. Detectors that don't serve a signal phase — count detectors, in
+  // particular — are located by approach and distance instead.
+  phase: integer("phase"),
   description: text("description"),
   purpose: text("purpose").notNull(),
   vehicleType: text("vehicle_type"),
   lane: text("lane"),
   technologyType: text("technology_type").notNull(),
   length: real("length"),
+  // Feet from the stop bar, signed: POSITIVE upstream (approaching the stop
+  // bar), NEGATIVE downstream (past it, on the departure side).
   stopbarSetbackDist: real("stopbar_setback_dist"),
+  // Approach this detector sits on. Required to place a detector that has no
+  // phase; when a phase is set, this overrides the phase's own approach.
+  approachId: text("approach_id"),
 });
 
 // Basic Timings table - new for GTSSv1.1

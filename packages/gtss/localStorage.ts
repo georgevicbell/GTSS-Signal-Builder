@@ -457,7 +457,14 @@ export const phaseStorage = {
 // Detector operations
 export const detectorStorage = {
   getAll: (): Detector[] => {
-    return getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
+    const raw = getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
+    // Rows stored before detectors could carry an approach (or stand without a
+    // phase) are missing these keys entirely.
+    return raw.map(d => ({
+      ...d,
+      phase: d.phase ?? null,
+      approachId: (d as { approachId?: string | null }).approachId ?? null,
+    }));
   },
 
   getBySignal: (signalId: string): Detector[] => {
@@ -470,7 +477,7 @@ export const detectorStorage = {
     const newDetector: Detector = {
       id: nanoid(),
       signalId: detector.signalId,
-      phase: detector.phase,
+      phase: detector.phase ?? null,
       channel: detector.channel,
       description: detector.description ?? null,
       purpose: detector.purpose,
@@ -479,6 +486,7 @@ export const detectorStorage = {
       technologyType: detector.technologyType,
       length: detector.length ?? null,
       stopbarSetbackDist: detector.stopbarSetbackDist ?? null,
+      approachId: detector.approachId ?? null,
     };
 
     const updatedDetectors = [...detectors, newDetector];
@@ -876,12 +884,15 @@ export function generatePhasesCSV(phases: Phase[], basicTimings: BasicTiming[] =
 }
 
 export function generateDetectionCSV(detectors: Detector[]): string {
-  const headers = 'channel,signal_id,phase,description,purpose,vehicle_type,lane,technology_type,length,stopbar_setback_dist';
+  // approach_id is appended last so files written before it existed (10
+  // columns) still import cleanly. phase is blank for detectors that serve no
+  // signal phase, such as count detectors.
+  const headers = 'channel,signal_id,phase,description,purpose,vehicle_type,lane,technology_type,length,stopbar_setback_dist,approach_id';
 
   if (detectors.length === 0) return headers + '\n';
 
   const rows = detectors.map(detector =>
-    `${sanitizeCSVField(detector.channel)},${sanitizeCSVField(detector.signalId)},${sanitizeCSVField(detector.phase)},${sanitizeCSVField(detector.description)},${sanitizeCSVField(detector.purpose)},${sanitizeCSVField(detector.vehicleType)},${sanitizeCSVField(detector.lane)},${sanitizeCSVField(detector.technologyType)},${sanitizeCSVField(detector.length)},${sanitizeCSVField(detector.stopbarSetbackDist)}`
+    `${sanitizeCSVField(detector.channel)},${sanitizeCSVField(detector.signalId)},${sanitizeCSVField(detector.phase ?? '')},${sanitizeCSVField(detector.description)},${sanitizeCSVField(detector.purpose)},${sanitizeCSVField(detector.vehicleType)},${sanitizeCSVField(detector.lane)},${sanitizeCSVField(detector.technologyType)},${sanitizeCSVField(detector.length)},${sanitizeCSVField(detector.stopbarSetbackDist)},${sanitizeCSVField(detector.approachId)}`
   );
 
   return [headers, ...rows].join('\n');
@@ -1377,8 +1388,9 @@ export function parseDetectorsTXT(content: string): Detector[] {
     // Use proper CSV parser to handle quoted fields
     const values = parseCSVLine(lines[i]);
 
+    // approach_id (column 11) was added later, so a 10-field row is still valid.
     if (values.length < 10) {
-      errors.push(`Row ${i + 1}: Must have 10 fields (channel, signalId, phase, description, purpose, vehicleType, lane, technologyType, length, stopbarSetbackDist)`);
+      errors.push(`Row ${i + 1}: Must have at least 10 fields (channel, signalId, phase, description, purpose, vehicleType, lane, technologyType, length, stopbarSetbackDist[, approachId])`);
       continue;
     }
 
@@ -1393,9 +1405,11 @@ export function parseDetectorsTXT(content: string): Detector[] {
       continue;
     }
 
-    // Use safer integer validation
-    if (!isValidInteger(values[2])) {
-      errors.push(`Row ${i + 1}: Phase must be a valid integer, got "${values[2]}"`);
+    // Phase is optional — a blank column means the detector serves no signal
+    // phase (count detectors are located by approach and distance instead).
+    const phaseRaw = (values[2] ?? '').trim();
+    if (phaseRaw !== '' && !isValidInteger(phaseRaw)) {
+      errors.push(`Row ${i + 1}: Phase must be a valid integer or empty, got "${values[2]}"`);
       continue;
     }
 
@@ -1409,7 +1423,7 @@ export function parseDetectorsTXT(content: string): Detector[] {
       continue;
     }
 
-    const phase = Number(values[2]);
+    const phase = phaseRaw === '' ? null : Number(phaseRaw);
 
     // Parse optional numeric fields using safer validation
     let length: number | null = null;
@@ -1443,6 +1457,7 @@ export function parseDetectorsTXT(content: string): Detector[] {
       technologyType: values[7],
       length,
       stopbarSetbackDist,
+      approachId: (values[10] ?? '').trim() || null,
     });
   }
 

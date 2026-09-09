@@ -3,18 +3,22 @@ import { freeRightPedMarkings } from "./free-right-markings";
 
 interface DetectorData {
   channel: string;
-  phase: number;
-  lane: string;
+  /** Optional — count detectors are located by approach and distance instead. */
+  phase: number | null;
+  lane: string | null;
   purpose: string;
   technologyType: string;
-  stopbarSetbackDist?: number;
+  /** Feet from the stop bar: positive upstream, negative past it. */
+  stopbarSetbackDist?: number | null;
+  /** Approach the detector sits on. Wins over the phase's approach. */
+  approachId?: string | null;
 }
 
 interface PhaseData {
   phase: number;
   approachId: string | null;
   movementType: string;
-  numOfLanes: number;
+  numOfLanes: number | null;
 }
 
 interface ApproachData {
@@ -56,16 +60,19 @@ const getTechnologyColor = (techType: string): string => {
 };
 
 // Check if detector is advanced (not at stop bar)
-const isAdvancedDetector = (purpose: string, setback?: number): boolean => {
-  if (setback !== undefined && setback > 20) return true;
+const isAdvancedDetector = (purpose: string, setback?: number | null): boolean => {
+  if (setback !== undefined && setback !== null && Math.abs(setback) > 20) return true;
   return ["Advanced Loop", "Count Detector", "Extension", "Dilemma Zone"].includes(purpose);
 };
 
 // Effective setback in feet, used to ORDER advanced detectors along the road
 // (and as the label when it comes from a real stopbar_setback_dist). Purposes
 // without an explicit distance get a typical ordering value.
-const effectiveSetback = (d: { purpose: string; stopbarSetbackDist?: number }): number => {
-  if (d.stopbarSetbackDist !== undefined && d.stopbarSetbackDist > 0) return d.stopbarSetbackDist;
+const effectiveSetback = (d: { purpose: string; stopbarSetbackDist?: number | null }): number => {
+  // Magnitude only — the sign says which side of the stop bar, not how far.
+  if (d.stopbarSetbackDist !== undefined && d.stopbarSetbackDist !== null && d.stopbarSetbackDist !== 0) {
+    return Math.abs(d.stopbarSetbackDist);
+  }
   switch (d.purpose) {
     case "Extension": return 80;
     case "Advanced Loop": return 120;
@@ -74,6 +81,11 @@ const effectiveSetback = (d: { purpose: string; stopbarSetbackDist?: number }): 
     default: return 0;
   }
 };
+
+// A negative stopbar setback puts the detector PAST the stop bar, on the
+// departure side of the intersection.
+const isDownstream = (d: { stopbarSetbackDist?: number | null }): boolean =>
+  d.stopbarSetbackDist !== undefined && d.stopbarSetbackDist !== null && d.stopbarSetbackDist < 0;
 
 // Lane width in diagram units
 const LANE_WIDTH = 28;
@@ -89,10 +101,21 @@ export default function DetectorDiagram({ detectors, phases, approaches, signal,
   const ROAD_LENGTH = hasAdvancedDetectors ? 110 : 105; // Extended to use more canvas space
 
   // Get approach for a phase
-  const getApproachForPhase = (phaseNum: number): ApproachData | null => {
+  const getApproachForPhase = (phaseNum: number | null): ApproachData | null => {
+    if (phaseNum === null || phaseNum === undefined) return null;
     const phase = phases.find(p => p.phase === phaseNum);
     if (!phase?.approachId) return null;
     return approaches.find(a => a.approachId === phase.approachId) || null;
+  };
+
+  // Where a detector sits. Its own approach wins — it is the only locator a
+  // phase-less count detector has — otherwise fall back to the phase's.
+  const getApproachForDetector = (det: DetectorData): ApproachData | null => {
+    if (det.approachId) {
+      const own = approaches.find(a => a.approachId === det.approachId);
+      if (own) return own;
+    }
+    return getApproachForPhase(det.phase);
   };
 
   // Get phases for an approach, grouped by movement type
@@ -134,11 +157,21 @@ export default function DetectorDiagram({ detectors, phases, approaches, signal,
 
   // Get lane offset for a detector based on phase movement type and lane number
   const getLaneOffset = (detector: DetectorData): number => {
-    const phase = phases.find(p => p.phase === detector.phase);
-    if (!phase?.approachId) return 0;
+    const phase = detector.phase !== null ? phases.find(p => p.phase === detector.phase) : undefined;
+    // Without a phase there is no movement to key off, so a lane number is
+    // measured from the right edge of the approach and anything else centres.
+    if (!phase?.approachId) {
+      const approachId = detector.approachId;
+      if (!approachId) return 0;
+      const config = getLaneConfigForApproach(approachId);
+      const laneNum = parseInt(detector.lane ?? "") || 0;
+      if (laneNum < 1) return 0;
+      const totalLanes = config.totalLanes || 1;
+      return (laneNum - (totalLanes + 1) / 2) * LANE_WIDTH;
+    }
 
     const config = getLaneConfigForApproach(phase.approachId);
-    const laneNum = parseInt(detector.lane) || 1;
+    const laneNum = parseInt(detector.lane ?? "") || 1;
 
     // Determine which lane group this detector belongs to
     const isLeft = phase.movementType === "Left Turn" || phase.movementType === "Left" || phase.movementType === "Left Protected-Permissive" || phase.movementType === "Flashing Yellow Arrow";
@@ -331,7 +364,7 @@ export default function DetectorDiagram({ detectors, phases, approaches, signal,
     const vals = Array.from(new Set(
       detectors
         .filter(d => {
-          const ap = getApproachForPhase(d.phase);
+          const ap = getApproachForDetector(d);
           return ap?.approachId === a.approachId && isAdvancedDetector(d.purpose, d.stopbarSetbackDist);
         })
         .map(effectiveSetback)
@@ -347,7 +380,7 @@ export default function DetectorDiagram({ detectors, phases, approaches, signal,
 
   const placedDetectors: PlacedDetector[] = [];
   detectors.forEach((det, index) => {
-    const approach = getApproachForPhase(det.phase);
+    const approach = getApproachForDetector(det);
     if (!approach || approach.compassBearing === null) return;
 
     const adjustedBearing = (approach.compassBearing + 180) % 360;
@@ -355,17 +388,23 @@ export default function DetectorDiagram({ detectors, phases, approaches, signal,
     const perpAngle = angleRad + Math.PI / 2;
     const advanced = isAdvancedDetector(det.purpose, det.stopbarSetbackDist);
 
-    let dist: number;
+    let magnitude: number;
     if (advanced) {
-      dist = advancedSlots.get(approach.approachId)?.get(effectiveSetback(det))
+      magnitude = advancedSlots.get(approach.approachId)?.get(effectiveSetback(det))
         ?? INTERSECTION_RADIUS + ROAD_LENGTH - 14;
     } else {
       // Stop-bar detectors: right behind the stop bar, nudged slightly by any
       // small (≤20 ft) setback.
-      dist = INTERSECTION_RADIUS + 12 + Math.min(det.stopbarSetbackDist ?? 0, 20) * 0.9;
+      magnitude = INTERSECTION_RADIUS + 12 + Math.min(Math.abs(det.stopbarSetbackDist ?? 0), 20) * 0.9;
     }
 
-    const laneOffset = getLaneOffset(det);
+    // angleRad points back up the approach leg, toward oncoming traffic. A
+    // detector past the stop bar is downstream, so it mirrors through the
+    // centre onto the departure side — and its lateral offset mirrors with it
+    // to stay on the same side of the road relative to travel.
+    const downstream = isDownstream(det);
+    const dist = downstream ? -magnitude : magnitude;
+    const laneOffset = getLaneOffset(det) * (downstream ? -1 : 1);
     placedDetectors.push({
       det,
       index,
@@ -416,12 +455,15 @@ export default function DetectorDiagram({ detectors, phases, approaches, signal,
     if (!isAdvancedDetector(sample.det.purpose, sample.det.stopbarSetbackDist)) return;
     const measured = group
       .map(pd => pd.det.stopbarSetbackDist)
-      .find(s => s !== undefined && s > 0);
+      .find((sb): sb is number => sb !== undefined && sb !== null && sb !== 0);
     if (measured === undefined) return;
     const config = getLaneConfigForApproach(sample.approachId);
     const roadHalf = (Math.max(config.totalLanes, 1) * LANE_WIDTH) / 2;
-    const lx = CENTER_X + sample.dist * Math.cos(sample.angleRad) + (roadHalf + 20) * Math.cos(sample.perpAngle);
-    const ly = CENTER_Y + sample.dist * Math.sin(sample.angleRad) + (roadHalf + 20) * Math.sin(sample.perpAngle);
+    // The label rides on the same side of the road as the row it belongs to,
+    // so a downstream row's label mirrors along with it.
+    const side = sample.dist < 0 ? -1 : 1;
+    const lx = CENTER_X + sample.dist * Math.cos(sample.angleRad) + side * (roadHalf + 20) * Math.cos(sample.perpAngle);
+    const ly = CENTER_Y + sample.dist * Math.sin(sample.angleRad) + side * (roadHalf + 20) * Math.sin(sample.perpAngle);
     distanceLabels.push(
       <text
         key={`dist-${key}`}
@@ -431,7 +473,7 @@ export default function DetectorDiagram({ detectors, phases, approaches, signal,
         fontSize="9"
         fill="#6b7280"
       >
-        {measured} ft
+        {measured < 0 ? `${Math.abs(measured)} ft past` : `${measured} ft`}
       </text>
     );
   });

@@ -77,6 +77,10 @@ const incrementLastNumber = (value: string): string => {
   return value.replace(/(\d+)(?!.*\d)/, nextValue);
 };
 
+// Radix Select can't hold an empty string, so "unassigned" rides a sentinel.
+const NO_PHASE = "__none__";
+const NO_APPROACH = "__none__";
+
 // Remove commas from string
 const sanitizeDescription = (value: string): string => {
   return value.replace(/,/g, "");
@@ -85,7 +89,9 @@ const sanitizeDescription = (value: string): string => {
 interface PendingDetector {
   id?: string;
   channel: string;
-  phase: number;
+  /** Optional — a count detector is located by approach and distance instead. */
+  phase: number | null;
+  approachId: string | null;
   lane: string;
   purpose: string;
   technologyType: string;
@@ -157,11 +163,21 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
   }, [approaches, selectedSignalId]);
 
   // Get direction for a phase
-  const getPhaseDirection = (phaseNum: number): string => {
+  const getPhaseDirection = (phaseNum: number | null): string => {
+    if (phaseNum === null) return "";
     const phase = signalPhases.find(p => p.phase === phaseNum);
     if (!phase?.approachId) return "";
     const approach = signalApproaches.find(a => a.approachId === phase.approachId);
     return bearingToDirection(approach?.compassBearing ?? null);
+  };
+
+  // Direction for a row: its own approach wins, otherwise the phase's.
+  const getRowDirection = (det: { phase: number | null; approachId: string | null }): string => {
+    if (det.approachId) {
+      const approach = signalApproaches.find(a => a.approachId === det.approachId);
+      if (approach) return bearingToDirection(approach.compassBearing ?? null);
+    }
+    return getPhaseDirection(det.phase);
   };
 
   // Auto-update descriptions when static purpose changes
@@ -169,7 +185,7 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
     if (staticFields.purpose) {
       setPendingDetectors(prev => prev.map(det => {
         if (det.isDescriptionManual) return det;
-        const direction = getPhaseDirection(det.phase);
+        const direction = getRowDirection(det);
         const formattedPurpose = formatPurposeForDescription(staticValues.purpose);
         return {
           ...det,
@@ -202,7 +218,7 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
         const updated = { ...det, [field]: value };
         // Update description if purpose changed and not manually set
         if (field === 'purpose' && !det.isDescriptionManual) {
-          const direction = getPhaseDirection(det.phase);
+          const direction = getRowDirection(det);
           const formattedPurpose = formatPurposeForDescription(value);
           updated.description = buildDescription(direction, formattedPurpose, det.lane);
         }
@@ -236,6 +252,7 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
     const newDetector: PendingDetector = {
       channel: nextChannel,
       phase: targetPhase,
+      approachId: null,
       lane: nextLane,
       purpose: staticFields.purpose ? staticValues.purpose : "Stop Bar",
       technologyType: staticFields.technologyType ? staticValues.technologyType : "Inductance Loop",
@@ -274,6 +291,7 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
       newDetectors.push({
         channel: currentChannel,
         phase: selectedPhaseForQuickAdd,
+        approachId: null,
         lane: currentLane,
         purpose: staticFields.purpose ? staticValues.purpose : "Stop Bar",
         technologyType: staticFields.technologyType ? staticValues.technologyType : "Inductance Loop",
@@ -308,7 +326,7 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
 
       // Auto-update description if not manually set
       if (!updated[index].isDescriptionManual && (field === 'phase' || field === 'lane')) {
-        const direction = getPhaseDirection(updated[index].phase);
+        const direction = getRowDirection(updated[index]);
         const purpose = staticFields.purpose ? staticValues.purpose : updated[index].purpose;
         const formattedPurpose = formatPurposeForDescription(purpose);
         updated[index].description = buildDescription(direction, formattedPurpose, updated[index].lane);
@@ -316,7 +334,7 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
 
       // If purpose is not static and changed, update description
       if (field === 'purpose' && !staticFields.purpose && !updated[index].isDescriptionManual) {
-        const direction = getPhaseDirection(updated[index].phase);
+        const direction = getRowDirection(updated[index]);
         const formattedPurpose = formatPurposeForDescription(value);
         updated[index].description = buildDescription(direction, formattedPurpose, updated[index].lane);
       }
@@ -343,7 +361,7 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
     // meant to cover the adjacent lane too.
     const nextChannel = incrementLastNumber(source.channel);
     const nextLane = incrementLastNumber(source.lane);
-    const direction = getPhaseDirection(source.phase);
+    const direction = getRowDirection(source);
     const formattedPurpose = formatPurposeForDescription(source.purpose);
 
     const newDetector: PendingDetector = {
@@ -414,8 +432,8 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
     // appear on more than one row. Only a row that repeats channel + phase +
     // lane exactly looks like a slip, and even that is just flagged — the save
     // goes through either way.
-    const rowIdentity = (d: { channel: string; phase: number; lane: string | null }) =>
-      `${(d.channel ?? '').trim()}|${d.phase}|${(d.lane ?? '').trim()}`;
+    const rowIdentity = (d: { channel: string; phase: number | null; approachId: string | null; lane: string | null }) =>
+      `${(d.channel ?? '').trim()}|${d.phase ?? ''}|${d.approachId ?? ''}|${(d.lane ?? '').trim()}`;
     const seenRows = new Set<string>();
     const repeatedChannels = new Set<string>();
     [...existingDetectors, ...pendingDetectors].forEach(d => {
@@ -426,7 +444,7 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
     // Only one toast is ever on screen at a time, so this rides along with the
     // success message below rather than firing its own.
     const repeatNote = repeatedChannels.size > 0
-      ? ` Channel ${Array.from(repeatedChannels).join(", ")} repeats the same phase and lane.`
+      ? ` Channel ${Array.from(repeatedChannels).join(", ")} repeats the same phase, approach and lane.`
       : "";
 
     setIsProcessing(true);
@@ -439,6 +457,7 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
             signalId: selectedSignalId,
             channel: detector.channel,
             phase: detector.phase,
+            approachId: detector.approachId,
             description: sanitizeDescription(detector.description),
             purpose: detector.purpose,
             vehicleType: detector.vehicleType,
@@ -456,6 +475,7 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
           signalId: selectedSignalId,
           channel: detector.channel,
           phase: detector.phase,
+          approachId: detector.approachId,
           description: sanitizeDescription(detector.description),
           purpose: detector.purpose,
           vehicleType: detector.vehicleType,
@@ -505,13 +525,14 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
         .map(d => ({
           id: d.id,
           channel: d.channel,
-          phase: d.phase,
+          phase: d.phase ?? null,
+          approachId: d.approachId ?? null,
           lane: d.lane || "1",
           purpose: d.purpose || "Stop Bar",
           technologyType: d.technologyType || "Inductance Loop",
           vehicleType: d.vehicleType || "Vehicle",
-          length: d.length,
-          stopbarSetbackDist: d.stopbarSetbackDist,
+          length: d.length ?? undefined,
+          stopbarSetbackDist: d.stopbarSetbackDist ?? undefined,
           description: d.description || "",
           isDescriptionManual: true,
         }));
@@ -928,6 +949,7 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
                       <TableRow className="bg-grey-50">
                         <TableHead className="w-20 text-xs py-2">Channel</TableHead>
                         <TableHead className="w-24 text-xs py-2">Phase</TableHead>
+                        <TableHead className="w-24 text-xs py-2">Approach</TableHead>
                         <TableHead className="w-16 text-xs py-2">Lane</TableHead>
                         {!staticFields.purpose && (
                           <TableHead className="text-xs py-2">Purpose</TableHead>
@@ -960,13 +982,16 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
                           </TableCell>
                           <TableCell className="py-1.5">
                             <Select
-                              value={detector.phase.toString()}
-                              onValueChange={(v) => handleDetectorChange(idx, 'phase', parseInt(v))}
+                              value={detector.phase === null ? NO_PHASE : detector.phase.toString()}
+                              onValueChange={(v) =>
+                                handleDetectorChange(idx, 'phase', v === NO_PHASE ? null : parseInt(v))
+                              }
                             >
                               <SelectTrigger className="h-7 text-xs">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
+                                <SelectItem value={NO_PHASE}>None</SelectItem>
                                 {signalPhases.map(phase => {
                                   const direction = getPhaseDirection(phase.phase);
                                   return (
@@ -975,6 +1000,26 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
                                     </SelectItem>
                                   );
                                 })}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="py-1.5">
+                            <Select
+                              value={detector.approachId || NO_APPROACH}
+                              onValueChange={(v) =>
+                                handleDetectorChange(idx, 'approachId', v === NO_APPROACH ? null : v)
+                              }
+                            >
+                              <SelectTrigger className="h-7 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value={NO_APPROACH}>None</SelectItem>
+                                {signalApproaches.map(approach => (
+                                  <SelectItem key={approach.approachId} value={approach.approachId}>
+                                    {approach.approachId}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </TableCell>
@@ -1176,6 +1221,7 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
                       <TableRow className="bg-green-50">
                         <TableHead className="w-20 text-xs py-2">Channel</TableHead>
                         <TableHead className="w-24 text-xs py-2">Phase</TableHead>
+                        <TableHead className="w-24 text-xs py-2">Approach</TableHead>
                         <TableHead className="w-16 text-xs py-2">Lane</TableHead>
                         <TableHead className="text-xs py-2">Purpose</TableHead>
                         <TableHead className="text-xs py-2">Technology</TableHead>
@@ -1196,13 +1242,16 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
                           </TableCell>
                           <TableCell className="py-1.5">
                             <Select
-                              value={detector.phase.toString()}
-                              onValueChange={(v) => handleExistingDetectorChange(idx, 'phase', parseInt(v))}
+                              value={detector.phase === null ? NO_PHASE : detector.phase.toString()}
+                              onValueChange={(v) =>
+                                handleExistingDetectorChange(idx, 'phase', v === NO_PHASE ? null : parseInt(v))
+                              }
                             >
                               <SelectTrigger className="h-7 text-xs">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
+                                <SelectItem value={NO_PHASE}>None</SelectItem>
                                 {signalPhases.map(phase => {
                                   const direction = getPhaseDirection(phase.phase);
                                   return (
@@ -1211,6 +1260,26 @@ export default function BulkDetectorModal({ onClose, preSelectedSignalId, inline
                                     </SelectItem>
                                   );
                                 })}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="py-1.5">
+                            <Select
+                              value={detector.approachId || NO_APPROACH}
+                              onValueChange={(v) =>
+                                handleExistingDetectorChange(idx, 'approachId', v === NO_APPROACH ? null : v)
+                              }
+                            >
+                              <SelectTrigger className="h-7 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value={NO_APPROACH}>None</SelectItem>
+                                {signalApproaches.map(approach => (
+                                  <SelectItem key={approach.approachId} value={approach.approachId}>
+                                    {approach.approachId}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </TableCell>

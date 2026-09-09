@@ -1623,7 +1623,6 @@ export default function SignalDetails() {
                         setShowBulkDetectorModal(true);
                       }}
                       className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700"
-                      disabled={signalPhases.length === 0}
                     >
                       <Plus className="w-3 h-3 mr-1" />
                       Add Detectors
@@ -1656,16 +1655,13 @@ export default function SignalDetails() {
                   <div className="p-6 text-center text-grey-500 text-sm">
                     Save the signal first to add detectors.
                   </div>
-                ) : signalPhases.length === 0 ? (
-                  <div className="p-6 text-center">
-                    <p className="text-sm text-warning-700 bg-warning-50 border border-warning-200 rounded-md p-3">
-                      Phases are required before adding detectors. Add phases above first.
-                    </p>
-                  </div>
                 ) : signalDetectors.length === 0 ? (
                   <div className="p-6 text-center text-grey-500 text-sm">
                     <p>No detectors configured.</p>
-                    <p className="text-xs text-grey-400 mt-1">Define detection equipment (loops, video, radar) assigned to each phase.</p>
+                    <p className="text-xs text-grey-400 mt-1">
+                      Define detection equipment (loops, video, radar). Most detectors serve a phase;
+                      count detectors instead take an approach and a distance from the stop bar.
+                    </p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -1674,6 +1670,8 @@ export default function SignalDetails() {
                         <TableRow className="bg-grey-50 border-b border-grey-200">
                           <TableHead className="font-medium py-1 px-1.5" style={{ fontSize: '12px' }}>Channel</TableHead>
                           <TableHead className="font-medium py-1 px-1.5" style={{ fontSize: '12px' }}>Phase</TableHead>
+                          <TableHead className="font-medium py-1 px-1.5" style={{ fontSize: '12px' }}>Approach</TableHead>
+                          <TableHead className="font-medium py-1 px-1.5" style={{ fontSize: '12px' }}>Dist. to Stop Bar</TableHead>
                           <TableHead className="font-medium py-1 px-1.5" style={{ fontSize: '12px' }}>Purpose</TableHead>
                           <TableHead className="font-medium py-1 px-1.5" style={{ fontSize: '12px' }}>Technology</TableHead>
                           <TableHead className="font-medium py-1 px-1.5" style={{ fontSize: '12px' }}>Actions</TableHead>
@@ -1687,7 +1685,22 @@ export default function SignalDetails() {
                             onClick={() => handleDetectorEdit(detector)}
                           >
                             <TableCell className="py-1 px-1.5 font-medium" style={{ fontSize: '12px' }}>{detector.channel}</TableCell>
-                            <TableCell className="py-1 px-1.5" style={{ fontSize: '12px' }}>{detector.phase}</TableCell>
+                            <TableCell className="py-1 px-1.5" style={{ fontSize: '12px' }}>
+                              {detector.phase ?? <span className="text-grey-400">&mdash;</span>}
+                            </TableCell>
+                            <TableCell className="py-1 px-1.5" style={{ fontSize: '12px' }}>
+                              {detector.approachId ?? <span className="text-grey-400">&mdash;</span>}
+                            </TableCell>
+                            <TableCell className="py-1 px-1.5" style={{ fontSize: '12px' }}>
+                              {detector.stopbarSetbackDist == null ? (
+                                <span className="text-grey-400">&mdash;</span>
+                              ) : detector.stopbarSetbackDist < 0 ? (
+                                // Negative means past the stop bar, on the departure side.
+                                `${Math.abs(detector.stopbarSetbackDist)} ft past`
+                              ) : (
+                                `${detector.stopbarSetbackDist} ft`
+                              )}
+                            </TableCell>
                             <TableCell
                               className="py-1 px-1.5"
                               style={{ fontSize: '12px' }}
