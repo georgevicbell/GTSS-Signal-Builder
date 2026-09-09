@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Approach, Signal } from '../shared/schema';
+import type { Approach, Signal } from '../schema/schema';
 import { cn, getDerivedStreetNames, getSignalDisplayName, suggestStreetNameForApproach } from '../src/utils';
 
 const signal = (signalId: string, latitude = 47.61, longitude = -122.33): Signal => ({

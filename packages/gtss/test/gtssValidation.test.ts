@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Detector, Phase, Signal } from '../shared/schema';
+import type { Detector, Phase, Signal } from '../schema/schema';
 import { evaluateGTSSCompleteness } from '../src/gtssValidation';
 
 const signal = (signalId: string): Signal => ({
@@ -28,6 +28,7 @@ const detector = (signalId: string, channel: number): Detector => ({
   signalId,
   channel: String(channel),
   phase: 2,
+  approachId: null,
   description: null,
   purpose: 'Stop Bar',
   vehicleType: null,
