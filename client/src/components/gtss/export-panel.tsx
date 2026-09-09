@@ -67,17 +67,43 @@ export default function ExportPanel() {
   };
 
   const getValidationStatus = () => {
-    const issues = [];
+    const issues: { type: string; message: string }[] = [];
 
-    if (!agency) {
-      issues.push({ type: "error", message: "Agency information is required" });
+    // Determine which agencies the user has selected for export. If none
+    // are selected, fall back to all agencies (the UI normally defaults to
+    // selecting all). Validation should run against the dataset that will
+    // actually be exported.
+    const allAgencies = agencyListStorage.getAll();
+    const selectedAgencies = selectedAgencyIds && selectedAgencyIds.length > 0
+      ? allAgencies.filter(a => selectedAgencyIds.includes(a.id))
+      : allAgencies;
+
+    const selectedAgencyIdsForData = selectedAgencies.map(a => a.agencyId);
+
+    // Filter records to only those that belong to the selected agencies.
+    const filteredSignals = signals.filter(s => selectedAgencyIdsForData.includes(s.agencyId));
+    const filteredSignalIds = filteredSignals.map(s => s.signalId);
+    const filteredApproaches = approaches.filter(a => filteredSignalIds.includes(a.signalId));
+    const filteredPhases = phases.filter(p => filteredSignalIds.includes(p.signalId));
+    const filteredDetectors = detectors.filter(d => filteredSignalIds.includes(d.signalId));
+    const filteredBasicTimings = basicTimings.filter(t => filteredSignalIds.includes(t.signalId));
+
+    // Agency level checks (only relevant if agency records are being exported)
+    if (includeFiles.agency) {
+      if (selectedAgencies.length === 0) {
+        issues.push({ type: "error", message: "No agencies selected for export" });
+      } else {
+        selectedAgencies.forEach(a => {
+          if (!a.agencyId) issues.push({ type: "error", message: `Agency record missing AgencyID: ${a.agencyName || a.id}` });
+        });
+      }
     }
 
-    if (signals.length === 0) {
-      issues.push({ type: "warning", message: "No signals configured" });
+    if (filteredSignals.length === 0) {
+      issues.push({ type: "warning", message: "No signals configured for the selected agencies" });
     }
 
-    signals.forEach(signal => {
+    filteredSignals.forEach(signal => {
       if (!signal.latitude || !signal.longitude) {
         issues.push({ type: "error", message: `Missing coordinates for ${signal.signalId}` });
       }
@@ -86,26 +112,24 @@ export default function ExportPanel() {
       }
     });
 
-    const signalIds = signals.map(s => s.signalId);
-
-    const orphanApproaches = approaches.filter(a => !signalIds.includes(a.signalId));
+    const orphanApproaches = filteredApproaches.filter(a => !filteredSignalIds.includes(a.signalId));
     if (orphanApproaches.length > 0) {
-      issues.push({ type: "error", message: `${orphanApproaches.length} approaches reference non-existent signals` });
+      issues.push({ type: "error", message: `${orphanApproaches.length} approaches reference non-existent signals (in selected agencies)` });
     }
 
-    const orphanPhases = phases.filter(p => !signalIds.includes(p.signalId));
+    const orphanPhases = filteredPhases.filter(p => !filteredSignalIds.includes(p.signalId));
     if (orphanPhases.length > 0) {
-      issues.push({ type: "error", message: `${orphanPhases.length} phases reference non-existent signals` });
+      issues.push({ type: "error", message: `${orphanPhases.length} phases reference non-existent signals (in selected agencies)` });
     }
 
-    const orphanDetectors = detectors.filter(d => !signalIds.includes(d.signalId));
+    const orphanDetectors = filteredDetectors.filter(d => !filteredSignalIds.includes(d.signalId));
     if (orphanDetectors.length > 0) {
-      issues.push({ type: "error", message: `${orphanDetectors.length} detectors reference non-existent signals` });
+      issues.push({ type: "error", message: `${orphanDetectors.length} detectors reference non-existent signals (in selected agencies)` });
     }
 
-    const orphanTimings = basicTimings.filter(t => !signalIds.includes(t.signalId));
+    const orphanTimings = filteredBasicTimings.filter(t => !filteredSignalIds.includes(t.signalId));
     if (orphanTimings.length > 0) {
-      issues.push({ type: "error", message: `${orphanTimings.length} timing configs reference non-existent signals` });
+      issues.push({ type: "error", message: `${orphanTimings.length} timing configs reference non-existent signals (in selected agencies)` });
     }
 
     return issues;

@@ -243,7 +243,23 @@ export const agencyListStorage = {
     return newAgency;
   },
 
-  delete: (id: string): void => {
+  // Note: `delete` was removed to avoid orphaned records. Use
+  // `deleteWithCascade(id)` to remove an agency and its dependent data.
+
+  // Delete an agency and all dependent records (signals, approaches, phases,
+  // detectors, and basic timings). This performs a cascade removal so no
+  // orphaned records remain in storage.
+  deleteWithCascade: (id: string): void => {
+    const agency = agencyListStorage.get(id);
+    if (!agency) return;
+
+    // Delete all signals associated with this agency's agencyId. The
+    // signalStorage.delete call will cascade to phases, detectors,
+    // approaches, and basic timings.
+    const signals = signalStorage.getAll().filter(s => s.agencyId === agency.agencyId);
+    signals.forEach(s => signalStorage.delete(s.signalId));
+
+    // Now remove the agency itself
     const list = agencyListStorage.getAll();
     const updated = list.filter(a => a.id !== id);
     saveToStorage(STORAGE_KEYS.AGENCY, updated);
@@ -1755,12 +1771,41 @@ export function importData(
     // Replace all data
     if (parsedData.agency !== undefined) {
       if (parsedData.agency === null) {
+        // Remove agencies and clear any stored default agency id
         localStorage.removeItem(STORAGE_KEYS.AGENCY);
+        try {
+          localStorage.removeItem(STORAGE_KEYS.DEFAULT_AGENCY);
+        } catch {
+          // ignore
+        }
       } else if (Array.isArray(parsedData.agency)) {
-        saveToStorage(STORAGE_KEYS.AGENCY, parsedData.agency);
+        // Ensure each imported agency has an `id` (legacy imports may lack it)
+        const agencies = parsedData.agency.map(a => ({ ...(a as Agency), id: (a as any).id ?? nanoid() }));
+        saveToStorage(STORAGE_KEYS.AGENCY, agencies);
+
+        // Set default to first agency if none set or if the current default would be invalid
+        try {
+          const curDefault = localStorage.getItem(STORAGE_KEYS.DEFAULT_AGENCY);
+          if (!curDefault || !agencies.some(x => x.id === curDefault)) {
+            if (agencies.length > 0) {
+              localStorage.setItem(STORAGE_KEYS.DEFAULT_AGENCY, agencies[0].id);
+            } else {
+              localStorage.removeItem(STORAGE_KEYS.DEFAULT_AGENCY);
+            }
+          }
+        } catch {
+          // ignore storage errors
+        }
       } else {
-        // single agency -> store as array for modern shape
-        saveToStorage(STORAGE_KEYS.AGENCY, [parsedData.agency]);
+        // single agency -> store as array for modern shape and set as default
+        const a = parsedData.agency as Agency;
+        const stored = { ...a, id: (a as any).id ?? nanoid() };
+        saveToStorage(STORAGE_KEYS.AGENCY, [stored]);
+        try {
+          localStorage.setItem(STORAGE_KEYS.DEFAULT_AGENCY, stored.id);
+        } catch {
+          // ignore
+        }
       }
     }
 

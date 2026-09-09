@@ -186,6 +186,17 @@ export function ImportPanel({ onImportComplete }: { onImportComplete?: () => voi
 
   const handleImport = () => {
     try {
+      // Safety: if an agency file was parsed but the user cleared all
+      // agency checkboxes, treat this as a no-op and reject the import.
+      if (parsedData.agency && selectedAgencyIds.length === 0) {
+        toast({
+          title: "No agencies selected",
+          description: "You cleared every agency — import would overwrite existing data. Select at least one agency or cancel.",
+          variant: "destructive",
+        });
+        setShowConfirmDialog(false);
+        return;
+      }
       // Build filtered payload based on selected agencies
       const selectedAgencies: Agency[] = [];
       if (parsedData.agency) {
@@ -201,22 +212,43 @@ export function ImportPanel({ onImportComplete }: { onImportComplete?: () => voi
         }
       }
 
-      const allowedAgencyIds = selectedAgencies.map(a => a.agencyId);
-      const filteredSignals = (parsedData.signals || []).filter(s => allowedAgencyIds.includes(s.agencyId));
-      const filteredSignalIds = filteredSignals.map(s => s.signalId);
-      const filteredApproaches = (parsedData.approaches || []).filter(ap => filteredSignalIds.includes(ap.signalId));
-      const filteredPhases = (parsedData.phases || []).filter(ph => filteredSignalIds.includes(ph.signalId));
-      const filteredDetectors = (parsedData.detectors || []).filter(d => filteredSignalIds.includes(d.signalId));
-      const filteredBasicTimings = (parsedData.basicTimings || []).filter(bt => filteredSignalIds.includes(bt.signalId));
+      let filteredSignals: Signal[] = [];
+      let filteredApproaches: Approach[] = [];
+      let filteredPhases: Phase[] = [];
+      let filteredDetectors: Detector[] = [];
+      let filteredBasicTimings: BasicTiming[] = [];
 
-      const payload: ParsedData = {
-        agency: selectedAgencies.length === 0 ? null : (selectedAgencies.length === 1 ? selectedAgencies[0] : selectedAgencies),
-        signals: filteredSignals,
-        approaches: filteredApproaches,
-        phases: filteredPhases,
-        detectors: filteredDetectors,
-        basicTimings: filteredBasicTimings,
-      };
+      // Only cascade-filter by agency if agency data was parsed.
+      if (parsedData.agency) {
+        const allowedAgencyIds = selectedAgencies.map(a => a.agencyId);
+        filteredSignals = (parsedData.signals || []).filter(s => allowedAgencyIds.includes(s.agencyId));
+        const filteredSignalIds = filteredSignals.map(s => s.signalId);
+        filteredApproaches = (parsedData.approaches || []).filter(ap => filteredSignalIds.includes(ap.signalId));
+        filteredPhases = (parsedData.phases || []).filter(ph => filteredSignalIds.includes(ph.signalId));
+        filteredDetectors = (parsedData.detectors || []).filter(d => filteredSignalIds.includes(d.signalId));
+        filteredBasicTimings = (parsedData.basicTimings || []).filter(bt => filteredSignalIds.includes(bt.signalId));
+      } else {
+        // No agency file present — preserve parsed arrays as-is
+        filteredSignals = parsedData.signals || [];
+        filteredApproaches = parsedData.approaches || [];
+        filteredPhases = parsedData.phases || [];
+        filteredDetectors = parsedData.detectors || [];
+        filteredBasicTimings = parsedData.basicTimings || [];
+      }
+
+      const payload: ParsedData = {};
+
+      // Only include fields that were actually parsed from uploaded files.
+      if (parsedData.agency) {
+        payload.agency = selectedAgencies.length === 0
+          ? null
+          : (selectedAgencies.length === 1 ? selectedAgencies[0] : selectedAgencies);
+      }
+      if (parsedData.signals) payload.signals = filteredSignals;
+      if (parsedData.approaches) payload.approaches = filteredApproaches;
+      if (parsedData.phases) payload.phases = filteredPhases;
+      if (parsedData.detectors) payload.detectors = filteredDetectors;
+      if (parsedData.basicTimings) payload.basicTimings = filteredBasicTimings;
 
       importData(payload, importMode);
 
@@ -542,8 +574,19 @@ export function ImportPanel({ onImportComplete }: { onImportComplete?: () => voi
               Cancel
             </Button>
             <Button
-              onClick={() => setShowConfirmDialog(true)}
+              onClick={() => {
+                if (parsedData.agency && selectedAgencyIds.length === 0) {
+                  toast({
+                    title: "No agencies selected",
+                    description: "Select at least one agency to import or cancel.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                setShowConfirmDialog(true);
+              }}
               data-testid="button-import-data"
+              disabled={parsedData.agency && selectedAgencyIds.length === 0}
             >
               Import Data
             </Button>

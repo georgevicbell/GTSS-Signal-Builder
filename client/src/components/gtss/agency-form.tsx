@@ -38,7 +38,7 @@ function LocationPicker({ onLocationSelect }: { onLocationSelect: (lat: number, 
 }
 
 export default function AgencyForm() {
-  const { agency, setAgency, signals, phases, detectors } = gtss.useGTSSStore();
+  const { agency, setAgency, signals, phases, detectors, approaches, basicTimings } = gtss.useGTSSStore();
   const { toast } = useToast();
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;
@@ -180,8 +180,18 @@ export default function AgencyForm() {
     toast({ title: "Default Set", description: "Default agency updated" });
   };
 
-  const handleDelete = (id: string) => {
-    gtss.agencyListStorage.delete(id);
+  // Note: deletion is only allowed via cascade to avoid orphaned records.
+
+  const handleDeleteCascade = (id: string) => {
+    const targetAgency = gtss.agencyListStorage.get(id);
+    if (!targetAgency) {
+      toast({ title: "Not Found", description: "Agency could not be found.", variant: "destructive" });
+      return;
+    }
+
+    // Perform cascade delete via storage helper
+    gtss.agencyListStorage.deleteWithCascade(id);
+
     // if deleted current, clear or set to default
     if (agency && agency.id === id) {
       const defId = gtss.agencyListStorage.getDefaultId();
@@ -189,7 +199,7 @@ export default function AgencyForm() {
       setAgency(newAgency as any);
     }
     refreshAgencies();
-    toast({ title: "Deleted", description: "Agency removed" });
+    toast({ title: "Deleted", description: "Agency and related data removed" });
   };
 
   const generateAgencyId = (state: string, agencyName: string): string => {
@@ -490,7 +500,7 @@ export default function AgencyForm() {
               <TableBody>
                 {agencies.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-6 text-xs text-grey-500">
+                    <TableCell colSpan={5} className="text-center py-6 text-xs text-grey-500">
                       No agencies yet. Save one to add it to the list.
                     </TableCell>
                   </TableRow>
@@ -530,13 +540,36 @@ export default function AgencyForm() {
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Agency</AlertDialogTitle>
-                                <AlertDialogDescription>This can't be undone. Are you sure you want to delete this agency?</AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Agency</AlertDialogTitle>
+                                  {
+                                    (() => {
+                                      const depSignals = signals.filter(s => s.agencyId === a.agencyId);
+                                      const depSignalIds = depSignals.map(s => s.signalId);
+                                      const depApproaches = approaches.filter(ap => depSignalIds.includes(ap.signalId)).length;
+                                      const depPhases = phases.filter(p => depSignalIds.includes(p.signalId)).length;
+                                      const depDetectors = detectors.filter(d => depSignalIds.includes(d.signalId)).length;
+                                      const depTimings = basicTimings.filter(t => depSignalIds.includes(t.signalId)).length;
+                                      const totalDependents = depSignals.length + depApproaches + depPhases + depDetectors + depTimings;
+
+                                      if (totalDependents > 0) {
+                                        return (
+                                          <AlertDialogDescription>
+                                            Deleting this agency will also remove {depSignals.length} signal(s), {depApproaches} approach(es), {depPhases} phase(s), {depDetectors} detector(s), and {depTimings} timing record(s). This can't be undone. Are you sure you want to proceed?
+                                          </AlertDialogDescription>
+                                        );
+                                      }
+                                      return (
+                                        <AlertDialogDescription>This can't be undone. Are you sure you want to delete this agency?</AlertDialogDescription>
+                                      );
+                                    })()
+                                  }
+                                </AlertDialogHeader>
+                              <AlertDialogFooter className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(a.id)}>Delete</AlertDialogAction>
+                                <div className="flex gap-2">
+                                  <AlertDialogAction onClick={() => handleDeleteCascade(a.id)}>Delete Agency and Data</AlertDialogAction>
+                                </div>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
