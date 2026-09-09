@@ -218,6 +218,18 @@ export default function GTSSBuilder() {
                     Use the <strong>Export</strong> feature to download your configuration as GTSS-formatted files, and
                     {" "}<strong>Import</strong> to load previously exported data or migrate between browsers.
                   </p>
+                  <p>
+                    GTSS Builder is <strong>open source and free to use</strong>. The full source is on{" "}
+                    <a
+                      href="https://github.com/redmond2742/GTSS-Signal-Builder"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      GitHub
+                    </a>
+                    {" "}&mdash; you're welcome to fork it and adapt it for your own agency.
+                  </p>
                   <p className="text-xs text-grey-500">
                     Learn more about GTSS at{" "}
                     <a href="https://gtss.dev" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
