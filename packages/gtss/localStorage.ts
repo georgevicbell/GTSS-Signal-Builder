@@ -1843,6 +1843,21 @@ export function importData(
         }
       }
       saveToStorage(STORAGE_KEYS.AGENCY, existing);
+
+      // After merging agencies, ensure the stored default is valid.
+      // If missing or invalid, set it to the first merged agency (or remove it when none).
+      try {
+        const curDefault = localStorage.getItem(STORAGE_KEYS.DEFAULT_AGENCY);
+        if (!curDefault || !existing.some(x => x.id === curDefault)) {
+          if (existing.length > 0) {
+            localStorage.setItem(STORAGE_KEYS.DEFAULT_AGENCY, existing[0].id);
+          } else {
+            localStorage.removeItem(STORAGE_KEYS.DEFAULT_AGENCY);
+          }
+        }
+      } catch {
+        // ignore storage errors
+      }
     }
 
     if (parsedData.signals && parsedData.signals.length > 0) {

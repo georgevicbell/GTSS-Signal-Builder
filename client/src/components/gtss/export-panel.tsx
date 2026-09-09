@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { evaluateGTSSCompleteness, generateAgencyCSV, generateApproachesCSV, generateBasicTimingsCSV, generateDetectionCSV, generatePhasesCSV, generateSignalsCSV, useExport, useGTSSStore, agencyListStorage } from "gtss";
+import { evaluateGTSSCompleteness, generateAgencyCSV, generateAgenciesCSV, generateApproachesCSV, generateBasicTimingsCSV, generateDetectionCSV, generatePhasesCSV, generateSignalsCSV, useExport, useGTSSStore, agencyListStorage } from "gtss";
 import { AlertTriangle, CheckCircle, ChevronDown, ChevronRight, Download, Eye, Info, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -148,22 +148,37 @@ export default function ExportPanel() {
     setSelectedAgencyIds(_ag.map(a => a.id));
   }, []);
 
+  // Build previews from the same filtered datasets used for export
+  const allAgencies = agencyListStorage.getAll();
+  const selectedAgencies = selectedAgencyIds && selectedAgencyIds.length > 0
+    ? allAgencies.filter(a => selectedAgencyIds.includes(a.id))
+    : allAgencies;
+  const selectedAgencyIdsForData = selectedAgencies.map(a => a.agencyId);
+
+  const filteredSignals = signals.filter(s => selectedAgencyIdsForData.includes(s.agencyId));
+  const filteredSignalIds = filteredSignals.map(s => s.signalId);
+  const filteredApproaches = approaches.filter(a => filteredSignalIds.includes(a.signalId));
+  const filteredPhases = phases.filter(p => filteredSignalIds.includes(p.signalId));
+  const filteredDetectors = detectors.filter(d => filteredSignalIds.includes(d.signalId));
+  const filteredBasicTimings = basicTimings.filter(t => filteredSignalIds.includes(t.signalId));
+
   const previewFiles: GTSSFilePreview[] = [
-    ...(includeFiles.agency ? agencyListStorage.getAll().filter(a => selectedAgencyIds.includes(a.id)).map(a => ({ id: `agency_${a.agencyId}`, label: `agency_${a.agencyId}.txt`, content: generateAgencyCSV(a) })) : []),
+    // Single combined agency.txt matching download behavior
+    ...(includeFiles.agency ? [{ id: "agency", label: "agency.txt", content: generateAgenciesCSV(selectedAgencies) }] : []),
     includeFiles.signals
-      ? { id: "signals", label: "signals.txt", content: generateSignalsCSV(signals) }
+      ? { id: "signals", label: "signals.txt", content: generateSignalsCSV(filteredSignals) }
       : null,
     includeFiles.approaches
-      ? { id: "approaches", label: "approaches.txt", content: generateApproachesCSV(approaches) }
+      ? { id: "approaches", label: "approaches.txt", content: generateApproachesCSV(filteredApproaches) }
       : null,
     includeFiles.phases
-      ? { id: "phases", label: "phases.txt", content: generatePhasesCSV(phases, basicTimings, approaches) }
+      ? { id: "phases", label: "phases.txt", content: generatePhasesCSV(filteredPhases, filteredBasicTimings, filteredApproaches) }
       : null,
     includeFiles.detection
-      ? { id: "detectors", label: "detectors.txt", content: generateDetectionCSV(detectors) }
+      ? { id: "detectors", label: "detectors.txt", content: generateDetectionCSV(filteredDetectors) }
       : null,
     includeFiles.basicTimings
-      ? { id: "basicTimings", label: "basic_timings.txt", content: generateBasicTimingsCSV(basicTimings) }
+      ? { id: "basicTimings", label: "basic_timings.txt", content: generateBasicTimingsCSV(filteredBasicTimings) }
       : null,
   ].filter(Boolean) as GTSSFilePreview[];
 
