@@ -258,7 +258,7 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
                               defaultValue={signal.lat.toFixed(6)}
                               onBlur={(e) => {
                                 const v = parseFloat(e.target.value);
-                                if (!isNaN(v)) handleUpdatePendingLocation(signal.id, v, signal.lon);
+                                if (!isNaN(v) && v >= -90 && v <= 90) handleUpdatePendingLocation(signal.id, v, signal.lon);
                               }}
                               className="w-28 text-xs px-1 py-0.5 border rounded"
                             />

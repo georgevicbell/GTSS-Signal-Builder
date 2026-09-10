@@ -191,7 +191,7 @@ export default function ApproachesTable({ triggerAdd, triggerBulk }: ApproachesT
           ) : (
             <div className="w-full h-full relative z-0">
               {selectedSignalId ? (
-                <SignalsMap signals={[signals.find(s => s.signalId === selectedSignalId)!]} approaches={filteredApproaches} className="w-full h-full" />
+                <SignalsMap signals={signals.filter(s => s.signalId === selectedSignalId)} approaches={filteredApproaches} className="w-full h-full" />
               ) : (
                 <div className="w-full h-full bg-grey-100 flex items-center justify-center">
                   <MapPin className="w-6 h-6 text-grey-400" />
