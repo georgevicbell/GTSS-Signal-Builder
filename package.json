@@ -11,6 +11,7 @@
     "check": "tsc",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "test": "npm run test --workspaces --if-present",
     "db:push": "drizzle-kit push",
     "publish": "npm publish --workspaces"
   },

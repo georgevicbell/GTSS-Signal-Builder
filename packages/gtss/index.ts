@@ -1,10 +1,10 @@
-export * from "./agencyDefaults";
-export * from "./gtssValidation";
-export * from "./localStorage";
-export * from "./localStorageHooks";
-export * from "./queryClient";
-
+export * as schema from "./schema/schema";
+export * from "./src/agencyDefaults";
+export * from "./src/gtssValidation";
+export * from "./src/localStorage";
+export * from "./src/localStorageHooks";
+export * from "./src/queryClient";
+export * from "./src/svg-export";
+export * from "./src/utils";
 export * from "./store/gtss-store";
-export * from "./svg-export";
-export * from "./utils";
 
