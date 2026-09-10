@@ -6,13 +6,14 @@ import { useToast } from "@/hooks/use-toast";
 import {
   AgencyDefaults,
   DEFAULT_AGENCY_DEFAULTS,
+  MapScrollWheelMode,
   NEMA_DEFAULTS,
   PhaseDirectionStandard,
   sanitizePhaseDirectionStandard, useAgencyDefaults,
   useGTSSStore,
   validatePhaseDirectionStandard
 } from "gtss";
-import { Info, RotateCcw, Save, Settings, X } from "lucide-react";
+import { Info, Move, RotateCcw, Save, Search, Settings, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const DIRECTIONS = [
@@ -96,6 +97,7 @@ export default function AgencyDefaultsSettings() {
     standardToForm(current.phaseDirectionStandard)
   );
   const [defaultPhaseCount, setDefaultPhaseCount] = useState<number>(current.defaultPhaseCount);
+  const [mapScrollWheel, setMapScrollWheel] = useState<MapScrollWheelMode>(current.mapScrollWheel);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isDirty, setIsDirty] = useState(false);
 
@@ -104,6 +106,7 @@ export default function AgencyDefaultsSettings() {
     const src = agencyDefaults ?? DEFAULT_AGENCY_DEFAULTS;
     setFormState(standardToForm(src.phaseDirectionStandard));
     setDefaultPhaseCount(src.defaultPhaseCount);
+    setMapScrollWheel(src.mapScrollWheel);
     setIsDirty(false);
     setValidationErrors([]);
   }, [agencyDefaults]);
@@ -116,6 +119,11 @@ export default function AgencyDefaultsSettings() {
 
   const handlePhaseCountChange = (count: number) => {
     setDefaultPhaseCount(count);
+    setIsDirty(true);
+  };
+
+  const handleMapScrollWheelChange = (mode: MapScrollWheelMode) => {
+    setMapScrollWheel(mode);
     setIsDirty(true);
   };
 
@@ -148,6 +156,7 @@ export default function AgencyDefaultsSettings() {
       agencyId: agency?.agencyId ?? '',
       phaseDirectionStandard: sanitized,
       defaultPhaseCount,
+      mapScrollWheel,
       updatedAt: new Date().toISOString(),
     };
 
@@ -165,6 +174,7 @@ export default function AgencyDefaultsSettings() {
     const src = agencyDefaults ?? DEFAULT_AGENCY_DEFAULTS;
     setFormState(standardToForm(src.phaseDirectionStandard));
     setDefaultPhaseCount(src.defaultPhaseCount);
+    setMapScrollWheel(src.mapScrollWheel);
     setIsDirty(false);
     setValidationErrors([]);
   };
@@ -313,6 +323,60 @@ export default function AgencyDefaultsSettings() {
             {defaultPhaseCount === 6 && "6 phases: 4-approach with 2 protected lefts"}
             {defaultPhaseCount === 4 && "4 phases: 4-approach through movements only"}
             {defaultPhaseCount === 2 && "2 phases: simple 2-approach intersection"}
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Map Scroll Wheel */}
+      <Card>
+        <CardHeader className="bg-grey-50 border-b border-grey-200 p-3">
+          <CardTitle className="text-sm font-semibold text-grey-800">Map Scroll Wheel</CardTitle>
+        </CardHeader>
+        <CardContent className="p-4">
+          <p className="text-xs text-grey-500 mb-3">
+            What the mouse wheel does when the cursor is over a map.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {([
+              {
+                mode: 'page' as const,
+                icon: Move,
+                title: 'Scroll the page',
+                blurb: 'The wheel scrolls past the map to the data below. Zoom with the +/− buttons.',
+              },
+              {
+                mode: 'zoom' as const,
+                icon: Search,
+                title: 'Zoom the map',
+                blurb: 'The wheel zooms the map in and out. The page stays put while the cursor is over it.',
+              },
+            ]).map(({ mode, icon: Icon, title, blurb }) => {
+              const selected = mapScrollWheel === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => handleMapScrollWheelChange(mode)}
+                  aria-pressed={selected}
+                  className={`text-left rounded-md border p-3 transition-colors ${selected
+                    ? "border-primary-600 bg-primary-50"
+                    : "border-grey-200 hover:bg-grey-50"
+                    }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Icon className={`w-4 h-4 ${selected ? "text-primary-600" : "text-grey-400"}`} />
+                    <span className={`text-sm font-medium ${selected ? "text-primary-700" : "text-grey-700"}`}>
+                      {title}
+                    </span>
+                  </span>
+                  <span className="block text-xs text-grey-500 mt-1">{blurb}</span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-grey-400 mt-2">
+            Sets the starting behavior for every map. The lock button on the signal map still
+            overrides it for the current session.
           </p>
         </CardContent>
       </Card>

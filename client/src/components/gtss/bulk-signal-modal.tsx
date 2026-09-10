@@ -2,11 +2,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import MapTileLayers from "@/components/ui/map-tile-layers";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
-import { useGTSSStore, useSignals } from "gtss";
-import { type InsertSignal}from "gtss/schema"
-import { agencyListStorage } from 'gtss';
+import { useGTSSStore, useSignals, useMapScrollZoom } from "gtss";
+import { type InsertSignal } from "gtss/schema";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapPin, Save, Trash2, X } from "lucide-react";
@@ -45,21 +43,12 @@ function MapClickHandler({ onLocationAdd }: { onLocationAdd: (lat: number, lon: 
 }
 
 export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
+  const mapScrollZoom = useMapScrollZoom();
   const { agency, addSignal, signals } = useGTSSStore();
   const { toast } = useToast();
   const signalHooks = useSignals();
   const [pendingSignals, setPendingSignals] = useState<PendingSignal[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedAgencyId, setSelectedAgencyId] = useState<string>(() => {
-    try {
-      const defId = agencyListStorage.getDefaultId();
-      const list = agencyListStorage.getAll();
-      const defAgency = list.find(a => a.id === defId);
-      return defAgency?.agencyId || agency?.agencyId || "";
-    } catch {
-      return agency?.agencyId || "";
-    }
-  });
 
   const getMapCenter = (): [number, number] => {
     // Use agency coordinates if available
@@ -120,6 +109,10 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
     setPendingSignals(prev => [...prev, newSignal]);
   };
 
+  const handleUpdatePendingLocation = (id: string, lat: number, lon: number) => {
+    setPendingSignals(prev => prev.map(s => s.id === id ? { ...s, lat, lon } : s));
+  };
+
   const handleRemoveSignal = (signalId: string) => {
     setPendingSignals(prev => prev.filter(s => s.id !== signalId));
   };
@@ -139,7 +132,7 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
     try {
       const signalsToCreate: InsertSignal[] = pendingSignals.map((signal, index) => ({
         signalId: "", // Will be auto-generated
-        agencyId: selectedAgencyId || agency?.agencyId || "",
+        agencyId: agency?.agencyId || "",
         streetName1: signal.streetName1 || `Street ${index + 1}`,
         streetName2: signal.streetName2 || `Cross Street ${index + 1}`,
         latitude: signal.lat,
@@ -193,15 +186,15 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
               Click anywhere on the map to add signal locations. Street names will be auto-populated when possible.
               You can edit details later from the main signals table.
             </p>
-            {/* Agency Select moved to footer */}
           </div>
 
           <div className="flex-1 relative min-h-0">
             <MapContainer
               center={getMapCenter()}
               zoom={13}
-              scrollWheelZoom={false}
+              scrollWheelZoom={mapScrollZoom}
               style={{ height: "100%", width: "100%" }}
+              className="rounded-lg cursor-crosshair"
             >
               <MapTileLayers />
 
@@ -226,11 +219,18 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
                 )
               ))}
 
-              {/* New pending signals in blue */}
+              {/* New pending signals in blue (draggable) */}
               {pendingSignals.map((signal) => (
                 <Marker
                   key={signal.id}
                   position={[signal.lat, signal.lon]}
+                  draggable={true}
+                  eventHandlers={{
+                    dragend: (e) => {
+                      const latlng = (e.target as any).getLatLng();
+                      handleUpdatePendingLocation(signal.id, latlng.lat, latlng.lng);
+                    }
+                  }}
                 />
               ))}
             </MapContainer>
@@ -242,17 +242,42 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
               <div className="space-y-2">
                 {pendingSignals.map((signal, index) => (
                   <div key={signal.id} className="flex items-center justify-between text-xs bg-white p-2 rounded border">
-                    <div>
-                      <span className="font-medium">Signal {index + 1}</span>
-                      {signal.streetName1 && (
-                        <span className="text-grey-600 ml-2">
-                          {signal.streetName1}{signal.streetName2 ? ` & ${signal.streetName2}` : ""}
-                        </span>
-                      )}
-                      <span className="text-grey-500 ml-2">
-                        ({signal.lat.toFixed(4)}, {signal.lon.toFixed(4)})
-                      </span>
-                    </div>
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <span className="font-medium">Signal {index + 1}</span>
+                          {signal.streetName1 && (
+                            <span className="text-grey-600 ml-2">
+                              {signal.streetName1}{signal.streetName2 ? ` & ${signal.streetName2}` : ""}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-grey-500 text-xs flex items-center gap-2">
+                          <label className="flex items-center gap-1">
+                            <span className="text-[11px] text-grey-500">Lat</span>
+                            <input
+                              type="text"
+                              defaultValue={signal.lat.toFixed(6)}
+                              onBlur={(e) => {
+                                const v = parseFloat(e.target.value);
+                                if (!isNaN(v) && v >= -90 && v <= 90) handleUpdatePendingLocation(signal.id, v, signal.lon);
+                              }}
+                              className="w-28 text-xs px-1 py-0.5 border rounded"
+                            />
+                          </label>
+                          <label className="flex items-center gap-1">
+                            <span className="text-[11px] text-grey-500">Lon</span>
+                            <input
+                              type="text"
+                              defaultValue={signal.lon.toFixed(6)}
+                              onBlur={(e) => {
+                                const v = parseFloat(e.target.value);
+                                if (!isNaN(v)) handleUpdatePendingLocation(signal.id, signal.lat, v);
+                              }}
+                              className="w-28 text-xs px-1 py-0.5 border rounded"
+                            />
+                          </label>
+                        </div>
+                      </div>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -269,23 +294,7 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
         </div>
 
         <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-t border-grey-200 bg-white">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <label className="text-xs font-medium text-gray-700">Agency</label>
-              <div className="w-44">
-                <Select value={selectedAgencyId} onValueChange={setSelectedAgencyId}>
-                  <SelectTrigger className="h-8 w-full">
-                    <SelectValue placeholder="Select agency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {agencyListStorage.getAll().map(a => (
-                      <SelectItem key={a.id} value={a.agencyId}>{a.agencyName} ({a.agencyId})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
+          <div className="flex space-x-2">
             {pendingSignals.length > 0 && (
               <Button
                 variant="outline"

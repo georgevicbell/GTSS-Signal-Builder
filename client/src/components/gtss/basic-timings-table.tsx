@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SignalsMap from "@/components/ui/signals-map";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BasicTiming, getSignalDisplayName, useBasicTimings, useGTSSStore } from "gtss";
+import { getSignalDisplayName, useBasicTimings, useGTSSStore } from "gtss";
+import { BasicTiming } from "gtss/schema";
 import { ChevronDown, ChevronUp, Download, MapPin, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import BasicTimingModal from "./basic-timing-modal";
@@ -37,7 +39,6 @@ interface TimingBarChartProps {
 }
 
 function TimingBarChart({ timings, svgRef, intersectionName }: TimingBarChartProps) {
-  // Sort timings by phase number
   const sortedTimings = useMemo(() => {
     return [...timings].sort((a, b) => a.phase - b.phase);
   }, [timings]);
@@ -50,7 +51,6 @@ function TimingBarChart({ timings, svgRef, intersectionName }: TimingBarChartPro
     );
   }
 
-  // Calculate max total time for scaling
   const maxTotal = Math.max(
     ...sortedTimings.map(t =>
       (t.minGreen || 0) + (t.maxGreen || 0) + (t.yellow || 0) + (t.allRed || 0)
@@ -58,24 +58,20 @@ function TimingBarChart({ timings, svgRef, intersectionName }: TimingBarChartPro
     1
   );
 
-  // SVG dimensions
   const chartWidth = 340;
   const chartHeight = sortedTimings.length * 40 + 80;
   const barHeight = 24;
   const labelWidth = 60;
-  const legendHeight = 30;
   const chartAreaWidth = chartWidth - labelWidth - 20;
 
   return (
     <svg ref={svgRef} viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-full">
-      {/* Title */}
       {intersectionName && (
         <text x={chartWidth / 2} y="16" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#374151">
           {intersectionName} - Timing Parameters
         </text>
       )}
 
-      {/* Legend */}
       <g transform={`translate(${labelWidth}, ${intersectionName ? 30 : 10})`}>
         <rect x="0" y="0" width="12" height="12" fill="#22c55e" rx="2" />
         <text x="16" y="10" fontSize="9" fill="#374151">Min Green</text>
@@ -90,7 +86,6 @@ function TimingBarChart({ timings, svgRef, intersectionName }: TimingBarChartPro
         <text x="216" y="10" fontSize="9" fill="#374151">All-Red</text>
       </g>
 
-      {/* Bars */}
       <g transform={`translate(0, ${intersectionName ? 55 : 35})`}>
         {sortedTimings.map((timing, index) => {
           const y = index * 40;
@@ -102,14 +97,12 @@ function TimingBarChart({ timings, svgRef, intersectionName }: TimingBarChartPro
           const allRed = timing.allRed || 0;
           const total = minGreen + maxGreen + yellow + allRed;
 
-          // Scale factors
           const scale = chartAreaWidth / Math.max(maxTotal, 60);
 
           let xOffset = labelWidth;
 
           return (
             <g key={timing.id}>
-              {/* Phase label */}
               <g transform={`translate(0, ${y})`}>
                 <rect
                   x="5"
@@ -124,7 +117,6 @@ function TimingBarChart({ timings, svgRef, intersectionName }: TimingBarChartPro
                 </text>
               </g>
 
-              {/* Min Green bar */}
               {minGreen > 0 && (
                 <g>
                   <rect
@@ -143,7 +135,6 @@ function TimingBarChart({ timings, svgRef, intersectionName }: TimingBarChartPro
                 </g>
               )}
 
-              {/* Max Green bar (additional to min) */}
               {maxGreen > 0 && (() => {
                 const x = xOffset + minGreen * scale;
                 return (
@@ -165,7 +156,6 @@ function TimingBarChart({ timings, svgRef, intersectionName }: TimingBarChartPro
                 );
               })()}
 
-              {/* Yellow bar */}
               {yellow > 0 && (() => {
                 const x = xOffset + (minGreen + maxGreen) * scale;
                 return (
@@ -187,7 +177,6 @@ function TimingBarChart({ timings, svgRef, intersectionName }: TimingBarChartPro
                 );
               })()}
 
-              {/* All-Red bar */}
               {allRed > 0 && (() => {
                 const x = xOffset + (minGreen + maxGreen + yellow) * scale;
                 return (
@@ -209,7 +198,6 @@ function TimingBarChart({ timings, svgRef, intersectionName }: TimingBarChartPro
                 );
               })()}
 
-              {/* Total time label */}
               <text
                 x={xOffset + total * scale + 5}
                 y={y + 15}
@@ -439,43 +427,52 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
   };
 
   return (
-    <div className="max-w-6xl">
-      <Card>
-        <CardHeader className="bg-grey-50 border-b border-grey-200 p-3">
+    <div className="max-w-6xl h-full">
+      <ResizablePanelGroup
+        direction="vertical"
+        autoSaveId="basic-timings-split"
+        className="flex-1 min-h-[480px] rounded-lg border border-grey-200 bg-white overflow-hidden"
+      >
+        <ResizablePanel defaultSize={50} minSize={12} className="relative z-0">
           {signals.length === 0 ? (
-            <div className="p-2 bg-warning-50 border border-warning-200 rounded-md">
-              <p className="text-xs text-warning-700">
-                No signals configured. Please add signals before creating timing configurations.
-              </p>
+            <div className="w-full h-full bg-grey-50 flex items-center justify-center">
+              <div className="text-center text-grey-500">
+                <MapPin className="w-6 h-6 mx-auto mb-1 text-grey-400" />
+                <p className="text-xs">No signals to display</p>
+              </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <Select value={selectedSignalId} onValueChange={setSelectedSignalId}>
-                  <SelectTrigger className="flex-1 h-8 text-sm">
-                    <SelectValue placeholder="Select Signal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {signals.map((signal) => (
-                      <SelectItem key={signal.signalId} value={signal.signalId}>
-                        {getSignalDisplayName(signal, approaches)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="w-full h-full relative z-0">
+              <SignalsMap
+                signals={signals}
+                approaches={approaches}
+                phases={phases}
+                onSignalSelect={(signal) => setSelectedSignalId(signal.signalId)}
+                highlightedSignalId={selectedSignalId}
+                className="w-full h-full"
+              />
+            </div>
+          )}
+        </ResizablePanel>
+        <ResizableHandle withHandle className="bg-grey-200 hover:bg-primary-300 transition-colors" />
+        <ResizablePanel defaultSize={50} minSize={20} className="flex flex-col min-h-0">
+          <Card className="rounded-none border-0 flex flex-col h-full min-h-0">
+            <CardHeader className="bg-grey-50 border-b border-grey-200 p-0">
+              {signals.length === 0 ? (
+                <div className="p-2 bg-warning-50 border border-warning-200 rounded-md">
+                  <p className="text-xs text-warning-700">
+                    No signals configured. Please add signals before creating timing configurations.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div />
+                </div>
+              )}
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="p-2">
                 {selectedSignalId && (
-                  <span className="text-xs text-grey-600 whitespace-nowrap">({filteredTimings.length} timing{filteredTimings.length !== 1 ? 's' : ''})</span>
-                )}
-                <Button
-                  onClick={handleAdd}
-                  className="h-8 px-3 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1 whitespace-nowrap"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Add Timing</span>
-                </Button>
-              </div>
-              {selectedSignalId && (
-                <div className="flex flex-col gap-2">
                   <div className="flex items-stretch gap-3">
                     {/* Timing Bar Chart */}
                     <div className="flex-1 border border-grey-200 rounded-lg p-2 bg-white min-w-0">
@@ -535,104 +532,105 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
                       </div>
                     </div>
                   </div>
-
-                  {/* Map - full width */}
-                  <div className="w-full h-72">
-                    {(() => {
-                      const selectedSignal = signals.find(s => s.signalId === selectedSignalId);
-                      return selectedSignal && selectedSignal.latitude && selectedSignal.longitude ? (
-                        <div className="w-full h-full border border-grey-300 rounded-md overflow-hidden bg-white relative z-0">
-                          <SignalsMap
-                            signals={[selectedSignal]}
-                            approaches={filteredApproaches}
-                            className="w-full h-full"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-full h-full border border-grey-300 rounded-md bg-grey-100 flex items-center justify-center">
-                          <MapPin className="w-6 h-6 text-grey-400" />
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-grey-50 border-b border-grey-200">
-                  <SortableHeader field="phase">Phase</SortableHeader>
-                  <TableHead className="text-xs font-medium text-grey-500 uppercase tracking-wider py-1.5 px-2">Ped Walk</TableHead>
-                  <TableHead className="text-xs font-medium text-grey-500 uppercase tracking-wider py-1.5 px-2">Ped Clear</TableHead>
-                  <TableHead className="text-xs font-medium text-grey-500 uppercase tracking-wider py-1.5 px-2">LPI</TableHead>
-                  <SortableHeader field="minGreen">Min Green</SortableHeader>
-                  <SortableHeader field="maxGreen">Max Green</SortableHeader>
-                  <SortableHeader field="yellow">Yellow</SortableHeader>
-                  <SortableHeader field="allRed">All-Red</SortableHeader>
-                  <SortableHeader field="vehRecallType">Veh Recall</SortableHeader>
-                  <TableHead className="text-xs font-medium text-grey-500 uppercase tracking-wider py-1.5 px-2">Ped Recall</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {!selectedSignalId ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="text-center py-4 text-xs text-grey-500">
-                      Please select a signal above to view its timing configurations.
-                    </TableCell>
-                  </TableRow>
-                ) : filteredTimings.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="text-center py-4 text-xs text-grey-500">
-                      No timing configurations for this signal. Add your first timing to get started.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  getSortedTimings().map((timing) => (
-                    <TableRow
-                      key={timing.id}
-                      className="cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => handleRowClick(timing)}
-                    >
-                      <TableCell className="font-medium text-grey-900 text-xs py-1.5 px-2">
-                        <Badge
-                          variant="secondary"
-                          className="text-xs py-0 px-1.5 h-4 text-white"
-                          style={{ backgroundColor: phaseColors[timing.phase] || '#6b7280' }}
-                        >
-                          {timing.phase}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.pedWalk)}</TableCell>
-                      <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.pedClearance)}</TableCell>
-                      <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.leadingPedInterval)}</TableCell>
-                      <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.minGreen)}</TableCell>
-                      <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.maxGreen)}</TableCell>
-                      <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.yellow)}</TableCell>
-                      <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.allRed)}</TableCell>
-                      <TableCell className="py-1.5 px-2">
-                        <Badge variant="secondary" className={`text-xs py-0 px-1.5 h-4 ${getRecallBadgeColor(timing.vehRecallType)}`}>
-                          {timing.vehRecallType || 'None'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-1.5 px-2">
-                        {timing.pedRecall ? (
-                          <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs py-0 px-1.5 h-4">Yes</Badge>
-                        ) : (
-                          <Badge variant="secondary" className="bg-grey-100 text-grey-600 text-xs py-0 px-1.5 h-4">No</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
                 )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+              </div>
+              {/* Filter row: moved below charts and above the table */}
+              <div className="p-3 border-t border-b border-grey-100">
+                <div className="flex items-center gap-3">
+                  <div className="text-xs font-medium text-grey-700">Filter by Signals</div>
+                  <div className="flex-1 min-w-0">
+                    <Select value={selectedSignalId} onValueChange={setSelectedSignalId}>
+                      <SelectTrigger className="w-full h-8 text-sm">
+                        <SelectValue placeholder="Select Signal" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {signals.map((signal) => (
+                          <SelectItem key={signal.signalId} value={signal.signalId}>
+                            {getSignalDisplayName(signal, approaches)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {selectedSignalId && (
+                    <div className="text-xs text-grey-600 whitespace-nowrap">{filteredTimings.length} timing{filteredTimings.length !== 1 ? 's' : ''}</div>
+                  )}
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-grey-50 border-b border-grey-200">
+                      <SortableHeader field="phase">Phase</SortableHeader>
+                      <TableHead className="text-xs font-medium text-grey-500 uppercase tracking-wider py-1.5 px-2">Ped Walk</TableHead>
+                      <TableHead className="text-xs font-medium text-grey-500 uppercase tracking-wider py-1.5 px-2">Ped Clear</TableHead>
+                      <TableHead className="text-xs font-medium text-grey-500 uppercase tracking-wider py-1.5 px-2">LPI</TableHead>
+                      <SortableHeader field="minGreen">Min Green</SortableHeader>
+                      <SortableHeader field="maxGreen">Max Green</SortableHeader>
+                      <SortableHeader field="yellow">Yellow</SortableHeader>
+                      <SortableHeader field="allRed">All-Red</SortableHeader>
+                      <SortableHeader field="vehRecallType">Veh Recall</SortableHeader>
+                      <TableHead className="text-xs font-medium text-grey-500 uppercase tracking-wider py-1.5 px-2">Ped Recall</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {!selectedSignalId ? (
+                      <TableRow>
+                        <TableCell colSpan={10} className="text-center py-4 text-xs text-grey-500">
+                          Please select a signal above to view its timing configurations.
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredTimings.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={10} className="text-center py-4 text-xs text-grey-500">
+                          No timing configurations for this signal. Add your first timing to get started.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      getSortedTimings().map((timing) => (
+                        <TableRow
+                          key={timing.id}
+                          className="cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleRowClick(timing)}
+                        >
+                          <TableCell className="font-medium text-grey-900 text-xs py-1.5 px-2">
+                            <Badge
+                              variant="secondary"
+                              className="text-xs py-0 px-1.5 h-4 text-white"
+                              style={{ backgroundColor: phaseColors[timing.phase] || '#6b7280' }}
+                            >
+                              {timing.phase}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.pedWalk)}</TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.pedClearance)}</TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.leadingPedInterval)}</TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.minGreen)}</TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.maxGreen)}</TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.yellow)}</TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.allRed)}</TableCell>
+                          <TableCell className="py-1.5 px-2">
+                            <Badge variant="secondary" className={`text-xs py-0 px-1.5 h-4 ${getRecallBadgeColor(timing.vehRecallType)}`}>
+                              {timing.vehRecallType || 'None'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="py-1.5 px-2">
+                            {timing.pedRecall ? (
+                              <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs py-0 px-1.5 h-4">Yes</Badge>
+                            ) : (
+                              <Badge variant="secondary" className="bg-grey-100 text-grey-600 text-xs py-0 px-1.5 h-4">No</Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       {showModal && (
         <BasicTimingModal

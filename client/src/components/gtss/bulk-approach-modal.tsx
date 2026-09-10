@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { getSignalDisplayName, handleColumnMajorTab, suggestStreetNameForApproach, useApproaches, useGTSSStore } from "gtss";
+import { getSignalDisplayName, handleColumnMajorTab, suggestStreetNameForApproach, useApproaches, useGTSSStore, useMapScrollZoom } from "gtss";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapPin, Minus, Plus, Save } from "lucide-react";
@@ -69,6 +69,7 @@ const getDirectionFromBearing = (bearing: number): string => {
 // Approach line colors (16 colors for up to 16 approaches)
 
 export default function BulkApproachModal({ onClose, preSelectedSignalId, inline = false }: BulkApproachModalProps) {
+  const mapScrollZoom = useMapScrollZoom();
   const { signals, approaches: existingApproaches } = useGTSSStore();
   const { toast } = useToast();
   const approachHooks = useApproaches();
@@ -625,7 +626,7 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
                 <MapContainer
                   center={[selectedSignal.latitude, selectedSignal.longitude]}
                   zoom={17}
-                  scrollWheelZoom={false}
+                  scrollWheelZoom={mapScrollZoom}
                   style={{ height: "100%", width: "100%" }}
                 >
                   <MapTileLayers />

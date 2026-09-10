@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useMapScrollZoom } from "gtss";
 import { MapContainer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -47,12 +48,13 @@ function LocationMarker({ onLocationSelect, selectedPosition }: {
 }
 
 export function MapPicker({ center, zoom = 13, onLocationSelect, selectedPosition, className }: MapPickerProps) {
+  const mapScrollZoom = useMapScrollZoom();
   return (
     <div className={className}>
       <MapContainer
         center={center}
         zoom={zoom}
-        scrollWheelZoom={false}
+        scrollWheelZoom={mapScrollZoom}
         style={{ height: "400px", width: "100%" }}
         className="rounded-lg border border-grey-200"
       >

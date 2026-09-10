@@ -3,8 +3,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import type { BasicTiming, Phase } from "gtss";
 import { useBasicTimings } from "gtss";
+import type { BasicTiming, Phase } from "gtss/schema";
 import { Save, X } from "lucide-react";
 import { useMemo, useState } from "react";
 

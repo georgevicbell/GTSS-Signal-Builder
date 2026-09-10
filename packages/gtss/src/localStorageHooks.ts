@@ -1,14 +1,5 @@
 import { useEffect } from 'react';
-import {
-  InsertAgency,
-  InsertApproach,
-  InsertBasicTiming,
-  InsertDetector,
-  InsertPhase,
-  InsertSignal
-} from '../schema/schema';
-import { useGTSSStore } from '../store/gtss-store';
-import { AgencyDefaults } from './agencyDefaults';
+import { AgencyDefaults, isMapScrollZoomEnabled } from './agencyDefaults';
 import {
   agencyDefaultsStorage,
   agencyStorage,
@@ -20,6 +11,15 @@ import {
   phaseStorage,
   signalStorage
 } from './localStorage';
+import {
+  InsertAgency,
+  InsertApproach,
+  InsertBasicTiming,
+  InsertDetector,
+  InsertPhase,
+  InsertSignal
+} from './schema/schema';
+import { useGTSSStore } from './store/gtss-store';
 
 // Custom hooks to replace TanStack Query for localStorage operations
 
@@ -42,6 +42,15 @@ export const useAgencyDefaults = () => {
     save: saveAgencyDefaults,
     clear: clearAgencyDefaults,
   };
+};
+
+/**
+ * Whether the mouse wheel should zoom maps, per the agency default.
+ * Pass straight to <MapContainer scrollWheelZoom={...}>.
+ */
+export const useMapScrollZoom = (): boolean => {
+  const agencyDefaults = useGTSSStore((state) => state.agencyDefaults);
+  return isMapScrollZoomEnabled(agencyDefaults);
 };
 
 export const useAgency = () => {

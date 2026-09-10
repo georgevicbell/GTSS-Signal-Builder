@@ -6,7 +6,7 @@ import MapTileLayers from "@/components/ui/map-tile-layers";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getSignalDisplayName, suggestStreetNameForApproach, useApproaches, useGTSSStore } from "gtss";
+import { getSignalDisplayName, suggestStreetNameForApproach, useApproaches, useGTSSStore, useMapScrollZoom } from "gtss";
 import { type Approach, type InsertApproach, insertApproachSchema } from "gtss/schema";
 import { MapPin, Navigation, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -31,6 +31,7 @@ function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number
 }
 
 export default function ApproachModal({ approach, onClose, preSelectedSignalId }: ApproachModalProps) {
+  const mapScrollZoom = useMapScrollZoom();
   const { signals, approaches } = useGTSSStore();
   const { toast } = useToast();
   const approachHooks = useApproaches();
@@ -400,7 +401,7 @@ export default function ApproachModal({ approach, onClose, preSelectedSignalId }
                     <MapContainer
                       center={[selectedSignal.latitude, selectedSignal.longitude]}
                       zoom={17}
-                      scrollWheelZoom={false}
+                      scrollWheelZoom={mapScrollZoom}
                       style={{ height: "100%", width: "100%", cursor: "crosshair" }}
                     >
                       <MapTileLayers />

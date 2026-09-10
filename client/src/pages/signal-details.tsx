@@ -21,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { downloadSvgAsJpg, generateAgencyCSV, generateApproachesCSV, generateBasicTimingsCSV, generateDetectionCSV, generatePhasesCSV, generateSignalsCSV, phaseDiagramFileName, suggestStreetNameForApproach, useApproaches, useBasicTimings, useDetectors, useGTSSStore, usePhases, useSignals, agencyListStorage } from "gtss";
+import { downloadSvgAsJpg, generateAgencyCSV, isMapScrollZoomEnabled, generateApproachesCSV, generateBasicTimingsCSV, generateDetectionCSV, generatePhasesCSV, generateSignalsCSV, phaseDiagramFileName, suggestStreetNameForApproach, useApproaches, useBasicTimings, useDetectors, useGTSSStore, usePhases, useSignals } from "gtss";
 import { insertPhaseSchema, insertSignalSchema, type Approach, type BasicTiming, type Detector, type InsertPhase, type InsertSignal, type Phase, type Signal } from "gtss/schema";
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Edit3, FileText, HelpCircle, Lock, MapPin, Navigation, Plus, Settings, Trash2, Unlock } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -93,7 +93,7 @@ function approachEndpoint(bearing: number, lat: number, lng: number): [number, n
 
 export default function SignalDetails() {
   const { toast } = useToast();
-  const { agency, signals, phases, detectors, approaches, basicTimings, currentSignalId, navigateToMain, navigateToSignalDetails } = useGTSSStore();
+  const { agency, agencyDefaults, signals, phases, detectors, approaches, basicTimings, currentSignalId, navigateToMain, navigateToSignalDetails, tempNewSignalLocation, setTempNewSignalLocation } = useGTSSStore();
   const signalId = currentSignalId;
   const isNewSignal = signalId === null;
   const signalHooks = useSignals();
@@ -136,7 +136,11 @@ export default function SignalDetails() {
   const [showGTSSOutput, setShowGTSSOutput] = useState(false);
   const [activeTab, setActiveTab] = useState<"approaches" | "phases" | "detection" | "timings">("approaches");
   // When true, mouse-wheel over the persistent map scrolls the page instead of zooming.
-  const [mapZoomLocked, setMapZoomLocked] = useState(true);
+  // Agency default for what the wheel does over a map.
+  const mapScrollZoom = isMapScrollZoomEnabled(agencyDefaults);
+  // Starting state for the main map comes from that default; the lock button
+  // below the map still overrides it for this session.
+  const [mapZoomLocked, setMapZoomLocked] = useState(() => !mapScrollZoom);
 
   // Quick-add Approach (rapid input below the map on Approaches tab)
   const [qaApproachId, setQaApproachId] = useState("");
@@ -260,14 +264,20 @@ export default function SignalDetails() {
       setSignalApproaches([]);
       setSignalTimings([]);
       setIsEditingSignal(true); // Start in editing mode for new signal
+      // If the map supplied a temporary location (via single-click add), use it;
+      // otherwise fall back to the agency or a US-center default.
+      const initLat = tempNewSignalLocation?.latitude ?? agency?.latitude ?? 39.8283;
+      const initLng = tempNewSignalLocation?.longitude ?? agency?.longitude ?? -98.5795;
       signalForm.reset({
         signalId: "",
         streetName1: "",
         streetName2: "",
-        latitude: agency?.latitude || 39.8283,
-        longitude: agency?.longitude || -98.5795,
+        latitude: initLat,
+        longitude: initLng,
         agencyId: agency?.agencyId || "",
       });
+      // Clear the temporary location so future new-signals don't reuse it
+      if (tempNewSignalLocation) setTempNewSignalLocation(null);
     } else if (signalId) {
       const foundSignal = signals.find(s => s.signalId === signalId);
       if (foundSignal) {
@@ -911,22 +921,7 @@ export default function SignalDetails() {
                       <FormItem className="space-y-1">
                         <FormLabel className="text-[10px] uppercase tracking-wide font-medium text-grey-500">Agency ID</FormLabel>
                         <FormControl>
-                          <Select value={field.value || (() => {
-                            try {
-                              const defId = agencyListStorage.getDefaultId();
-                              const list = agencyListStorage.getAll();
-                              return list.find(a => a.id === defId)?.agencyId || "";
-                            } catch { return ""; }
-                          })()} onValueChange={field.onChange}>
-                            <SelectTrigger className="h-7 text-sm">
-                              <SelectValue placeholder="Select agency" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {agencyListStorage.getAll().map(a => (
-                                <SelectItem key={a.id} value={a.agencyId}>{a.agencyName} ({a.agencyId})</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Input {...field} className="h-7 text-sm" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -2247,18 +2242,7 @@ export default function SignalDetails() {
                     <FormItem className="space-y-1">
                       <FormLabel className="text-xs font-medium">Agency ID</FormLabel>
                       <FormControl>
-                        <Select value={field.value || (() => {
-                          try { const defId = agencyListStorage.getDefaultId(); const list = agencyListStorage.getAll(); return list.find(a => a.id === defId)?.agencyId || ""; } catch { return ""; }
-                        })()} onValueChange={field.onChange}>
-                          <SelectTrigger className="h-7 px-2 text-xs">
-                            <SelectValue placeholder="Select agency" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {agencyListStorage.getAll().map(a => (
-                              <SelectItem key={a.id} value={a.agencyId}>{a.agencyName} ({a.agencyId})</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Input {...field} className="h-7 px-2 text-xs" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -2325,7 +2309,7 @@ export default function SignalDetails() {
                       center={[signalForm.watch("latitude") || signal?.latitude || 0, signalForm.watch("longitude") || signal?.longitude || 0]}
                       zoom={16}
                       maxZoom={22}
-                      scrollWheelZoom={false}
+                      scrollWheelZoom={mapScrollZoom}
                       style={{ height: "100%", width: "100%", zIndex: 1 }}
                       key={`edit-map-${signalForm.watch("latitude")}-${signalForm.watch("longitude")}`}
                     >

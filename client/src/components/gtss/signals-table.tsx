@@ -1,12 +1,13 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import SignalsMap from "@/components/ui/signals-map";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { getDerivedStreetNames, Signal, useGTSSStore, useSignals } from "gtss";
-import { ChevronDown, ChevronUp, MapPin, Navigation, Plus, Search, X } from "lucide-react";
+import { getDerivedStreetNames, useGTSSStore, useSignals } from "gtss";
+import type { Signal } from "gtss/schema";
+
+import { ChevronDown, ChevronUp, MapPin, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import BulkSignalModal from "./bulk-signal-modal";
 import SignalModal from "./signal-modal";
@@ -255,6 +256,7 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
                 getCompletenessPct={getCompletenessPct}
                 highlightedSignalId={hoveredSignalId}
                 className="w-full h-full"
+                enableClickToAdd={true}
               />
             </div>
           )}
@@ -293,23 +295,7 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
                     </button>
                   )}
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Button
-                    onClick={() => setShowBulkModal(true)}
-                    variant="outline"
-                    className="h-8 px-3 text-xs border-primary-200 text-primary-700 hover:bg-primary-50 flex items-center gap-1"
-                  >
-                    <Navigation className="w-3 h-3" />
-                    <span>Add Multiple</span>
-                  </Button>
-                  <Button
-                    onClick={handleAdd}
-                    className="h-8 px-3 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Add Signal</span>
-                  </Button>
-                </div>
+                {/* Header buttons removed — Add controls remain below the map */}
               </div>
             </CardHeader>
             <CardContent className="p-0 flex-1 min-h-0 overflow-auto">

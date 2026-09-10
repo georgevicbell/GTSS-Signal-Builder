@@ -16,6 +16,10 @@ interface GTSSStore {
   currentView: 'main' | 'signal-details';
   currentSignalId: string | null; // null = new signal, string = edit existing
 
+  // Temporary coordinates when creating a new signal via the map click
+  tempNewSignalLocation: { latitude: number; longitude: number } | null;
+  setTempNewSignalLocation: (loc: { latitude: number; longitude: number } | null) => void;
+
   // Shared signal selection state (persists across tabs)
   selectedSignalIdForTables: string;
   setSelectedSignalIdForTables: (signalId: string) => void;
@@ -139,6 +143,10 @@ export const useGTSSStore = create<GTSSStore>((set) => ({
   // Navigation actions
   navigateToMain: () => set({ currentView: 'main', currentSignalId: null }),
   navigateToSignalDetails: (signalId) => set({ currentView: 'signal-details', currentSignalId: signalId }),
+
+  // Temp location used when adding a new signal from the map click
+  tempNewSignalLocation: null,
+  setTempNewSignalLocation: (loc) => set({ tempNewSignalLocation: loc }),
 
   loadFromStorage: () => set({
     agency: agencyStorage.get(),
