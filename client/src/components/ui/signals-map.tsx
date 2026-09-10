@@ -30,6 +30,8 @@ interface SignalsMapProps {
   /** Optional completeness lookup so the popup can show the same %-bar as the table. */
   getCompletenessPct?: (signalId: string) => number;
   className?: string;
+  /** When true, enable map-click-to-add behavior and crosshair cursor (signals page only) */
+  enableClickToAdd?: boolean;
 }
 
 // Distinct icon used when a signal is being hovered in the list — bright pink
@@ -188,7 +190,7 @@ function SignalPopup({
   );
 }
 
-export default function SignalsMap({ signals, approaches, phases, onSignalSelect, getCompletenessPct, highlightedSignalId, className }: SignalsMapProps) {
+export default function SignalsMap({ signals, approaches, phases, onSignalSelect, getCompletenessPct, highlightedSignalId, className, enableClickToAdd = false }: SignalsMapProps) {
   const agency = useGTSSStore((state) => state.agency);
   const { navigateToSignalDetails, setTempNewSignalLocation } = useGTSSStore();
 
@@ -223,7 +225,7 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
         zoom={signals.length === 1 ? 15 : signals.length > 0 ? 13 : 4}
         scrollWheelZoom={true}
         style={{ height: "100%", width: "100%", zIndex: 1 }}
-        className={`rounded-lg cursor-crosshair`}
+        className={`rounded-lg ${enableClickToAdd ? "cursor-crosshair" : ""}`}
         key={`map-${signals.length}-${center[0]}-${center[1]}`}
       >
         <MapTileLayers />
@@ -231,13 +233,15 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
 
         <MapBounds signals={signals} />
 
-        <ClickToAdd
-          onMapClick={(lat, lng) => {
-            // Save temporary coords and open the new-signal form
-            setTempNewSignalLocation({ latitude: lat, longitude: lng });
-            navigateToSignalDetails(null);
-          }}
-        />
+        {enableClickToAdd && (
+          <ClickToAdd
+            onMapClick={(lat, lng) => {
+              // Save temporary coords and open the new-signal form
+              setTempNewSignalLocation({ latitude: lat, longitude: lng });
+              navigateToSignalDetails(null);
+            }}
+          />
+        )}
 
         {signals.filter(signal => signal.latitude && signal.longitude).map((signal) => (
           <Marker
@@ -245,6 +249,12 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
             position={[signal.latitude, signal.longitude]}
             icon={highlightedSignalId === signal.signalId ? highlightedSignalIcon : new L.Icon.Default()}
             zIndexOffset={highlightedSignalId === signal.signalId ? 1000 : 0}
+            eventHandlers={{
+              click: (e) => {
+                // Prevent marker clicks from bubbling up to the map (which would trigger click-to-add)
+                (e.originalEvent as any)?.stopPropagation?.();
+              },
+            }}
           >
             <Popup minWidth={272}>
               <SignalPopup
@@ -284,6 +294,12 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
                 color={color}
                 weight={4}
                 opacity={0.8}
+                eventHandlers={{
+                  click: (e) => {
+                    // Prevent polyline clicks from bubbling to the map
+                    (e.originalEvent as any)?.stopPropagation?.();
+                  },
+                }}
               />
             );
           });

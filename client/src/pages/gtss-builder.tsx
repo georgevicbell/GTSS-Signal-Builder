@@ -492,6 +492,13 @@ export default function GTSSBuilder() {
                     <span>Add Detectors</span>
                   </Button>
                 </div>
+              ) : activeTab === "basic-timings" ? (
+                <div className="flex space-x-1">
+                  <Button onClick={handleAddBasicTiming} className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1">
+                    <Plus className="w-3 h-3" />
+                    <span>Add Timing</span>
+                  </Button>
+                </div>
               ) : null
             )}
           </div>

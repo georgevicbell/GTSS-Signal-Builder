@@ -256,6 +256,7 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
                 getCompletenessPct={getCompletenessPct}
                 highlightedSignalId={hoveredSignalId}
                 className="w-full h-full"
+                enableClickToAdd={true}
               />
             </div>
           )}
