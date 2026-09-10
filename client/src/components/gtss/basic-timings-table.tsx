@@ -220,6 +220,7 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
   const [sortField, setSortField] = useState<SortField>('phase');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const { basicTimings, signals, approaches, phases, selectedSignalIdForTables, setSelectedSignalIdForTables } = useGTSSStore();
+  const { deepLinkTarget, setDeepLinkTarget } = useGTSSStore();
   const svgRef = useRef<SVGSVGElement>(null);
   const phaseDiagramRef = useRef<SVGSVGElement>(null);
 
@@ -233,6 +234,20 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
       setSelectedSignalId(signals[0].signalId);
     }
   }, [signals, selectedSignalId, setSelectedSignalId]);
+
+  // Open timing modal when deep-linked
+  useEffect(() => {
+    if (deepLinkTarget?.type === 'basicTiming' && deepLinkTarget.id) {
+      const t = basicTimings.find(bt => bt.id === deepLinkTarget.id);
+      if (t) {
+        setSelectedSignalId(t.signalId);
+        setEditingTiming(t);
+        setShowModal(true);
+        setDeepLinkTarget({ type: null, id: null });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkTarget, basicTimings]);
 
   const timingHooks = useBasicTimings();
 

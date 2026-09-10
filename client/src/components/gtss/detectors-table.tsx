@@ -27,6 +27,7 @@ export default function DetectorsTable({ triggerAdd, triggerBulk }: DetectorsTab
   const [sortField, setSortField] = useState<SortField>('signalId');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const { detectors, signals, approaches, phases, selectedSignalIdForTables, setSelectedSignalIdForTables } = useGTSSStore();
+  const { deepLinkTarget, setDeepLinkTarget } = useGTSSStore();
   const svgRef = useRef<SVGSVGElement>(null);
 
   // Use shared signal selection from store
@@ -39,6 +40,20 @@ export default function DetectorsTable({ triggerAdd, triggerBulk }: DetectorsTab
       setSelectedSignalId(signals[0].signalId);
     }
   }, [signals, selectedSignalId, setSelectedSignalId]);
+
+  // Open detector modal when deep-linked
+  useEffect(() => {
+    if (deepLinkTarget?.type === 'detector' && deepLinkTarget.id) {
+      const det = detectors.find(d => d.id === deepLinkTarget.id);
+      if (det) {
+        setSelectedSignalId(det.signalId);
+        setEditingDetector(det);
+        setShowModal(true);
+        setDeepLinkTarget({ type: null, id: null });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkTarget, detectors]);
   const { toast } = useToast();
   const detectorHooks = useDetectors();
 

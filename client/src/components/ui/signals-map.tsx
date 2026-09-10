@@ -5,8 +5,13 @@ import { getDerivedStreetNames, useGTSSStore, useMapScrollZoom } from "gtss";
 import { Approach, Phase, Signal } from "gtss/schema";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+<<<<<<< HEAD
 import { useEffect, useMemo } from "react";
 import { MapContainer, Marker, Polyline, Popup, useMap, useMapEvents } from "react-leaflet";
+=======
+import { useEffect, useMemo, useState } from "react";
+import { MapContainer, Marker, Polyline, Popup, useMap } from "react-leaflet";
+>>>>>>> george-deeplink
 import MapTileLayers from "./map-tile-layers";
 
 // Fix for default markers in react-leaflet
@@ -205,6 +210,8 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
     return null;
   }
 
+  const [map, setMap] = useState<L.Map | null>(null);
+
   // Use agency coordinates as starting point for map center
   const center: [number, number] = useMemo(() => {
     // First priority: use agency coordinates if available
@@ -228,12 +235,37 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
         style={{ height: "100%", width: "100%", zIndex: 1 }}
         className={`rounded-lg ${enableClickToAdd ? "cursor-crosshair" : ""}`}
         key={`map-${signals.length}-${center[0]}-${center[1]}`}
+        whenCreated={(m) => setMap(m)}
       >
         <MapTileLayers />
+<<<<<<< HEAD
         <MapResizeObserver />
+=======
+        {map && (
+          <>
+            <MapBounds signals={signals} />
+>>>>>>> george-deeplink
 
-        <MapBounds signals={signals} />
+            {signals.filter(signal => signal.latitude && signal.longitude).map((signal) => (
+              <Marker
+                key={signal.id}
+                position={[signal.latitude, signal.longitude]}
+                icon={highlightedSignalId === signal.signalId ? highlightedSignalIcon : new L.Icon.Default()}
+                zIndexOffset={highlightedSignalId === signal.signalId ? 1000 : 0}
+              >
+                <Popup minWidth={272}>
+                  <SignalPopup
+                    signal={signal}
+                    approaches={approaches || []}
+                    phases={phases || []}
+                    getCompletenessPct={getCompletenessPct}
+                    onSignalSelect={onSignalSelect}
+                  />
+                </Popup>
+              </Marker>
+            ))}
 
+<<<<<<< HEAD
         {enableClickToAdd && (
           <ClickToAdd
             onMapClick={(lat, lng) => {
@@ -271,6 +303,10 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
 
         {/* Render approach arrows */}
         {approaches && signals.filter(signal => signal.latitude && signal.longitude).map((signal) => {
+=======
+            {/* Render approach arrows */}
+            {approaches && signals.filter(signal => signal.latitude && signal.longitude).map((signal) => {
+>>>>>>> george-deeplink
           // Color index counts every approach on the signal, matching the
           // signal-details map; only the ones with a bearing get a line.
           const allApproaches = approaches.filter(a => a.signalId === signal.signalId);
@@ -305,6 +341,8 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
             );
           });
         })}
+          </>
+        )}
       </MapContainer>
     </div>
   );
