@@ -198,7 +198,7 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
           ) : (
             <div className="w-full h-full relative z-0">
               {filterSignal ? (
-                <SignalsMap signals={[signals.find(s => s.signalId === filterSignal)!]} className="w-full h-full" />
+                <SignalsMap signals={signals.filter(s => s.signalId === filterSignal)} className="w-full h-full" />
               ) : (
                 <div className="w-full h-full bg-grey-100 flex items-center justify-center">
                   <MapPin className="w-6 h-6 text-grey-400" />
