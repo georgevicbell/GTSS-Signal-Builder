@@ -5,13 +5,8 @@ import { getDerivedStreetNames, useGTSSStore, useMapScrollZoom } from "gtss";
 import { Approach, Phase, Signal } from "gtss/schema";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-<<<<<<< HEAD
-import { useEffect, useMemo } from "react";
-import { MapContainer, Marker, Polyline, Popup, useMap, useMapEvents } from "react-leaflet";
-=======
 import { useEffect, useMemo, useState } from "react";
-import { MapContainer, Marker, Polyline, Popup, useMap } from "react-leaflet";
->>>>>>> george-deeplink
+import { MapContainer, Marker, Polyline, Popup, useMap, useMapEvents } from "react-leaflet";
 import MapTileLayers from "./map-tile-layers";
 
 // Fix for default markers in react-leaflet
@@ -238,13 +233,10 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
         whenCreated={(m) => setMap(m)}
       >
         <MapTileLayers />
-<<<<<<< HEAD
         <MapResizeObserver />
-=======
         {map && (
           <>
             <MapBounds signals={signals} />
->>>>>>> george-deeplink
 
             {signals.filter(signal => signal.latitude && signal.longitude).map((signal) => (
               <Marker
@@ -265,7 +257,6 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
               </Marker>
             ))}
 
-<<<<<<< HEAD
         {enableClickToAdd && (
           <ClickToAdd
             onMapClick={(lat, lng) => {
@@ -301,12 +292,8 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
           </Marker>
         ))}
 
-        {/* Render approach arrows */}
-        {approaches && signals.filter(signal => signal.latitude && signal.longitude).map((signal) => {
-=======
             {/* Render approach arrows */}
             {approaches && signals.filter(signal => signal.latitude && signal.longitude).map((signal) => {
->>>>>>> george-deeplink
           // Color index counts every approach on the signal, matching the
           // signal-details map; only the ones with a bearing get a line.
           const allApproaches = approaches.filter(a => a.signalId === signal.signalId);

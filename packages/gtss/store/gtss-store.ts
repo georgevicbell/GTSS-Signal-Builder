@@ -1,7 +1,7 @@
 import { create } from 'zustand';
+import type { Agency, Approach, BasicTiming, Detector, Phase, Signal } from '../schema/schema';
 import { AgencyDefaults, } from '../src/agencyDefaults';
 import { agencyDefaultsStorage, agencyStorage, approachStorage, basicTimingStorage, detectorStorage, phaseStorage, signalStorage } from '../src/localStorage';
-import type { Agency, Approach, BasicTiming, Detector, Phase, Signal } from '../schema/schema';
 
 interface GTSSStore {
   agency: Agency | null;
@@ -150,14 +150,11 @@ export const useGTSSStore = create<GTSSStore>((set) => ({
   navigateToMain: () => set({ currentView: 'main', currentSignalId: null }),
   navigateToSignalDetails: (signalId) => set({ currentView: 'signal-details', currentSignalId: signalId }),
 
-<<<<<<< HEAD
   // Temp location used when adding a new signal from the map click
   tempNewSignalLocation: null,
   setTempNewSignalLocation: (loc) => set({ tempNewSignalLocation: loc }),
-=======
   deepLinkTarget: { type: null, id: null },
   setDeepLinkTarget: (target) => set({ deepLinkTarget: target }),
->>>>>>> george-deeplink
 
   loadFromStorage: () => set({
     agency: agencyStorage.get(),
