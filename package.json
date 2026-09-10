@@ -18,7 +18,7 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{ts,tsx,js}": ["prettier --write --ignore-unknown","eslint --cache --fix"]
+    "*.{ts,tsx,js}": ["prettier --write --ignore-unknown","eslint 'client/**/*.{ts,tsx}' 'server/**/*.{ts,tsx}' 'packages/**/*.{ts,tsx}' --cache --fix"]
   },
   "workspaces": [
     "packages/*"
