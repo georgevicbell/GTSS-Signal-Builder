@@ -93,7 +93,7 @@ function approachEndpoint(bearing: number, lat: number, lng: number): [number, n
 
 export default function SignalDetails() {
   const { toast } = useToast();
-  const { agency, signals, phases, detectors, approaches, basicTimings, currentSignalId, navigateToMain, navigateToSignalDetails } = useGTSSStore();
+  const { agency, signals, phases, detectors, approaches, basicTimings, currentSignalId, navigateToMain, navigateToSignalDetails, tempNewSignalLocation, setTempNewSignalLocation } = useGTSSStore();
   const signalId = currentSignalId;
   const isNewSignal = signalId === null;
   const signalHooks = useSignals();
@@ -260,14 +260,20 @@ export default function SignalDetails() {
       setSignalApproaches([]);
       setSignalTimings([]);
       setIsEditingSignal(true); // Start in editing mode for new signal
+      // If the map supplied a temporary location (via single-click add), use it;
+      // otherwise fall back to the agency or a US-center default.
+      const initLat = tempNewSignalLocation?.latitude ?? agency?.latitude ?? 39.8283;
+      const initLng = tempNewSignalLocation?.longitude ?? agency?.longitude ?? -98.5795;
       signalForm.reset({
         signalId: "",
         streetName1: "",
         streetName2: "",
-        latitude: agency?.latitude || 39.8283,
-        longitude: agency?.longitude || -98.5795,
+        latitude: initLat,
+        longitude: initLng,
         agencyId: agency?.agencyId || "",
       });
+      // Clear the temporary location so future new-signals don't reuse it
+      if (tempNewSignalLocation) setTempNewSignalLocation(null);
     } else if (signalId) {
       const foundSignal = signals.find(s => s.signalId === signalId);
       if (foundSignal) {
@@ -2299,7 +2305,7 @@ export default function SignalDetails() {
                       center={[signalForm.watch("latitude") || signal?.latitude || 0, signalForm.watch("longitude") || signal?.longitude || 0]}
                       zoom={16}
                       maxZoom={22}
-                      scrollWheelZoom={false}
+                      scrollWheelZoom={true}
                       style={{ height: "100%", width: "100%", zIndex: 1 }}
                       key={`edit-map-${signalForm.watch("latitude")}-${signalForm.watch("longitude")}`}
                     >

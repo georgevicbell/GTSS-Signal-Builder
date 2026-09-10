@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Approach, getSignalDisplayName, useApproaches, useGTSSStore } from "gtss";
 import { ChevronDown, ChevronUp, MapPin, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import ResizableBlock from "@/components/ui/resizable-block";
 import ApproachModal from "./approach-modal";
 import BulkApproachModal from "./bulk-approach-modal";
 
@@ -177,6 +178,7 @@ export default function ApproachesTable({ triggerAdd, triggerBulk }: ApproachesT
     <div className="max-w-6xl">
       <Card>
         <CardHeader className="bg-grey-50 border-b border-grey-200 p-3">
+          
           {signals.length === 0 ? (
             <div className="p-2 bg-warning-50 border border-warning-200 rounded-md">
               <p className="text-xs text-warning-700">
@@ -201,18 +203,11 @@ export default function ApproachesTable({ triggerAdd, triggerBulk }: ApproachesT
                 {selectedSignalId && (
                   <span className="text-xs text-grey-600 whitespace-nowrap">({filteredApproaches.length} approach{filteredApproaches.length !== 1 ? 'es' : ''})</span>
                 )}
-                <Button
-                  onClick={() => setShowBulkModal(true)}
-                  className="h-8 px-3 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1 whitespace-nowrap"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Add Approaches</span>
-                </Button>
               </div>
               {selectedSignalId && (() => {
                 const selectedSignal = signals.find(s => s.signalId === selectedSignalId);
                 return (
-                  <div className="w-full h-72">
+                  <ResizableBlock initialHeight={288} minHeight={120} maxHeight={800}>
                     {selectedSignal && selectedSignal.latitude && selectedSignal.longitude ? (
                       <div className="w-full h-full border border-grey-300 rounded-md overflow-hidden bg-white relative z-0">
                         <SignalsMap
@@ -226,7 +221,7 @@ export default function ApproachesTable({ triggerAdd, triggerBulk }: ApproachesT
                         <MapPin className="w-6 h-6 text-grey-400" />
                       </div>
                     )}
-                  </div>
+                  </ResizableBlock>
                 );
               })()}
             </div>

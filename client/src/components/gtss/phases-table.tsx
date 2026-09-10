@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { downloadSvgAsJpg, getSignalDisplayName, Phase, phaseDiagramFileName, useGTSSStore, usePhases } from "gtss";
 import { AlertTriangle, ChevronDown, ChevronUp, Download, MapPin, Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import ResizableBlock from "@/components/ui/resizable-block";
 import BulkPhaseModal from "./bulk-phase-modal";
 import PhaseDiagram from "./phase-diagram";
 import PhaseModal from "./phase-modal";
@@ -183,6 +184,7 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
     <div className="max-w-6xl">
       <Card>
         <CardHeader className="bg-grey-50 border-b border-grey-200 p-3">
+         
           {signals.length === 0 ? (
             <div className="p-2 bg-warning-50 border border-warning-200 rounded-md">
               <p className="text-xs text-warning-700">
@@ -204,13 +206,7 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
                     ))}
                   </SelectContent>
                 </Select>
-                <Button
-                  onClick={() => setShowBulkModal(true)}
-                  className="h-8 px-3 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1 whitespace-nowrap"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Add Phases</span>
-                </Button>
+                
               </div>
               {filterSignal && (
                 <div className="flex items-stretch gap-3">
@@ -245,7 +241,7 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
                   {(() => {
                     const selectedSignal = signals.find(s => s.signalId === filterSignal);
                     return (
-                      <div className="flex-1 h-72">
+                      <ResizableBlock initialHeight={288} minHeight={120} maxHeight={800}>
                         {selectedSignal && selectedSignal.latitude && selectedSignal.longitude ? (
                           <div className="w-full h-full border border-grey-300 rounded-md overflow-hidden bg-white relative z-0">
                             <SignalsMap signals={[selectedSignal]} className="w-full h-full" />
@@ -255,9 +251,9 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
                             <MapPin className="w-6 h-6 text-grey-400" />
                           </div>
                         )}
-                      </div>
+                      </ResizableBlock>
                     );
-                  })()}
+                  })()} 
                 </div>
               )}
             </div>

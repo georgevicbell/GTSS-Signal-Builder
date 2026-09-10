@@ -625,7 +625,7 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
                 <MapContainer
                   center={[selectedSignal.latitude, selectedSignal.longitude]}
                   zoom={17}
-                  scrollWheelZoom={false}
+                  scrollWheelZoom={true}
                   style={{ height: "100%", width: "100%" }}
                 >
                   <MapTileLayers />

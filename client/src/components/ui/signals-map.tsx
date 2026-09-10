@@ -1,10 +1,10 @@
 import { PhaseDiagram } from "@/components/gtss/phase-diagram-svg";
-import { Button } from "@/components/ui/button";
-import { Approach, getDerivedStreetNames, Phase, Signal, useGTSSStore } from "gtss";
+import { getDerivedStreetNames, useGTSSStore } from "gtss";
+import {Approach,Phase,Signal} from"gtss/schema";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo } from "react";
-import { MapContainer, Marker, Polyline, Popup, useMap } from "react-leaflet";
+import { MapContainer, Marker, Polyline, Popup, useMap, useMapEvents } from "react-leaflet";
 import MapTileLayers from "./map-tile-layers";
 import { approachColorFor } from "@/components/gtss/approach-colors";
 
@@ -100,6 +100,30 @@ function MapBounds({ signals }: { signals: Signal[] }) {
   return null;
 }
 
+// Observes container size changes and invalidates the Leaflet map so it
+// redraws correctly when surrounding panes resize (prevents gray tiles).
+function MapResizeObserver() {
+  const map = useMap();
+
+  useEffect(() => {
+    const container = map.getContainer();
+    if (!container || typeof (window as any).ResizeObserver === "undefined") return;
+
+    const ro = new ResizeObserver(() => {
+      // Give the browser a moment to finish layout before invalidating
+      // size to avoid a race where tiles are requested for the wrong size.
+      setTimeout(() => map.invalidateSize(), 50);
+    });
+
+    ro.observe(container);
+    if (container.parentElement) ro.observe(container.parentElement);
+
+    return () => ro.disconnect();
+  }, [map]);
+
+  return null;
+}
+
 // Compact map popup: street-name title, phase diagram with the intersection
 // number in the middle, optional completeness bar, and a Full Details button.
 function SignalPopup({
@@ -165,6 +189,17 @@ function SignalPopup({
 
 export default function SignalsMap({ signals, approaches, phases, onSignalSelect, getCompletenessPct, highlightedSignalId, className }: SignalsMapProps) {
   const agency = useGTSSStore((state) => state.agency);
+  const { navigateToSignalDetails, setTempNewSignalLocation } = useGTSSStore();
+
+  // Map click helper used for adding a signal (always enabled)
+  function ClickToAdd({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
+    useMapEvents({
+      click(e) {
+        onMapClick(e.latlng.lat, e.latlng.lng);
+      },
+    });
+    return null;
+  }
 
   // Use agency coordinates as starting point for map center
   const center: [number, number] = useMemo(() => {
@@ -185,14 +220,23 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
       <MapContainer
         center={center}
         zoom={signals.length === 1 ? 15 : signals.length > 0 ? 13 : 4}
-        scrollWheelZoom={false}
+        scrollWheelZoom={true}
         style={{ height: "100%", width: "100%", zIndex: 1 }}
-        className="rounded-lg"
+        className={`rounded-lg cursor-crosshair`}
         key={`map-${signals.length}-${center[0]}-${center[1]}`}
       >
         <MapTileLayers />
+        <MapResizeObserver />
 
         <MapBounds signals={signals} />
+
+        <ClickToAdd
+          onMapClick={(lat, lng) => {
+            // Save temporary coords and open the new-signal form
+            setTempNewSignalLocation({ latitude: lat, longitude: lng });
+            navigateToSignalDetails(null);
+          }}
+        />
 
         {signals.filter(signal => signal.latitude && signal.longitude).map((signal) => (
           <Marker

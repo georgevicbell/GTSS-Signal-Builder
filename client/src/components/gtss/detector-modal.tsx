@@ -631,7 +631,7 @@ export default function DetectorModal({ detector, onClose, preSelectedSignalId }
                         key={selectedSignalId} // Force remount when signal changes
                         center={[selectedSignal.latitude || 0, selectedSignal.longitude || 0]}
                         zoom={18}
-                        scrollWheelZoom={false}
+                        scrollWheelZoom={true}
                         style={{ height: "100%", width: "100%" }}
                       >
                         <MapTileLayers />

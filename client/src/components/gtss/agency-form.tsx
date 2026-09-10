@@ -246,7 +246,7 @@ export default function AgencyForm() {
                   <MapContainer
                     center={mapCenter}
                     zoom={selectedLocation ? 12 : 6}
-                    scrollWheelZoom={false}
+                    scrollWheelZoom={true}
                     style={{ height: "100%", width: "100%" }}
                     className="rounded-lg border"
                     key={`agency-map-${mapCenter[0]}-${mapCenter[1]}`}

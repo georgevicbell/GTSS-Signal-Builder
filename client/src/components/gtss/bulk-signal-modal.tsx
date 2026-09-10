@@ -7,6 +7,7 @@ import { useGTSSStore, useSignals, type InsertSignal } from "gtss";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapPin, Save, Trash2, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { MapContainer, Marker, useMapEvents } from "react-leaflet";
 
@@ -107,6 +108,10 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
     setPendingSignals(prev => [...prev, newSignal]);
   };
 
+  const handleUpdatePendingLocation = (id: string, lat: number, lon: number) => {
+    setPendingSignals(prev => prev.map(s => s.id === id ? { ...s, lat, lon } : s));
+  };
+
   const handleRemoveSignal = (signalId: string) => {
     setPendingSignals(prev => prev.filter(s => s.id !== signalId));
   };
@@ -186,8 +191,9 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
             <MapContainer
               center={getMapCenter()}
               zoom={13}
-              scrollWheelZoom={false}
+              scrollWheelZoom={true}
               style={{ height: "100%", width: "100%" }}
+              className="rounded-lg cursor-crosshair"
             >
               <MapTileLayers />
 
@@ -212,11 +218,18 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
                 )
               ))}
 
-              {/* New pending signals in blue */}
+              {/* New pending signals in blue (draggable) */}
               {pendingSignals.map((signal) => (
                 <Marker
                   key={signal.id}
                   position={[signal.lat, signal.lon]}
+                  draggable={true}
+                  eventHandlers={{
+                    dragend: (e) => {
+                      const latlng = (e.target as any).getLatLng();
+                      handleUpdatePendingLocation(signal.id, latlng.lat, latlng.lng);
+                    }
+                  }}
                 />
               ))}
             </MapContainer>
@@ -228,17 +241,42 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
               <div className="space-y-2">
                 {pendingSignals.map((signal, index) => (
                   <div key={signal.id} className="flex items-center justify-between text-xs bg-white p-2 rounded border">
-                    <div>
-                      <span className="font-medium">Signal {index + 1}</span>
-                      {signal.streetName1 && (
-                        <span className="text-grey-600 ml-2">
-                          {signal.streetName1}{signal.streetName2 ? ` & ${signal.streetName2}` : ""}
-                        </span>
-                      )}
-                      <span className="text-grey-500 ml-2">
-                        ({signal.lat.toFixed(4)}, {signal.lon.toFixed(4)})
-                      </span>
-                    </div>
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <span className="font-medium">Signal {index + 1}</span>
+                          {signal.streetName1 && (
+                            <span className="text-grey-600 ml-2">
+                              {signal.streetName1}{signal.streetName2 ? ` & ${signal.streetName2}` : ""}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-grey-500 text-xs flex items-center gap-2">
+                          <label className="flex items-center gap-1">
+                            <span className="text-[11px] text-grey-500">Lat</span>
+                            <input
+                              type="text"
+                              defaultValue={signal.lat.toFixed(6)}
+                              onBlur={(e) => {
+                                const v = parseFloat(e.target.value);
+                                if (!isNaN(v)) handleUpdatePendingLocation(signal.id, v, signal.lon);
+                              }}
+                              className="w-28 text-xs px-1 py-0.5 border rounded"
+                            />
+                          </label>
+                          <label className="flex items-center gap-1">
+                            <span className="text-[11px] text-grey-500">Lon</span>
+                            <input
+                              type="text"
+                              defaultValue={signal.lon.toFixed(6)}
+                              onBlur={(e) => {
+                                const v = parseFloat(e.target.value);
+                                if (!isNaN(v)) handleUpdatePendingLocation(signal.id, signal.lat, v);
+                              }}
+                              className="w-28 text-xs px-1 py-0.5 border rounded"
+                            />
+                          </label>
+                        </div>
+                      </div>
                     <Button
                       variant="ghost"
                       size="sm"

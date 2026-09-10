@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Detector, getSignalDisplayName, useDetectors, useGTSSStore } from "gtss";
 import { ChevronDown, ChevronUp, Download, MapPin, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import ResizableBlock from "@/components/ui/resizable-block";
 import BulkDetectorModal from "./bulk-detector-modal";
 import DetectorDiagram from "./detector-diagram";
 import DetectorModal from "./detector-modal";
@@ -233,6 +234,7 @@ export default function DetectorsTable({ triggerAdd, triggerBulk }: DetectorsTab
     <div className="max-w-6xl">
       <Card>
         <CardHeader className="bg-grey-50 border-b border-grey-200 p-3">
+          
           {signals.length === 0 ? (
             <div className="p-2 bg-warning-50 border border-warning-200 rounded-md">
               <p className="text-xs text-warning-700">
@@ -254,13 +256,7 @@ export default function DetectorsTable({ triggerAdd, triggerBulk }: DetectorsTab
                     ))}
                   </SelectContent>
                 </Select>
-                <Button
-                  onClick={() => setShowBulkModal(true)}
-                  className="h-8 px-3 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1 whitespace-nowrap"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Add Detectors</span>
-                </Button>
+                
               </div>
               {selectedSignalId && (
                 <div className="flex flex-col gap-2">
@@ -296,7 +292,7 @@ export default function DetectorsTable({ triggerAdd, triggerBulk }: DetectorsTab
                   {(() => {
                     const selectedSignal = signals.find(s => s.signalId === selectedSignalId);
                     return (
-                      <div className="w-full h-72">
+                      <ResizableBlock initialHeight={288} minHeight={120} maxHeight={800}>
                         {selectedSignal && selectedSignal.latitude && selectedSignal.longitude ? (
                           <div className="w-full h-full border border-grey-300 rounded-md overflow-hidden bg-white relative z-0">
                             <SignalsMap signals={[selectedSignal]} className="w-full h-full" />
@@ -306,7 +302,7 @@ export default function DetectorsTable({ triggerAdd, triggerBulk }: DetectorsTab
                             <MapPin className="w-6 h-6 text-grey-400" />
                           </div>
                         )}
-                      </div>
+                      </ResizableBlock>
                     );
                   })()}
                 </div>

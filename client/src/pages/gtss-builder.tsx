@@ -133,12 +133,24 @@ export default function GTSSBuilder() {
     setTriggerAddApproach(prev => prev + 1);
   };
 
+  const handleBulkApproach = () => {
+    setTriggerBulkApproach(prev => prev + 1);
+  };
+
   const handleAddPhase = () => {
     setTriggerAddPhase(prev => prev + 1);
   };
 
+  const handleBulkPhase = () => {
+    setTriggerBulkPhase(prev => prev + 1);
+  };
+
   const handleAddDetector = () => {
     setTriggerAddDetector(prev => prev + 1);
+  };
+
+  const handleBulkDetector = () => {
+    setTriggerBulkDetector(prev => prev + 1);
   };
 
   const handleAddBasicTiming = () => {
@@ -447,17 +459,40 @@ export default function GTSSBuilder() {
                 </p>
               </div>
             </div>
-            {!showExportPanel && !showImportPanel && activeTab === "signals" && (
-              <div className="flex space-x-1">
-                <Button onClick={handleAddMultiple} variant="outline" className="h-7 px-2 text-xs border-primary-200 text-primary-700 hover:bg-primary-50 flex items-center gap-1">
-                  <Navigation className="w-3 h-3" />
-                  <span>Add Multiple</span>
-                </Button>
-                <Button onClick={handleAddSignal} className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1">
-                  <Plus className="w-3 h-3" />
-                  <span>Add Signal</span>
-                </Button>
-              </div>
+            {!showExportPanel && !showImportPanel && (
+              activeTab === "signals" ? (
+                <div className="flex space-x-1">
+                  <Button onClick={handleAddMultiple} variant="outline" className="h-7 px-2 text-xs border-primary-200 text-primary-700 hover:bg-primary-50 flex items-center gap-1">
+                    <Navigation className="w-3 h-3" />
+                    <span>Add Multiple</span>
+                  </Button>
+                  <Button onClick={handleAddSignal} className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1">
+                    <Plus className="w-3 h-3" />
+                    <span>Add Signal</span>
+                  </Button>
+                </div>
+              ) : activeTab === "approaches" ? (
+                <div className="flex space-x-1">
+                  <Button onClick={handleAddApproach} className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1">
+                    <Plus className="w-3 h-3" />
+                    <span>Add Approaches</span>
+                  </Button>
+                </div>
+              ) : activeTab === "phases" ? (
+                <div className="flex space-x-1">
+                  <Button onClick={handleAddPhase} className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1">
+                    <Plus className="w-3 h-3" />
+                    <span>Add Phases</span>
+                  </Button>
+                </div>
+              ) : activeTab === "detectors" ? (
+                <div className="flex space-x-1">
+                  <Button onClick={handleAddDetector} className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1">
+                    <Plus className="w-3 h-3" />
+                    <span>Add Detectors</span>
+                  </Button>
+                </div>
+              ) : null
             )}
           </div>
         </header>
