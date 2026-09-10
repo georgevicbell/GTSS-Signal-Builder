@@ -26,6 +26,7 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
   const [sortField, setSortField] = useState<SortField>('phase');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const { signals, phases, approaches, selectedSignalIdForTables, setSelectedSignalIdForTables } = useGTSSStore();
+  const { deepLinkTarget, setDeepLinkTarget } = useGTSSStore();
 
   // Use shared signal selection from store
   const filterSignal = selectedSignalIdForTables;
@@ -63,6 +64,20 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
       setFilterSignal(signals[0].signalId);
     }
   }, [signals, filterSignal]);
+
+  // Handle deep link to a specific phase: open modal for that phase
+  useEffect(() => {
+    if (deepLinkTarget?.type === 'phase' && deepLinkTarget.id) {
+      const phase = phases.find(p => p.id === deepLinkTarget.id);
+      if (phase) {
+        setFilterSignal(phase.signalId);
+        setEditingPhase(phase);
+        setShowModal(true);
+        setDeepLinkTarget({ type: null, id: null });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkTarget, phases]);
 
   const filteredPhases = phases.filter(phase => phase.signalId === filterSignal);
   const orphanPhases = phases.filter(phase => !signals.some(signal => signal.signalId === phase.signalId));

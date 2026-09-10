@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Approach, getDerivedStreetNames, Phase, Signal, useGTSSStore } from "gtss";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MapContainer, Marker, Polyline, Popup, useMap } from "react-leaflet";
 import MapTileLayers from "./map-tile-layers";
 import { approachColorFor } from "@/components/gtss/approach-colors";
@@ -166,6 +166,8 @@ function SignalPopup({
 export default function SignalsMap({ signals, approaches, phases, onSignalSelect, getCompletenessPct, highlightedSignalId, className }: SignalsMapProps) {
   const agency = useGTSSStore((state) => state.agency);
 
+  const [map, setMap] = useState<L.Map | null>(null);
+
   // Use agency coordinates as starting point for map center
   const center: [number, number] = useMemo(() => {
     // First priority: use agency coordinates if available
@@ -189,32 +191,34 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
         style={{ height: "100%", width: "100%", zIndex: 1 }}
         className="rounded-lg"
         key={`map-${signals.length}-${center[0]}-${center[1]}`}
+        whenCreated={(m) => setMap(m)}
       >
         <MapTileLayers />
+        {map && (
+          <>
+            <MapBounds signals={signals} />
 
-        <MapBounds signals={signals} />
+            {signals.filter(signal => signal.latitude && signal.longitude).map((signal) => (
+              <Marker
+                key={signal.id}
+                position={[signal.latitude, signal.longitude]}
+                icon={highlightedSignalId === signal.signalId ? highlightedSignalIcon : new L.Icon.Default()}
+                zIndexOffset={highlightedSignalId === signal.signalId ? 1000 : 0}
+              >
+                <Popup minWidth={272}>
+                  <SignalPopup
+                    signal={signal}
+                    approaches={approaches || []}
+                    phases={phases || []}
+                    getCompletenessPct={getCompletenessPct}
+                    onSignalSelect={onSignalSelect}
+                  />
+                </Popup>
+              </Marker>
+            ))}
 
-        {signals.filter(signal => signal.latitude && signal.longitude).map((signal) => (
-          <Marker
-            key={signal.id}
-            position={[signal.latitude, signal.longitude]}
-            icon={highlightedSignalId === signal.signalId ? highlightedSignalIcon : new L.Icon.Default()}
-            zIndexOffset={highlightedSignalId === signal.signalId ? 1000 : 0}
-          >
-            <Popup minWidth={272}>
-              <SignalPopup
-                signal={signal}
-                approaches={approaches || []}
-                phases={phases || []}
-                getCompletenessPct={getCompletenessPct}
-                onSignalSelect={onSignalSelect}
-              />
-            </Popup>
-          </Marker>
-        ))}
-
-        {/* Render approach arrows */}
-        {approaches && signals.filter(signal => signal.latitude && signal.longitude).map((signal) => {
+            {/* Render approach arrows */}
+            {approaches && signals.filter(signal => signal.latitude && signal.longitude).map((signal) => {
           // Color index counts every approach on the signal, matching the
           // signal-details map; only the ones with a bearing get a line.
           const allApproaches = approaches.filter(a => a.signalId === signal.signalId);
@@ -243,6 +247,8 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
             );
           });
         })}
+          </>
+        )}
       </MapContainer>
     </div>
   );

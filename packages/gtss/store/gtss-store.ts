@@ -51,6 +51,12 @@ interface GTSSStore {
   navigateToMain: () => void;
   navigateToSignalDetails: (signalId: string | null) => void;
 
+  // Deep-link target used to open specific item modals when a URL contains
+  // an entity id (approach, phase, detector, basicTiming). Components may
+  // consume and clear this after handling.
+  deepLinkTarget: { type: string | null; id: string | null };
+  setDeepLinkTarget: (target: { type: string | null; id: string | null }) => void;
+
   // Load from localStorage
   loadFromStorage: () => void;
 }
@@ -139,6 +145,9 @@ export const useGTSSStore = create<GTSSStore>((set) => ({
   // Navigation actions
   navigateToMain: () => set({ currentView: 'main', currentSignalId: null }),
   navigateToSignalDetails: (signalId) => set({ currentView: 'signal-details', currentSignalId: signalId }),
+
+  deepLinkTarget: { type: null, id: null },
+  setDeepLinkTarget: (target) => set({ deepLinkTarget: target }),
 
   loadFromStorage: () => set({
     agency: agencyStorage.get(),

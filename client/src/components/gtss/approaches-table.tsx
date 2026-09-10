@@ -26,6 +26,7 @@ export default function ApproachesTable({ triggerAdd, triggerBulk }: ApproachesT
   const [sortField, setSortField] = useState<SortField>('approachId');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const { approaches, signals, selectedSignalIdForTables, setSelectedSignalIdForTables } = useGTSSStore();
+  const { deepLinkTarget, setDeepLinkTarget } = useGTSSStore();
 
   // Use shared signal selection from store
   const selectedSignalId = selectedSignalIdForTables;
@@ -37,6 +38,20 @@ export default function ApproachesTable({ triggerAdd, triggerBulk }: ApproachesT
       setSelectedSignalId(signals[0].signalId);
     }
   }, [signals, selectedSignalId, setSelectedSignalId]);
+
+  // If the app was deep-linked to a specific approach, open it
+  useEffect(() => {
+    if (deepLinkTarget?.type === 'approach' && deepLinkTarget.id) {
+      const approach = approaches.find(a => a.id === deepLinkTarget.id);
+      if (approach) {
+        setSelectedSignalId(approach.signalId);
+        setEditingApproach(approach);
+        setShowModal(true);
+        setDeepLinkTarget({ type: null, id: null });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkTarget, approaches]);
 
   const approachHooks = useApproaches();
 

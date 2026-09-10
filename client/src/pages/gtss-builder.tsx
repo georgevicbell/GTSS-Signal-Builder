@@ -16,6 +16,7 @@ import SignalDetails from "@/pages/signal-details";
 import { clearAllData, cn, useGTSSStore, useLoadFromStorage } from "gtss";
 import { ArrowUpDown, Building, Clock, Coffee, Compass, ExternalLink, FolderInput, FolderOutput, HelpCircle, MapPin, Menu, Navigation, Plus, SlidersHorizontal, Target, TrafficCone, Trash2, X } from "lucide-react";
 import { useState } from "react";
+import { useEffect } from "react";
 
 type TabType = "agency" | "signals" | "approaches" | "phases" | "detectors" | "basic-timings";
 
@@ -45,6 +46,7 @@ export default function GTSSBuilder() {
   const [showAgencyDefaults, setShowAgencyDefaults] = useState(false);
   const { agency, signals, approaches, phases, detectors, basicTimings, currentView, setAgency, setSignals, setApproaches, setPhases, setDetectors, setBasicTimings, navigateToSignalDetails } = useGTSSStore();
   const { toast } = useToast();
+  const { setSelectedSignalIdForTables, setDeepLinkTarget } = useGTSSStore();
 
   // Load data from localStorage on mount
   useLoadFromStorage();
@@ -162,6 +164,91 @@ export default function GTSSBuilder() {
   };
 
   // Conditionally render signal details view or main view
+  // NOTE: `currentView` rendering is handled after all hooks to avoid
+  // React's "Rendered fewer hooks than expected" error caused by early returns.
+
+  // Parse URL params on mount to support deep linking
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab') as TabType | null;
+    const view = params.get('view');
+    const signalId = params.get('signalId');
+    const approachId = params.get('approachId');
+    const phaseId = params.get('phaseId');
+    const detectorId = params.get('detectorId');
+    const timingId = params.get('timingId');
+
+    if (tab) {
+      setActiveTab(tab);
+    }
+
+    if (view === 'signal-details' && signalId) {
+      navigateToSignalDetails(signalId);
+      return;
+    }
+
+    // If a specific child entity is requested, tell the tables to open it
+    if (approachId) {
+      const approach = approaches.find(a => a.id === approachId);
+      if (approach) {
+        setSelectedSignalIdForTables(approach.signalId);
+        setDeepLinkTarget({ type: 'approach', id: approachId });
+      }
+    }
+
+    if (phaseId) {
+      const phase = phases.find(p => p.id === phaseId);
+      if (phase) {
+        setSelectedSignalIdForTables(phase.signalId);
+        setDeepLinkTarget({ type: 'phase', id: phaseId });
+      }
+    }
+
+    if (detectorId) {
+      const det = detectors.find(d => d.id === detectorId);
+      if (det) {
+        setSelectedSignalIdForTables(det.signalId);
+        setDeepLinkTarget({ type: 'detector', id: detectorId });
+      }
+    }
+
+    if (timingId) {
+      const t = basicTimings.find(bt => bt.id === timingId);
+      if (t) {
+        setSelectedSignalIdForTables(t.signalId);
+        setDeepLinkTarget({ type: 'basicTiming', id: timingId });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep URL in sync when navigating between tabs or opening signal details
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (currentView === 'signal-details' && (window.location.search.indexOf('view=signal-details') === -1 || !params.get('signalId'))) {
+      // signal-details view is managed by store; when active, set URL accordingly
+      if (window.history && navigateToSignalDetails) {
+        const signalId = useGTSSStore.getState().currentSignalId;
+        params.set('view', 'signal-details');
+        if (signalId) params.set('signalId', signalId);
+        window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+      }
+      return;
+    }
+
+    // Sync selected tab
+    const tab = activeTab;
+    if (tab) {
+      params.set('tab', tab);
+    }
+    // Clear view-specific params when on main
+    if (currentView === 'main') {
+      params.delete('view');
+      params.delete('signalId');
+    }
+    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+  }, [activeTab, currentView, navigateToSignalDetails]);
+
   if (currentView === 'signal-details') {
     return <SignalDetails />;
   }
