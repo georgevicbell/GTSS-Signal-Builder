@@ -4,7 +4,8 @@ import type { Agency, Approach, BasicTiming, Detector, InsertAgency, InsertAppro
 
 // Storage keys
 const STORAGE_KEYS = {
-  AGENCY: 'gtss_agency',
+  AGENCY: 'gtss_agency', // now stores either a single Agency (legacy) or an array of Agency
+  DEFAULT_AGENCY: 'gtss_default_agency',
   SIGNALS: 'gtss_signals',
   PHASES: 'gtss_phases',
   DETECTORS: 'gtss_detectors',
@@ -129,14 +130,33 @@ function saveToStorage<T>(key: string, data: T): void {
 
 // Agency operations
 export const agencyStorage = {
+  // Return the current agency. Supports legacy single-object storage and
+  // the newer array-of-agencies storage where a default is selected.
   get: (): Agency | null => {
-    return getFromStorage<Agency | null>(STORAGE_KEYS.AGENCY, null);
+    try {
+      const raw = getFromStorage<any>(STORAGE_KEYS.AGENCY, null);
+      if (raw == null) return null;
+      if (Array.isArray(raw)) {
+        const defId = agencyListStorage.getDefaultId();
+        if (defId) {
+          return raw.find((a: Agency) => a.id === defId) ?? raw[0] ?? null;
+        }
+        return raw[0] ?? null;
+      }
+      return raw as Agency;
+    } catch {
+      return null;
+    }
   },
 
+  // Save a single agency by adding/updating the array stored at STORAGE_KEYS.AGENCY
   save: (agency: InsertAgency): Agency => {
-    const existingAgency = agencyStorage.get();
+    const raw = getFromStorage<any>(STORAGE_KEYS.AGENCY, null);
+    const list: Agency[] = Array.isArray(raw) ? raw : (raw ? [raw as Agency] : []);
+
+    const existingIndex = list.findIndex(a => a.agencyId === agency.agencyId);
     const newAgency: Agency = {
-      id: existingAgency?.id || nanoid(),
+      id: existingIndex !== -1 ? list[existingIndex].id : nanoid(),
       agencyId: agency.agencyId,
       agencyName: agency.agencyName,
       agencyUrl: agency.agencyUrl ?? null,
@@ -146,12 +166,138 @@ export const agencyStorage = {
       latitude: agency.latitude ?? null,
       longitude: agency.longitude ?? null,
     };
-    saveToStorage(STORAGE_KEYS.AGENCY, newAgency);
+
+    if (existingIndex !== -1) {
+      list[existingIndex] = newAgency;
+    } else {
+      list.push(newAgency);
+    }
+
+    saveToStorage(STORAGE_KEYS.AGENCY, list);
+
+    // ensure default is set
+    const defaultId = localStorage.getItem(STORAGE_KEYS.DEFAULT_AGENCY);
+    if (!defaultId) {
+      try {
+        localStorage.setItem(STORAGE_KEYS.DEFAULT_AGENCY, newAgency.id);
+      } catch {
+        // ignore
+      }
+    }
+
     return newAgency;
   },
 
   clear: (): void => {
     localStorage.removeItem(STORAGE_KEYS.AGENCY);
+    localStorage.removeItem(STORAGE_KEYS.DEFAULT_AGENCY);
+  },
+};
+
+// Agency list operations (support multiple agencies, default selection)
+export const agencyListStorage = {
+  getAll: (): Agency[] => {
+    const raw = getFromStorage<any>(STORAGE_KEYS.AGENCY, null);
+    if (!raw) return [];
+    return Array.isArray(raw) ? raw : [raw as Agency];
+  },
+
+  get: (id: string): Agency | undefined => {
+    const list = agencyListStorage.getAll();
+    return list.find(a => a.id === id);
+  },
+
+  save: (agency: InsertAgency): Agency => {
+    const list = agencyListStorage.getAll();
+    const existingIndex = list.findIndex(a => a.agencyId === agency.agencyId);
+    const newAgency: Agency = {
+      id: existingIndex !== -1 ? list[existingIndex].id : nanoid(),
+      agencyId: agency.agencyId,
+      agencyName: agency.agencyName,
+      agencyUrl: agency.agencyUrl ?? null,
+      agencyTimezone: agency.agencyTimezone,
+      agencyLanguage: agency.agencyLanguage ?? null,
+      agencyEmail: agency.agencyEmail ?? null,
+      latitude: agency.latitude ?? null,
+      longitude: agency.longitude ?? null,
+    };
+
+    if (existingIndex !== -1) {
+      list[existingIndex] = newAgency;
+    } else {
+      list.push(newAgency);
+    }
+
+    saveToStorage(STORAGE_KEYS.AGENCY, list);
+
+    // If there is no default agency yet, set this as default
+    const defaultId = localStorage.getItem(STORAGE_KEYS.DEFAULT_AGENCY);
+    if (!defaultId) {
+      try {
+        localStorage.setItem(STORAGE_KEYS.DEFAULT_AGENCY, newAgency.id);
+      } catch {
+        // ignore
+      }
+    }
+
+    return newAgency;
+  },
+
+  // Note: `delete` was removed to avoid orphaned records. Use
+  // `deleteWithCascade(id)` to remove an agency and its dependent data.
+
+  // Delete an agency and all dependent records (signals, approaches, phases,
+  // detectors, and basic timings). This performs a cascade removal so no
+  // orphaned records remain in storage.
+  deleteWithCascade: (id: string): void => {
+    const agency = agencyListStorage.get(id);
+    if (!agency) return;
+
+    // Delete all signals associated with this agency's agencyId. The
+    // signalStorage.delete call will cascade to phases, detectors,
+    // approaches, and basic timings.
+    const signals = signalStorage.getAll().filter(s => s.agencyId === agency.agencyId);
+    signals.forEach(s => signalStorage.delete(s.signalId));
+
+    // Now remove the agency itself
+    const list = agencyListStorage.getAll();
+    const updated = list.filter(a => a.id !== id);
+    saveToStorage(STORAGE_KEYS.AGENCY, updated);
+
+    // If deleted agency was default, clear default or pick first remaining
+    const defaultId = localStorage.getItem(STORAGE_KEYS.DEFAULT_AGENCY);
+    if (defaultId === id) {
+      if (updated.length > 0) {
+        try {
+          localStorage.setItem(STORAGE_KEYS.DEFAULT_AGENCY, updated[0].id);
+        } catch {
+          // ignore
+        }
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.DEFAULT_AGENCY);
+      }
+    }
+  },
+
+  getDefaultId: (): string | null => {
+    try {
+      const v = localStorage.getItem(STORAGE_KEYS.DEFAULT_AGENCY);
+      return v || null;
+    } catch {
+      return null;
+    }
+  },
+
+  setDefaultId: (id: string | null): void => {
+    if (id) {
+      try {
+        localStorage.setItem(STORAGE_KEYS.DEFAULT_AGENCY, id);
+      } catch {
+        // ignore
+      }
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.DEFAULT_AGENCY);
+    }
   },
 };
 
@@ -694,6 +840,14 @@ export function generateAgencyCSV(agency: Agency | null): string {
   ].join('\n');
 }
 
+// Generate a single agencies CSV containing multiple agency rows
+export function generateAgenciesCSV(agencies: Agency[]): string {
+  const header = 'agency_id,agency_name,agency_url,agency_timezone,agency_email';
+  if (!agencies || agencies.length === 0) return header + '\n';
+  const rows = agencies.map(a => `${sanitizeCSVField(a.agencyId)},${sanitizeCSVField(a.agencyName)},${sanitizeCSVField(a.agencyUrl)},${sanitizeCSVField(a.agencyTimezone)},${sanitizeCSVField(a.agencyEmail)}`);
+  return [header, ...rows].join('\n');
+}
+
 export function generateSignalsCSV(signals: Signal[]): string {
   const headers = 'signal_id,agency_id,latitude,longitude';
 
@@ -930,45 +1084,61 @@ const downloadFile = (content: string, filename: string) => {
 };
 
 // Export individual TXT files - updated for GTSSv1.1
-export const exportAsIndividualFiles = async (includeFiles: {
-  agency: boolean;
-  signals: boolean;
-  approaches: boolean;
-  phases: boolean;
-  detection: boolean;
-  basicTimings: boolean;
-}): Promise<void> => {
+export const exportAsIndividualFiles = async (
+  includeFiles: {
+    agency: boolean;
+    signals: boolean;
+    approaches: boolean;
+    phases: boolean;
+    detection: boolean;
+    basicTimings: boolean;
+  } = { agency: true, signals: true, approaches: true, phases: true, detection: true, basicTimings: true },
+  agencyIds: string[] | null = null
+): Promise<void> => {
   try {
     const data = exportData();
 
-    // Generate and download each selected file
+    // If agencyIds provided, filter data to only include those agencies' data
+    let filteredAgencies = agencyListStorage.getAll();
+    if (agencyIds && agencyIds.length > 0) {
+      filteredAgencies = filteredAgencies.filter(a => agencyIds!.includes(a.id));
+    }
+    const allowedAgencyIds = filteredAgencies.map(a => a.agencyId);
+    const filteredSignals = data.signals.filter(s => allowedAgencyIds.includes(s.agencyId));
+    const filteredSignalIds = filteredSignals.map(s => s.signalId);
+    const filteredApproaches = data.approaches.filter(ap => filteredSignalIds.includes(ap.signalId));
+    const filteredPhases = data.phases.filter(ph => filteredSignalIds.includes(ph.signalId));
+    const filteredDetectors = data.detectors.filter(d => filteredSignalIds.includes(d.signalId));
+    const filteredBasicTimings = data.basicTimings.filter(bt => filteredSignalIds.includes(bt.signalId));
+
     if (includeFiles.agency) {
-      const agencyCSV = generateAgencyCSV(data.agency);
-      downloadFile(agencyCSV, 'agency.txt');
+      // Download a single agency.txt containing all selected agencies
+      const agenciesCSV = generateAgenciesCSV(filteredAgencies as Agency[]);
+      downloadFile(agenciesCSV, 'agency.txt');
     }
 
     if (includeFiles.signals) {
-      const signalsCSV = generateSignalsCSV(data.signals);
+      const signalsCSV = generateSignalsCSV(filteredSignals);
       downloadFile(signalsCSV, 'signals.txt');
     }
 
     if (includeFiles.approaches) {
-      const approachesCSV = generateApproachesCSV(data.approaches);
+      const approachesCSV = generateApproachesCSV(filteredApproaches);
       downloadFile(approachesCSV, 'approaches.txt');
     }
 
     if (includeFiles.phases) {
-      const phasesCSV = generatePhasesCSV(data.phases);
+      const phasesCSV = generatePhasesCSV(filteredPhases);
       downloadFile(phasesCSV, 'phases.txt');
     }
 
     if (includeFiles.detection) {
-      const detectionCSV = generateDetectionCSV(data.detectors);
+      const detectionCSV = generateDetectionCSV(filteredDetectors);
       downloadFile(detectionCSV, 'detectors.txt');
     }
 
     if (includeFiles.basicTimings) {
-      const basicTimingsCSV = generateBasicTimingsCSV(data.basicTimings);
+      const basicTimingsCSV = generateBasicTimingsCSV(filteredBasicTimings);
       downloadFile(basicTimingsCSV, 'basic_timings.txt');
     }
   } catch (error) {
@@ -978,14 +1148,17 @@ export const exportAsIndividualFiles = async (includeFiles: {
 };
 
 // Export as ZIP using JSZip - updated for GTSSv1.1
-export const exportAsZip = async (includeFiles: {
-  agency: boolean;
-  signals: boolean;
-  approaches: boolean;
-  phases: boolean;
-  detection: boolean;
-  basicTimings: boolean;
-} = { agency: true, signals: true, approaches: true, phases: true, detection: true, basicTimings: true }): Promise<void> => {
+export const exportAsZip = async (
+  includeFiles: {
+    agency: boolean;
+    signals: boolean;
+    approaches: boolean;
+    phases: boolean;
+    detection: boolean;
+    basicTimings: boolean;
+  } = { agency: true, signals: true, approaches: true, phases: true, detection: true, basicTimings: true },
+  agencyIds: string[] | null = null
+): Promise<void> => {
   try {
     // Dynamically import JSZip
     const JSZip = (await import('jszip')).default;
@@ -993,34 +1166,47 @@ export const exportAsZip = async (includeFiles: {
 
     const data = exportData();
 
-    // Add selected files to ZIP
+    // If agencyIds provided, filter data to only include those agencies' data
+    let filteredAgencies = agencyListStorage.getAll();
+    if (agencyIds && agencyIds.length > 0) {
+      filteredAgencies = filteredAgencies.filter(a => agencyIds!.includes(a.id));
+    }
+    const allowedAgencyIds = filteredAgencies.map(a => a.agencyId);
+    const filteredSignals = data.signals.filter(s => allowedAgencyIds.includes(s.agencyId));
+    const filteredSignalIds = filteredSignals.map(s => s.signalId);
+    const filteredApproaches = data.approaches.filter(ap => filteredSignalIds.includes(ap.signalId));
+    const filteredPhases = data.phases.filter(ph => filteredSignalIds.includes(ph.signalId));
+    const filteredDetectors = data.detectors.filter(d => filteredSignalIds.includes(d.signalId));
+    const filteredBasicTimings = data.basicTimings.filter(bt => filteredSignalIds.includes(bt.signalId));
+
     if (includeFiles.agency) {
-      const agencyCSV = generateAgencyCSV(data.agency);
-      zip.file('agency.txt', agencyCSV);
+      // Add a single agency.txt containing all selected agencies
+      const agenciesCSV = generateAgenciesCSV(filteredAgencies as Agency[]);
+      zip.file('agency.txt', agenciesCSV);
     }
 
     if (includeFiles.signals) {
-      const signalsCSV = generateSignalsCSV(data.signals);
+      const signalsCSV = generateSignalsCSV(filteredSignals);
       zip.file('signals.txt', signalsCSV);
     }
 
     if (includeFiles.approaches) {
-      const approachesCSV = generateApproachesCSV(data.approaches);
+      const approachesCSV = generateApproachesCSV(filteredApproaches);
       zip.file('approaches.txt', approachesCSV);
     }
 
     if (includeFiles.phases) {
-      const phasesCSV = generatePhasesCSV(data.phases);
+      const phasesCSV = generatePhasesCSV(filteredPhases);
       zip.file('phases.txt', phasesCSV);
     }
 
     if (includeFiles.detection) {
-      const detectionCSV = generateDetectionCSV(data.detectors);
+      const detectionCSV = generateDetectionCSV(filteredDetectors);
       zip.file('detectors.txt', detectionCSV);
     }
 
     if (includeFiles.basicTimings) {
-      const basicTimingsCSV = generateBasicTimingsCSV(data.basicTimings);
+      const basicTimingsCSV = generateBasicTimingsCSV(filteredBasicTimings);
       zip.file('basic_timings.txt', basicTimingsCSV);
     }
 
@@ -1041,41 +1227,46 @@ export const exportAsZip = async (includeFiles: {
 };
 
 // Parse agency.txt file
-export function parseAgencyTXT(content: string): Agency | null {
+// Parse agencies.txt file with potentially multiple agency rows
+export function parseAgenciesTXT(content: string): Agency[] {
   const lines = content.trim().split('\n').filter(line => line.trim());
   if (lines.length < 2) {
     throw new Error('Agency file must contain header and at least one data row');
   }
 
-  // Use proper CSV parser to handle quoted fields
-  const values = parseCSVLine(lines[1]);
+  const agencies: Agency[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCSVLine(lines[i]);
 
-  if (values.length < 5) {
-    throw new Error('Agency data must have at least 5 fields: agencyId, agencyName, agencyUrl, agencyTimezone, agencyEmail');
+    if (values.length < 5) {
+      throw new Error(`Row ${i + 1}: Agency data must have at least 5 fields: agencyId, agencyName, agencyUrl, agencyTimezone, agencyEmail`);
+    }
+
+    if (!values[0]) throw new Error(`Row ${i + 1}: Agency ID is required`);
+    if (!values[1]) throw new Error(`Row ${i + 1}: Agency Name is required`);
+    if (!values[3]) throw new Error(`Row ${i + 1}: Agency Timezone is required`);
+
+    agencies.push({
+      id: nanoid(),
+      agencyId: values[0],
+      agencyName: values[1],
+      agencyUrl: values[2] || null,
+      agencyTimezone: values[3],
+      agencyLanguage: null,
+      agencyEmail: values[4] || null,
+      latitude: null,
+      longitude: null,
+    });
   }
 
-  // Validate required fields
-  if (!values[0]) {
-    throw new Error('Agency ID is required');
-  }
-  if (!values[1]) {
-    throw new Error('Agency Name is required');
-  }
-  if (!values[3]) {
-    throw new Error('Agency Timezone is required');
-  }
+  if (agencies.length === 0) throw new Error('No valid agencies found in file');
+  return agencies;
+}
 
-  return {
-    id: nanoid(),
-    agencyId: values[0],
-    agencyName: values[1],
-    agencyUrl: values[2] || null,
-    agencyTimezone: values[3],
-    agencyLanguage: null,
-    agencyEmail: values[4] || null,
-    latitude: null,
-    longitude: null,
-  };
+// Backwards-compatible single-agency parser — returns first agency or null
+export function parseAgencyTXT(content: string): Agency | null {
+  const agencies = parseAgenciesTXT(content);
+  return agencies.length > 0 ? agencies[0] : null;
 }
 
 // Parse signals.txt file
@@ -1567,7 +1758,7 @@ export function parseBasicTimingsTXT(content: string): BasicTiming[] {
 // Import data with replace or merge mode - updated for GTSSv1.1
 export function importData(
   parsedData: {
-    agency?: Agency | null;
+    agency?: Agency | Agency[] | null;
     signals?: Signal[];
     approaches?: Approach[];
     phases?: Phase[];
@@ -1579,10 +1770,42 @@ export function importData(
   if (mode === 'replace') {
     // Replace all data
     if (parsedData.agency !== undefined) {
-      if (parsedData.agency) {
-        saveToStorage(STORAGE_KEYS.AGENCY, parsedData.agency);
-      } else {
+      if (parsedData.agency === null) {
+        // Remove agencies and clear any stored default agency id
         localStorage.removeItem(STORAGE_KEYS.AGENCY);
+        try {
+          localStorage.removeItem(STORAGE_KEYS.DEFAULT_AGENCY);
+        } catch {
+          // ignore
+        }
+      } else if (Array.isArray(parsedData.agency)) {
+        // Ensure each imported agency has an `id` (legacy imports may lack it)
+        const agencies = parsedData.agency.map(a => ({ ...(a as Agency), id: (a as any).id ?? nanoid() }));
+        saveToStorage(STORAGE_KEYS.AGENCY, agencies);
+
+        // Set default to first agency if none set or if the current default would be invalid
+        try {
+          const curDefault = localStorage.getItem(STORAGE_KEYS.DEFAULT_AGENCY);
+          if (!curDefault || !agencies.some(x => x.id === curDefault)) {
+            if (agencies.length > 0) {
+              localStorage.setItem(STORAGE_KEYS.DEFAULT_AGENCY, agencies[0].id);
+            } else {
+              localStorage.removeItem(STORAGE_KEYS.DEFAULT_AGENCY);
+            }
+          }
+        } catch {
+          // ignore storage errors
+        }
+      } else {
+        // single agency -> store as array for modern shape and set as default
+        const a = parsedData.agency as Agency;
+        const stored = { ...a, id: (a as any).id ?? nanoid() };
+        saveToStorage(STORAGE_KEYS.AGENCY, [stored]);
+        try {
+          localStorage.setItem(STORAGE_KEYS.DEFAULT_AGENCY, stored.id);
+        } catch {
+          // ignore
+        }
       }
     }
 
@@ -1608,7 +1831,33 @@ export function importData(
   } else {
     // Merge mode
     if (parsedData.agency) {
-      saveToStorage(STORAGE_KEYS.AGENCY, parsedData.agency);
+      const existing = agencyListStorage.getAll();
+      const incoming = Array.isArray(parsedData.agency) ? parsedData.agency : [parsedData.agency];
+      for (const a of incoming) {
+        const idx = existing.findIndex(e => e.agencyId === a.agencyId);
+        if (idx !== -1) {
+          // Preserve existing id but update fields
+          existing[idx] = { ...existing[idx], ...a, id: existing[idx].id } as Agency;
+        } else {
+          existing.push({ ...(a as Agency), id: nanoid() });
+        }
+      }
+      saveToStorage(STORAGE_KEYS.AGENCY, existing);
+
+      // After merging agencies, ensure the stored default is valid.
+      // If missing or invalid, set it to the first merged agency (or remove it when none).
+      try {
+        const curDefault = localStorage.getItem(STORAGE_KEYS.DEFAULT_AGENCY);
+        if (!curDefault || !existing.some(x => x.id === curDefault)) {
+          if (existing.length > 0) {
+            localStorage.setItem(STORAGE_KEYS.DEFAULT_AGENCY, existing[0].id);
+          } else {
+            localStorage.removeItem(STORAGE_KEYS.DEFAULT_AGENCY);
+          }
+        }
+      } catch {
+        // ignore storage errors
+      }
     }
 
     if (parsedData.signals && parsedData.signals.length > 0) {

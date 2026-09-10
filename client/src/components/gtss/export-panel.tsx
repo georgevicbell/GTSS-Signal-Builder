@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { evaluateGTSSCompleteness, generateAgencyCSV, generateApproachesCSV, generateBasicTimingsCSV, generateDetectionCSV, generatePhasesCSV, generateSignalsCSV, useExport, useGTSSStore } from "gtss";
+import { evaluateGTSSCompleteness, generateAgencyCSV, generateAgenciesCSV, generateApproachesCSV, generateBasicTimingsCSV, generateDetectionCSV, generatePhasesCSV, generateSignalsCSV, useExport, useGTSSStore, agencyListStorage } from "gtss";
 import { AlertTriangle, CheckCircle, ChevronDown, ChevronRight, Download, Eye, Info, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -32,6 +32,7 @@ export default function ExportPanel() {
     detection: true,
     basicTimings: true,
   });
+  const [selectedAgencyIds, setSelectedAgencyIds] = useState<string[]>([]);
   const { toast } = useToast();
 
   const { exportAsZip, exportAsIndividualFiles } = useExport();
@@ -43,14 +44,14 @@ export default function ExportPanel() {
   const handleExport = async () => {
     try {
       if (exportFormat === "txt") {
-        await exportAsIndividualFiles(includeFiles);
+        await exportAsIndividualFiles(includeFiles, selectedAgencyIds);
         const fileCount = Object.values(includeFiles).filter(Boolean).length;
         toast({
           title: "Success",
           description: `${fileCount} TXT file${fileCount > 1 ? 's' : ''} downloaded successfully`,
         });
       } else if (exportFormat === "zip") {
-        await exportAsZip(includeFiles);
+        await exportAsZip(includeFiles, selectedAgencyIds);
         toast({
           title: "Success",
           description: "GTSS ZIP package exported successfully",
@@ -66,17 +67,43 @@ export default function ExportPanel() {
   };
 
   const getValidationStatus = () => {
-    const issues = [];
+    const issues: { type: string; message: string }[] = [];
 
-    if (!agency) {
-      issues.push({ type: "error", message: "Agency information is required" });
+    // Determine which agencies the user has selected for export. If none
+    // are selected, fall back to all agencies (the UI normally defaults to
+    // selecting all). Validation should run against the dataset that will
+    // actually be exported.
+    const allAgencies = agencyListStorage.getAll();
+    const selectedAgencies = selectedAgencyIds && selectedAgencyIds.length > 0
+      ? allAgencies.filter(a => selectedAgencyIds.includes(a.id))
+      : allAgencies;
+
+    const selectedAgencyIdsForData = selectedAgencies.map(a => a.agencyId);
+
+    // Filter records to only those that belong to the selected agencies.
+    const filteredSignals = signals.filter(s => selectedAgencyIdsForData.includes(s.agencyId));
+    const filteredSignalIds = filteredSignals.map(s => s.signalId);
+    const filteredApproaches = approaches.filter(a => filteredSignalIds.includes(a.signalId));
+    const filteredPhases = phases.filter(p => filteredSignalIds.includes(p.signalId));
+    const filteredDetectors = detectors.filter(d => filteredSignalIds.includes(d.signalId));
+    const filteredBasicTimings = basicTimings.filter(t => filteredSignalIds.includes(t.signalId));
+
+    // Agency level checks (only relevant if agency records are being exported)
+    if (includeFiles.agency) {
+      if (selectedAgencies.length === 0) {
+        issues.push({ type: "error", message: "No agencies selected for export" });
+      } else {
+        selectedAgencies.forEach(a => {
+          if (!a.agencyId) issues.push({ type: "error", message: `Agency record missing AgencyID: ${a.agencyName || a.id}` });
+        });
+      }
     }
 
-    if (signals.length === 0) {
-      issues.push({ type: "warning", message: "No signals configured" });
+    if (filteredSignals.length === 0) {
+      issues.push({ type: "warning", message: "No signals configured for the selected agencies" });
     }
 
-    signals.forEach(signal => {
+    filteredSignals.forEach(signal => {
       if (!signal.latitude || !signal.longitude) {
         issues.push({ type: "error", message: `Missing coordinates for ${signal.signalId}` });
       }
@@ -85,26 +112,24 @@ export default function ExportPanel() {
       }
     });
 
-    const signalIds = signals.map(s => s.signalId);
-
-    const orphanApproaches = approaches.filter(a => !signalIds.includes(a.signalId));
+    const orphanApproaches = filteredApproaches.filter(a => !filteredSignalIds.includes(a.signalId));
     if (orphanApproaches.length > 0) {
-      issues.push({ type: "error", message: `${orphanApproaches.length} approaches reference non-existent signals` });
+      issues.push({ type: "error", message: `${orphanApproaches.length} approaches reference non-existent signals (in selected agencies)` });
     }
 
-    const orphanPhases = phases.filter(p => !signalIds.includes(p.signalId));
+    const orphanPhases = filteredPhases.filter(p => !filteredSignalIds.includes(p.signalId));
     if (orphanPhases.length > 0) {
-      issues.push({ type: "error", message: `${orphanPhases.length} phases reference non-existent signals` });
+      issues.push({ type: "error", message: `${orphanPhases.length} phases reference non-existent signals (in selected agencies)` });
     }
 
-    const orphanDetectors = detectors.filter(d => !signalIds.includes(d.signalId));
+    const orphanDetectors = filteredDetectors.filter(d => !filteredSignalIds.includes(d.signalId));
     if (orphanDetectors.length > 0) {
-      issues.push({ type: "error", message: `${orphanDetectors.length} detectors reference non-existent signals` });
+      issues.push({ type: "error", message: `${orphanDetectors.length} detectors reference non-existent signals (in selected agencies)` });
     }
 
-    const orphanTimings = basicTimings.filter(t => !signalIds.includes(t.signalId));
+    const orphanTimings = filteredBasicTimings.filter(t => !filteredSignalIds.includes(t.signalId));
     if (orphanTimings.length > 0) {
-      issues.push({ type: "error", message: `${orphanTimings.length} timing configs reference non-existent signals` });
+      issues.push({ type: "error", message: `${orphanTimings.length} timing configs reference non-existent signals (in selected agencies)` });
     }
 
     return issues;
@@ -117,26 +142,47 @@ export default function ExportPanel() {
   const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(false);
   const [showFilePreview, setShowFilePreview] = useState(false);
 
+  useEffect(() => {
+    // default select all agencies
+    const _ag = agencyListStorage.getAll();
+    setSelectedAgencyIds(_ag.map(a => a.id));
+  }, []);
+
+  // Build previews from the same filtered datasets used for export
+  const allAgencies = agencyListStorage.getAll();
+  const selectedAgencies = selectedAgencyIds && selectedAgencyIds.length > 0
+    ? allAgencies.filter(a => selectedAgencyIds.includes(a.id))
+    : allAgencies;
+  const selectedAgencyIdsForData = selectedAgencies.map(a => a.agencyId);
+
+  const filteredSignals = signals.filter(s => selectedAgencyIdsForData.includes(s.agencyId));
+  const filteredSignalIds = filteredSignals.map(s => s.signalId);
+  const filteredApproaches = approaches.filter(a => filteredSignalIds.includes(a.signalId));
+  const filteredPhases = phases.filter(p => filteredSignalIds.includes(p.signalId));
+  const filteredDetectors = detectors.filter(d => filteredSignalIds.includes(d.signalId));
+  const filteredBasicTimings = basicTimings.filter(t => filteredSignalIds.includes(t.signalId));
+
   const previewFiles: GTSSFilePreview[] = [
-    includeFiles.agency
-      ? { id: "agency", label: "agency.txt", content: generateAgencyCSV(agency) }
-      : null,
+    // Single combined agency.txt matching download behavior
+    ...(includeFiles.agency ? [{ id: "agency", label: "agency.txt", content: generateAgenciesCSV(selectedAgencies) }] : []),
     includeFiles.signals
-      ? { id: "signals", label: "signals.txt", content: generateSignalsCSV(signals) }
+      ? { id: "signals", label: "signals.txt", content: generateSignalsCSV(filteredSignals) }
       : null,
     includeFiles.approaches
-      ? { id: "approaches", label: "approaches.txt", content: generateApproachesCSV(approaches) }
+      ? { id: "approaches", label: "approaches.txt", content: generateApproachesCSV(filteredApproaches) }
       : null,
     includeFiles.phases
-      ? { id: "phases", label: "phases.txt", content: generatePhasesCSV(phases, basicTimings, approaches) }
+      ? { id: "phases", label: "phases.txt", content: generatePhasesCSV(filteredPhases, filteredBasicTimings, filteredApproaches) }
       : null,
     includeFiles.detection
-      ? { id: "detectors", label: "detectors.txt", content: generateDetectionCSV(detectors) }
+      ? { id: "detectors", label: "detectors.txt", content: generateDetectionCSV(filteredDetectors) }
       : null,
     includeFiles.basicTimings
-      ? { id: "basicTimings", label: "basic_timings.txt", content: generateBasicTimingsCSV(basicTimings) }
+      ? { id: "basicTimings", label: "basic_timings.txt", content: generateBasicTimingsCSV(filteredBasicTimings) }
       : null,
   ].filter(Boolean) as GTSSFilePreview[];
+
+  const agencies = agencyListStorage.getAll();
 
   const handleExportValidated = async () => {
     if (hasErrors) {
@@ -160,6 +206,11 @@ export default function ExportPanel() {
         <CardContent className="p-4">
           {/* Counts row */}
           <div className="flex flex-wrap gap-3 mb-4">
+            <div className="flex items-center gap-1.5 text-sm">
+              <span className="font-medium text-grey-800">{agencies.length}</span>
+              <span className="text-grey-500">agenc{agencies.length !== 1 ? 'ies' : 'y'}</span>
+            </div>
+            <span className="text-grey-300">|</span>
             <div className="flex items-center gap-1.5 text-sm">
               <span className="font-medium text-grey-800">{signals.length}</span>
               <span className="text-grey-500">signal{signals.length !== 1 ? 's' : ''}</span>
@@ -322,7 +373,7 @@ export default function ExportPanel() {
                     }
                   />
                   <Label htmlFor="agency" className="text-sm text-grey-700">
-                    agency.txt ({agency ? 1 : 0} record)
+                    agency.txt ({agencies.length} record{agencies.length !== 1 ? 's' : ''})
                   </Label>
                 </div>
                 <div className="flex items-center space-x-3">
@@ -387,6 +438,29 @@ export default function ExportPanel() {
                 </div>
               </div>
             </div>
+            
+            <div className="border border-grey-200 rounded-lg p-4">
+              <h4 className="font-medium text-grey-800 mb-3">Agencies to Export</h4>
+              <div className="grid grid-cols-1 gap-2 max-h-48 overflow-auto">
+                {agencyListStorage.getAll().map((a) => (
+                  <div key={a.id} className="flex items-center space-x-3">
+                    <Checkbox
+                      id={`export-agency-${a.id}`}
+                      checked={selectedAgencyIds.includes(a.id)}
+                      onCheckedChange={(checked) => {
+                        setSelectedAgencyIds(prev => {
+                          if (checked) return [...prev, a.id];
+                          return prev.filter(id => id !== a.id);
+                        });
+                      }}
+                    />
+                    <Label htmlFor={`export-agency-${a.id}`} className="text-sm text-grey-700">
+                      {a.agencyName} ({a.agencyId})
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             <div className="flex items-center justify-between pt-4 border-t border-grey-200">
               <div className="flex items-center text-sm text-grey-600">
@@ -399,7 +473,7 @@ export default function ExportPanel() {
               </div>
               <Button
                 onClick={handleExportValidated}
-                disabled={hasErrors || Object.values(includeFiles).every(v => !v)}
+                disabled={hasErrors || Object.values(includeFiles).every(v => !v) || (includeFiles.agency && selectedAgencyIds.length === 0)}
                 className="bg-primary-600 hover:bg-primary-700 text-lg px-8 py-3"
               >
                 <Download className="w-5 h-5 mr-3" />

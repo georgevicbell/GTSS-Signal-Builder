@@ -1,7 +1,7 @@
 # GTSS Builder
 
 ## Overview
-GTSS Builder is a web and desktop application designed for configuring and exporting traffic signal system data in a GTFS-like format (GTSS = General Traffic Signal Specification). It enables users to manage agency information, signal locations, phases, and detectors through an intuitive tabbed interface. The core capabilities include exporting all configured data as a downloadable ZIP file containing TXT files, importing data from TXT files, and running as a standalone desktop application. The project streamlines data exchange for government workers and traffic engineers, providing a robust, client-side solution for traffic signal data management without server dependencies.
+GTSS Builder is a web application designed for configuring and exporting traffic signal system data in a GTFS-like format (GTSS = General Traffic Signal Specification). It enables users to manage agency information, signal locations, phases, and detectors through an intuitive tabbed interface. The core capabilities include exporting all configured data as a downloadable ZIP file containing TXT files and importing data from TXT files. The project streamlines data exchange for government workers and traffic engineers, providing a robust, client-side solution for traffic signal data management without server dependencies.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -28,7 +28,6 @@ The application follows a client-side architecture optimized for browser-based o
 - **Technical Implementations**:
     - **Client-Side Operation**: Complete conversion from server-based APIs to localStorage, making the application fully functional offline without server or database requirements.
     - **State-Based Navigation**: The app uses Zustand state management for navigation instead of URL routing, keeping the URL constant at the root path. This architecture enables perfect static site hosting without requiring server-side routing or rewrite rules. All navigation (signal details, tabs, etc.) happens through state changes, making the app a true single-page application.
-    - **Desktop Application**: Electron-based desktop app support allows packaging as downloadable installers for Windows, macOS, and Linux. The desktop version shares the same codebase as the web app and works completely offline.
     - **Import/Export System**: Comprehensive data exchange system with TXT file export (agency.txt, signals.txt, phases.txt, detectors.txt) and strict validation-based import with replace/merge modes. Movement type encoding/decoding ensures data integrity across import/export cycles.
     - **Signal Details Page**: Comprehensive management page for signals, phases, and detectors with inline editing and map integration.
     - **Visual Phase Editor**: Interactive map-based tool for configuring phases, including click-to-draw directions, rapid multi-phase creation, and automatic bearing calculation.

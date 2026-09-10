@@ -21,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { downloadSvgAsJpg, generateAgencyCSV, generateApproachesCSV, generateBasicTimingsCSV, generateDetectionCSV, generatePhasesCSV, generateSignalsCSV, phaseDiagramFileName, suggestStreetNameForApproach, useApproaches, useBasicTimings, useDetectors, useGTSSStore, usePhases, useSignals } from "gtss";
+import { downloadSvgAsJpg, generateAgencyCSV, generateApproachesCSV, generateBasicTimingsCSV, generateDetectionCSV, generatePhasesCSV, generateSignalsCSV, phaseDiagramFileName, suggestStreetNameForApproach, useApproaches, useBasicTimings, useDetectors, useGTSSStore, usePhases, useSignals, agencyListStorage } from "gtss";
 import { insertPhaseSchema, insertSignalSchema, type Approach, type BasicTiming, type Detector, type InsertPhase, type InsertSignal, type Phase, type Signal } from "gtss/schema";
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Edit3, FileText, HelpCircle, Lock, MapPin, Navigation, Plus, Settings, Trash2, Unlock } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -911,7 +911,22 @@ export default function SignalDetails() {
                       <FormItem className="space-y-1">
                         <FormLabel className="text-[10px] uppercase tracking-wide font-medium text-grey-500">Agency ID</FormLabel>
                         <FormControl>
-                          <Input {...field} className="h-7 text-sm" />
+                          <Select value={field.value || (() => {
+                            try {
+                              const defId = agencyListStorage.getDefaultId();
+                              const list = agencyListStorage.getAll();
+                              return list.find(a => a.id === defId)?.agencyId || "";
+                            } catch { return ""; }
+                          })()} onValueChange={field.onChange}>
+                            <SelectTrigger className="h-7 text-sm">
+                              <SelectValue placeholder="Select agency" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {agencyListStorage.getAll().map(a => (
+                                <SelectItem key={a.id} value={a.agencyId}>{a.agencyName} ({a.agencyId})</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -2232,7 +2247,18 @@ export default function SignalDetails() {
                     <FormItem className="space-y-1">
                       <FormLabel className="text-xs font-medium">Agency ID</FormLabel>
                       <FormControl>
-                        <Input {...field} className="h-7 px-2 text-xs" />
+                        <Select value={field.value || (() => {
+                          try { const defId = agencyListStorage.getDefaultId(); const list = agencyListStorage.getAll(); return list.find(a => a.id === defId)?.agencyId || ""; } catch { return ""; }
+                        })()} onValueChange={field.onChange}>
+                          <SelectTrigger className="h-7 px-2 text-xs">
+                            <SelectValue placeholder="Select agency" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {agencyListStorage.getAll().map(a => (
+                              <SelectItem key={a.id} value={a.agencyId}>{a.agencyName} ({a.agencyId})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

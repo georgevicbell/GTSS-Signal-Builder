@@ -1,15 +1,28 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import MapTileLayers from "@/components/ui/map-tile-layers";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { agencyStorage, useGTSSStore } from "gtss";
+import * as gtss from "gtss";
+import type { Agency } from "gtss/schema";
 import { type InsertAgency, insertAgencySchema } from "gtss/schema";
-import { Crosshair, MapPin } from "lucide-react";
+import { Crosshair, MapPin, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { MapContainer, Marker, useMapEvents } from "react-leaflet";
@@ -25,7 +38,7 @@ function LocationPicker({ onLocationSelect }: { onLocationSelect: (lat: number, 
 }
 
 export default function AgencyForm() {
-  const { agency, setAgency, signals, phases, detectors } = useGTSSStore();
+  const { agency, setAgency, signals, phases, detectors, approaches, basicTimings } = gtss.useGTSSStore();
   const { toast } = useToast();
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;
@@ -45,8 +58,13 @@ export default function AgencyForm() {
 
   const saveAgency = (data: InsertAgency) => {
     try {
-      const savedAgency = agencyStorage.save(data);
-      setAgency(savedAgency);
+      // Save to agency list and mark as current
+      const savedListAgency = gtss.agencyListStorage.save(data);
+      // Also persist the currently selected agency for legacy APIs
+      gtss.agencyStorage.save(data);
+      setAgency(savedListAgency);
+      // refresh local list UI
+      refreshAgencies();
       toast({
         title: "Success",
         description: "Agency information saved successfully",
@@ -116,6 +134,73 @@ export default function AgencyForm() {
       longitude: selectedLocation?.lon || data.longitude,
     };
     saveAgency(saveData);
+  };
+
+  const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [defaultAgencyId, setDefaultAgencyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // load agencies list and default id
+    try {
+      const list = gtss.agencyListStorage.getAll();
+      setAgencies(list);
+      const def = gtss.agencyListStorage.getDefaultId();
+      setDefaultAgencyId(def);
+    } catch {
+      setAgencies([]);
+      setDefaultAgencyId(null);
+    }
+  }, []);
+
+  const refreshAgencies = () => {
+    const list = gtss.agencyListStorage.getAll();
+    setAgencies(list);
+    setDefaultAgencyId(gtss.agencyListStorage.getDefaultId());
+  };
+
+  const handleLoadAgency = (a: Agency) => {
+    // load into form and store
+    form.reset({
+      agencyId: a.agencyId,
+      agencyName: a.agencyName,
+      agencyUrl: a.agencyUrl || "http://",
+      agencyTimezone: a.agencyTimezone,
+      agencyEmail: a.agencyEmail || "",
+      latitude: a.latitude || undefined,
+      longitude: a.longitude || undefined,
+    });
+    setSelectedLocation(a.latitude && a.longitude ? { lat: a.latitude, lon: a.longitude, displayName: a.agencyName } : null);
+    setMapCenter([a.latitude || 39.8283, a.longitude || -98.5795]);
+    setAgency(a);
+  };
+
+  const handleSetDefault = (id: string) => {
+    gtss.agencyListStorage.setDefaultId(id);
+    setAgency(gtss.agencyListStorage.get(id) || null);
+    setDefaultAgencyId(id);
+    toast({ title: "Default Set", description: "Default agency updated" });
+  };
+
+  // Note: deletion is only allowed via cascade to avoid orphaned records.
+
+  const handleDeleteCascade = (id: string) => {
+    const targetAgency = gtss.agencyListStorage.get(id);
+    if (!targetAgency) {
+      toast({ title: "Not Found", description: "Agency could not be found.", variant: "destructive" });
+      return;
+    }
+
+    // Perform cascade delete via storage helper
+    gtss.agencyListStorage.deleteWithCascade(id);
+
+    // if deleted current, clear or set to default
+    if (agency && agency.id === id) {
+      const defId = gtss.agencyListStorage.getDefaultId();
+      const newAgency = defId ? gtss.agencyListStorage.get(defId) || null : null;
+      setAgency(newAgency as any);
+    }
+    refreshAgencies();
+    toast({ title: "Deleted", description: "Agency and related data removed" });
   };
 
   const generateAgencyId = (state: string, agencyName: string): string => {
@@ -215,9 +300,7 @@ export default function AgencyForm() {
     <div className="max-w-4xl space-y-6">
       {/* Agency Information Form */}
       <Card>
-        <CardHeader className="bg-grey-50 border-b border-grey-200">
-          <CardTitle className="text-lg font-semibold text-grey-800">Agency Configuration</CardTitle>
-        </CardHeader>
+       
         <CardContent className="p-4">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -397,23 +480,107 @@ export default function AgencyForm() {
         </CardContent>
       </Card>
 
-      {/* Quick Preview */}
+      {/* Agencies List */}
       <Card>
         <CardHeader className="bg-grey-50 border-b border-grey-200">
-          <CardTitle className="text-lg font-semibold text-grey-800">Configuration Preview</CardTitle>
-          <p className="text-sm text-grey-600">Current configuration summary</p>
+          <CardTitle className="text-lg font-semibold text-grey-800">Agencies</CardTitle>
+          <p className="text-sm text-grey-600">Select an agency to load it into the editor</p>
         </CardHeader>
-        <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-            <div className="bg-primary-50 border border-primary-200 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-primary-600 font-medium">Signal Intersections</p>
-                  <p className="text-xl font-bold text-primary-700">{signals.length}</p>
-                </div>
-                <MapPin className="text-primary-500 w-5 h-5" />
-              </div>
-            </div>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-grey-50">
+                <TableRow>
+                  <TableHead className="text-sm">Agency Name</TableHead>
+                  <TableHead className="text-sm">Agency ID</TableHead>
+                  <TableHead className="text-sm">Signals</TableHead>
+                  <TableHead className="text-sm">Default</TableHead>
+                  <TableHead className="text-sm text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {agencies.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-6 text-xs text-grey-500">
+                      No agencies yet. Save one to add it to the list.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  agencies.map((a) => (
+                    <TableRow
+                      key={a.id}
+                      className="hover:bg-grey-50 cursor-pointer transition-colors"
+                      onClick={() => handleLoadAgency(a)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleLoadAgency(a);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      data-testid={`row-agency-${a.agencyId}`}
+                    >
+                      <TableCell className="font-medium text-grey-900 text-sm py-2 px-3">{a.agencyName}</TableCell>
+                      <TableCell className="text-grey-600 text-xs py-2 px-3">{a.agencyId}</TableCell>
+                      <TableCell className="text-grey-600 text-xs py-2 px-3">{signals.filter(s => s.agencyId === a.agencyId).length}</TableCell>
+                      <TableCell className="text-xs py-2 px-3">
+                        {defaultAgencyId === a.id ? (
+                          <Badge>Default</Badge>
+                        ) : (
+                          <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleSetDefault(a.id); }}>Set Default</Button>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs py-2 px-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="destructive" aria-label={`Delete ${a.agencyName}`} onClick={(e) => e.stopPropagation()}>
+                                <Trash className="w-4 h-4" aria-hidden="true" />
+                                <span className="sr-only">Delete</span>
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Agency</AlertDialogTitle>
+                                  {
+                                    (() => {
+                                      const depSignals = signals.filter(s => s.agencyId === a.agencyId);
+                                      const depSignalIds = depSignals.map(s => s.signalId);
+                                      const depApproaches = approaches.filter(ap => depSignalIds.includes(ap.signalId)).length;
+                                      const depPhases = phases.filter(p => depSignalIds.includes(p.signalId)).length;
+                                      const depDetectors = detectors.filter(d => depSignalIds.includes(d.signalId)).length;
+                                      const depTimings = basicTimings.filter(t => depSignalIds.includes(t.signalId)).length;
+                                      const totalDependents = depSignals.length + depApproaches + depPhases + depDetectors + depTimings;
+
+                                      if (totalDependents > 0) {
+                                        return (
+                                          <AlertDialogDescription>
+                                            Deleting this agency will also remove {depSignals.length} signal(s), {depApproaches} approach(es), {depPhases} phase(s), {depDetectors} detector(s), and {depTimings} timing record(s). This can't be undone. Are you sure you want to proceed?
+                                          </AlertDialogDescription>
+                                        );
+                                      }
+                                      return (
+                                        <AlertDialogDescription>This can't be undone. Are you sure you want to delete this agency?</AlertDialogDescription>
+                                      );
+                                    })()
+                                  }
+                                </AlertDialogHeader>
+                              <AlertDialogFooter className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <div className="flex gap-2">
+                                  <AlertDialogAction onClick={() => handleDeleteCascade(a.id)}>Delete Agency and Data</AlertDialogAction>
+                                </div>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>

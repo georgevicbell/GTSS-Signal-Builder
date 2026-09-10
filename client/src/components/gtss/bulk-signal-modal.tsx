@@ -2,8 +2,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import MapTileLayers from "@/components/ui/map-tile-layers";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from "@/hooks/use-toast";
-import { useGTSSStore, useSignals, type InsertSignal } from "gtss";
+import { useGTSSStore, useSignals } from "gtss";
+import { type InsertSignal}from "gtss/schema"
+import { agencyListStorage } from 'gtss';
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapPin, Save, Trash2, X } from "lucide-react";
@@ -47,6 +50,16 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
   const signalHooks = useSignals();
   const [pendingSignals, setPendingSignals] = useState<PendingSignal[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedAgencyId, setSelectedAgencyId] = useState<string>(() => {
+    try {
+      const defId = agencyListStorage.getDefaultId();
+      const list = agencyListStorage.getAll();
+      const defAgency = list.find(a => a.id === defId);
+      return defAgency?.agencyId || agency?.agencyId || "";
+    } catch {
+      return agency?.agencyId || "";
+    }
+  });
 
   const getMapCenter = (): [number, number] => {
     // Use agency coordinates if available
@@ -126,7 +139,7 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
     try {
       const signalsToCreate: InsertSignal[] = pendingSignals.map((signal, index) => ({
         signalId: "", // Will be auto-generated
-        agencyId: agency?.agencyId || "",
+        agencyId: selectedAgencyId || agency?.agencyId || "",
         streetName1: signal.streetName1 || `Street ${index + 1}`,
         streetName2: signal.streetName2 || `Cross Street ${index + 1}`,
         latitude: signal.lat,
@@ -180,6 +193,7 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
               Click anywhere on the map to add signal locations. Street names will be auto-populated when possible.
               You can edit details later from the main signals table.
             </p>
+            {/* Agency Select moved to footer */}
           </div>
 
           <div className="flex-1 relative min-h-0">
@@ -255,7 +269,23 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
         </div>
 
         <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-t border-grey-200 bg-white">
-          <div className="flex space-x-2">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <label className="text-xs font-medium text-gray-700">Agency</label>
+              <div className="w-44">
+                <Select value={selectedAgencyId} onValueChange={setSelectedAgencyId}>
+                  <SelectTrigger className="h-8 w-full">
+                    <SelectValue placeholder="Select agency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {agencyListStorage.getAll().map(a => (
+                      <SelectItem key={a.id} value={a.agencyId}>{a.agencyName} ({a.agencyId})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             {pendingSignals.length > 0 && (
               <Button
                 variant="outline"
