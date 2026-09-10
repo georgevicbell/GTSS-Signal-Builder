@@ -61,8 +61,6 @@
     "date-fns": "^3.6.0",
     "drizzle-orm": "^0.39.1",
     "drizzle-zod": "^0.7.0",
-    "electron": "^38.2.2",
-    "electron-builder": "^26.0.12",
     "embla-carousel-react": "^8.6.0",
     "express": "^4.21.2",
     "express-rate-limit": "^8.2.1",
