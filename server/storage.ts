@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { type Agency, type Detector, type GTSSData, type InsertAgency, type InsertDetector, type InsertPhase, type InsertSignal, type Phase, type Signal } from "gtss";
+import { type Agency, type Detector, type GTSSData, type InsertAgency, type InsertDetector, type InsertPhase, type InsertSignal, type Phase, type Signal } from "gtss/schema";
 
 export interface IStorage {
   // Agency methods

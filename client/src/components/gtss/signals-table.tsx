@@ -1,11 +1,12 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import SignalsMap from "@/components/ui/signals-map";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { getDerivedStreetNames, Signal, useGTSSStore, useSignals } from "gtss";
+import { getDerivedStreetNames, useGTSSStore, useSignals } from "gtss";
+import type { Signal } from "gtss/schema";
+
 import { ChevronDown, ChevronUp, MapPin, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import BulkSignalModal from "./bulk-signal-modal";
