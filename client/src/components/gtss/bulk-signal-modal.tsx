@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import MapTileLayers from "@/components/ui/map-tile-layers";
 import { useToast } from "@/hooks/use-toast";
-import { useGTSSStore, useSignals } from "gtss";
+import { useGTSSStore, useSignals, useMapScrollZoom } from "gtss";
 import { type InsertSignal } from "gtss/schema";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -43,6 +43,7 @@ function MapClickHandler({ onLocationAdd }: { onLocationAdd: (lat: number, lon: 
 }
 
 export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
+  const mapScrollZoom = useMapScrollZoom();
   const { agency, addSignal, signals } = useGTSSStore();
   const { toast } = useToast();
   const signalHooks = useSignals();
@@ -191,7 +192,7 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
             <MapContainer
               center={getMapCenter()}
               zoom={13}
-              scrollWheelZoom={true}
+              scrollWheelZoom={mapScrollZoom}
               style={{ height: "100%", width: "100%" }}
               className="rounded-lg cursor-crosshair"
             >

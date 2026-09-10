@@ -1,7 +1,7 @@
 import { approachColorFor } from "@/components/gtss/approach-colors";
 import { PhaseDiagram } from "@/components/gtss/phase-diagram-svg";
 import { Button } from "@/components/ui/button";
-import { getDerivedStreetNames, useGTSSStore } from "gtss";
+import { getDerivedStreetNames, useGTSSStore, useMapScrollZoom } from "gtss";
 import { Approach, Phase, Signal } from "gtss/schema";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -191,6 +191,7 @@ function SignalPopup({
 }
 
 export default function SignalsMap({ signals, approaches, phases, onSignalSelect, getCompletenessPct, highlightedSignalId, className, enableClickToAdd = false }: SignalsMapProps) {
+  const mapScrollZoom = useMapScrollZoom();
   const agency = useGTSSStore((state) => state.agency);
   const { navigateToSignalDetails, setTempNewSignalLocation } = useGTSSStore();
 
@@ -223,7 +224,7 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
       <MapContainer
         center={center}
         zoom={signals.length === 1 ? 15 : signals.length > 0 ? 13 : 4}
-        scrollWheelZoom={true}
+        scrollWheelZoom={mapScrollZoom}
         style={{ height: "100%", width: "100%", zIndex: 1 }}
         className={`rounded-lg ${enableClickToAdd ? "cursor-crosshair" : ""}`}
         key={`map-${signals.length}-${center[0]}-${center[1]}`}

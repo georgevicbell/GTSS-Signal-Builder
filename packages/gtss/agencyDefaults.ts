@@ -13,10 +13,20 @@ export type PhaseDirectionStandard = {
   W_left?: number[];
 };
 
+/**
+ * What the mouse wheel does over a map.
+ *   'page' — the wheel scrolls the page, so the tables below the map stay
+ *            reachable; zoom with the +/- buttons instead.
+ *   'zoom' — the wheel zooms the map and the page stays put.
+ */
+export type MapScrollWheelMode = 'page' | 'zoom';
+
 export type AgencyDefaults = {
   agencyId: string;
   phaseDirectionStandard: PhaseDirectionStandard;
   defaultPhaseCount: number;
+  /** Mouse-wheel behavior over maps. Defaults to 'page'. */
+  mapScrollWheel: MapScrollWheelMode;
   updatedAt: string;
 };
 
@@ -43,8 +53,20 @@ export const DEFAULT_AGENCY_DEFAULTS: AgencyDefaults = {
   agencyId: '',
   phaseDirectionStandard: { ...NEMA_DEFAULTS },
   defaultPhaseCount: 8,
+  // Page scrolling by default: a wheel that zooms the map traps the cursor and
+  // makes the data below it hard to reach.
+  mapScrollWheel: 'page',
   updatedAt: new Date().toISOString(),
 };
+
+/**
+ * Whether Leaflet's scroll-wheel zoom should be on, given saved defaults.
+ * Anything unrecognized — including defaults saved before this setting
+ * existed — falls back to page scrolling.
+ */
+export function isMapScrollZoomEnabled(defaults: AgencyDefaults | null | undefined): boolean {
+  return defaults?.mapScrollWheel === 'zoom';
+}
 
 /**
  * Convert a compass bearing (0–359°) to a 4-quadrant cardinal direction.

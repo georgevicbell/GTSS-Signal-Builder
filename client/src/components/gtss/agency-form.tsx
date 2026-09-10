@@ -7,7 +7,7 @@ import MapTileLayers from "@/components/ui/map-tile-layers";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { agencyStorage, useGTSSStore } from "gtss";
+import { agencyStorage, useGTSSStore, useMapScrollZoom } from "gtss";
 import { type InsertAgency, insertAgencySchema } from "gtss/schema";
 import { Crosshair, MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -25,6 +25,7 @@ function LocationPicker({ onLocationSelect }: { onLocationSelect: (lat: number, 
 }
 
 export default function AgencyForm() {
+  const mapScrollZoom = useMapScrollZoom();
   const { agency, setAgency, signals, phases, detectors } = useGTSSStore();
   const { toast } = useToast();
   const [selectedLocation, setSelectedLocation] = useState<{
@@ -246,7 +247,7 @@ export default function AgencyForm() {
                   <MapContainer
                     center={mapCenter}
                     zoom={selectedLocation ? 12 : 6}
-                    scrollWheelZoom={true}
+                    scrollWheelZoom={mapScrollZoom}
                     style={{ height: "100%", width: "100%" }}
                     className="rounded-lg border"
                     key={`agency-map-${mapCenter[0]}-${mapCenter[1]}`}

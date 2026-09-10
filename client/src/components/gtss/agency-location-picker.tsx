@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useMapScrollZoom } from "gtss";
 import { MapContainer, Marker, useMapEvents } from "react-leaflet";
 import MapTileLayers from "@/components/ui/map-tile-layers";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ function LocationPicker({ onLocationSelect }: { onLocationSelect: (lat: number, 
 }
 
 export default function AgencyLocationPicker({ isOpen, onClose, onLocationSelect, suggestedLocation }: AgencyLocationPickerProps) {
+  const mapScrollZoom = useMapScrollZoom();
   const [selectedLocation, setSelectedLocation] = useState<LocationInfo | null>(null);
   const [isGeocodingUserLocation, setIsGeocodingUserLocation] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
@@ -158,7 +160,7 @@ export default function AgencyLocationPicker({ isOpen, onClose, onLocationSelect
             <MapContainer
               center={mapCenter}
               zoom={suggestedLocation ? 10 : 4}
-              scrollWheelZoom={true}
+              scrollWheelZoom={mapScrollZoom}
               style={{ height: "100%", width: "100%" }}
               className="rounded-lg border"
             >

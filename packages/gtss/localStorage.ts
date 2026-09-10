@@ -615,7 +615,14 @@ export const basicTimingStorage = {
 // Agency Defaults operations
 export const agencyDefaultsStorage = {
   get: (): AgencyDefaults | null => {
-    return getFromStorage<AgencyDefaults | null>(STORAGE_KEYS.AGENCY_DEFAULTS, null);
+    const stored = getFromStorage<AgencyDefaults | null>(STORAGE_KEYS.AGENCY_DEFAULTS, null);
+    if (!stored) return null;
+    // Defaults saved before mapScrollWheel existed have no value for it; treat
+    // anything unrecognized as page scrolling.
+    return {
+      ...stored,
+      mapScrollWheel: stored.mapScrollWheel === 'zoom' ? 'zoom' : 'page',
+    };
   },
 
   save: (defaults: AgencyDefaults): AgencyDefaults => {

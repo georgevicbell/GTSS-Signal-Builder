@@ -6,7 +6,7 @@ import MapTileLayers from "@/components/ui/map-tile-layers";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getSignalDisplayName, useDetectors, useGTSSStore } from "gtss";
+import { getSignalDisplayName, useDetectors, useGTSSStore, useMapScrollZoom } from "gtss";
 import { type Detector, type InsertDetector, insertDetectorSchema } from "gtss/schema";
 import { approachColorFor } from "./approach-colors";
 import { MapPin, Trash2 } from "lucide-react";
@@ -80,6 +80,7 @@ interface DetectorModalProps {
 }
 
 export default function DetectorModal({ detector, onClose, preSelectedSignalId }: DetectorModalProps) {
+  const mapScrollZoom = useMapScrollZoom();
   const { signals, phases, approaches } = useGTSSStore();
   const { toast } = useToast();
   const detectorHooks = useDetectors();
@@ -631,7 +632,7 @@ export default function DetectorModal({ detector, onClose, preSelectedSignalId }
                         key={selectedSignalId} // Force remount when signal changes
                         center={[selectedSignal.latitude || 0, selectedSignal.longitude || 0]}
                         zoom={18}
-                        scrollWheelZoom={true}
+                        scrollWheelZoom={mapScrollZoom}
                         style={{ height: "100%", width: "100%" }}
                       >
                         <MapTileLayers />
