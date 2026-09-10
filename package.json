@@ -68,7 +68,7 @@
     "express-rate-limit": "^8.2.1",
     "express-session": "^1.18.1",
     "framer-motion": "^11.13.1",
-    "gtss": "file:packages/gtss",
+    "gtss-lib": "file:packages/gtss",
     "helmet": "^8.1.0",
     "input-otp": "^1.4.2",
     "jszip": "^3.10.1",
