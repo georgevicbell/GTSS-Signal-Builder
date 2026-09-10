@@ -14,12 +14,11 @@
     "test": "npm run test --workspaces --if-present",
     "db:push": "drizzle-kit push",
     "publish": "npm publish --workspaces",
-    "lint": "eslint 'src/**/*.{ts,js}'",
+    "lint": "eslint 'client/**/*.{ts,tsx}' 'server/**/*.{ts,tsx}' 'packages/**/*.{ts,tsx}'",
     "prepare": "husky"
   },
   "lint-staged": {
-    "**/*": "prettier --write --ignore-unknown",
-    "*.{ts,js}": "eslint --cache --fix"
+    "*.{ts,js}": "prettier --write --ignore-unknown;eslint 'client/**/*.{ts,tsx}' 'server/**/*.{ts,tsx}' 'packages/**/*.{ts,tsx}' --cache --fix"
   },
   "workspaces": [
     "packages/*"
