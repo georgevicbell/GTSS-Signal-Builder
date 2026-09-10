@@ -18,7 +18,6 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "**/*": "prettier --write --ignore-unknown",
     "*.ts": [
       "tslint --fix"
     ]
