@@ -1,15 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SignalsMap from "@/components/ui/signals-map";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { downloadSvgAsJpg, getSignalDisplayName, Phase, phaseDiagramFileName, useGTSSStore, usePhases } from "gtss";
-import { AlertTriangle, ChevronDown, ChevronUp, Download, MapPin, Plus, Trash2 } from "lucide-react";
+import { downloadSvgAsJpg, getSignalDisplayName, phaseDiagramFileName, useGTSSStore, usePhases } from "gtss";
+import { Phase } from "gtss/schema";
+import { AlertTriangle, ChevronDown, ChevronUp, MapPin, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import ResizableBlock from "@/components/ui/resizable-block";
 import BulkPhaseModal from "./bulk-phase-modal";
-import PhaseDiagram from "./phase-diagram";
 import PhaseModal from "./phase-modal";
 
 type SortField = 'phase' | 'signalId' | 'movementType' | 'approachId' | 'numOfLanes';
@@ -181,153 +181,126 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
   };
 
   return (
-    <div className="max-w-6xl">
-      <Card>
-        <CardHeader className="bg-grey-50 border-b border-grey-200 p-3">
-         
+    <div className="max-w-6xl h-full">
+      <ResizablePanelGroup
+        direction="vertical"
+        autoSaveId="phases-split"
+        className="flex-1 min-h-[420px] rounded-lg border border-grey-200 bg-white overflow-hidden"
+      >
+        <ResizablePanel defaultSize={40} minSize={12} className="relative z-0">
           {signals.length === 0 ? (
-            <div className="p-2 bg-warning-50 border border-warning-200 rounded-md">
-              <p className="text-xs text-warning-700">
-                No signals configured. Please add signals before creating phases.
-              </p>
+            <div className="w-full h-full bg-grey-50 flex items-center justify-center">
+              <div className="text-center text-grey-500">
+                <MapPin className="w-6 h-6 mx-auto mb-1 text-grey-400" />
+                <p className="text-xs">No signals to display</p>
+              </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <Select value={filterSignal} onValueChange={setFilterSignal}>
-                  <SelectTrigger className="flex-1 h-8 text-sm">
-                    <SelectValue placeholder="Select Signal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {signals.map((signal) => (
-                      <SelectItem key={signal.signalId} value={signal.signalId}>
-                        {getSignalDisplayName(signal, approaches)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-              </div>
-              {filterSignal && (
-                <div className="flex items-stretch gap-3">
-                  {filteredPhases.length > 0 && (() => {
-                    const selectedSignal = signals.find(s => s.signalId === filterSignal);
-                    const signalName = selectedSignal ? getSignalDisplayName(selectedSignal, approaches) : filterSignal;
-                    return (
-                      <div className="flex flex-col items-center flex-shrink-0">
-                        <div className="text-sm font-semibold text-grey-700 mb-1 text-center">
-                          {signalName}
-                        </div>
-                        <div className="w-72 h-72 border border-grey-300 rounded-md overflow-hidden bg-white">
-                          <PhaseDiagram
-                            phases={filteredPhases}
-                            approaches={signalApproaches}
-                            svgRef={svgRef}
-                            compact
-                          />
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleDownloadImage}
-                          className="mt-2 h-7 text-xs"
-                        >
-                          <Download className="w-3 h-3 mr-1" />
-                          Download JPG
-                        </Button>
-                      </div>
-                    );
-                  })()}
-                  {(() => {
-                    const selectedSignal = signals.find(s => s.signalId === filterSignal);
-                    return (
-                      <ResizableBlock initialHeight={288} minHeight={120} maxHeight={800}>
-                        {selectedSignal && selectedSignal.latitude && selectedSignal.longitude ? (
-                          <div className="w-full h-full border border-grey-300 rounded-md overflow-hidden bg-white relative z-0">
-                            <SignalsMap signals={[selectedSignal]} className="w-full h-full" />
-                          </div>
-                        ) : (
-                          <div className="w-full h-full border border-grey-300 rounded-md bg-grey-100 flex items-center justify-center">
-                            <MapPin className="w-6 h-6 text-grey-400" />
-                          </div>
-                        )}
-                      </ResizableBlock>
-                    );
-                  })()} 
+            <div className="w-full h-full relative z-0">
+              {filterSignal ? (
+                <SignalsMap signals={[signals.find(s => s.signalId === filterSignal)!]} className="w-full h-full" />
+              ) : (
+                <div className="w-full h-full bg-grey-100 flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-grey-400" />
                 </div>
               )}
             </div>
           )}
-        </CardHeader>
-        <CardContent className="p-0">
-          {orphanPhases.length > 0 && (
-            <div className="flex items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-3">
-              <div className="flex items-start gap-2 text-amber-800">
-                <AlertTriangle className="mt-0.5 h-4 w-4" />
-                <div>
-                  <p className="text-xs font-medium">Orphaned phases detected</p>
-                  <p className="text-xs text-amber-700">
-                    {orphanPhases.length} phase{orphanPhases.length > 1 ? "s" : ""} reference deleted signals.
-                  </p>
+        </ResizablePanel>
+        <ResizableHandle withHandle className="bg-grey-200 hover:bg-primary-300 transition-colors" />
+        <ResizablePanel defaultSize={60} minSize={20} className="flex flex-col min-h-0">
+          <Card className="rounded-none border-0 flex flex-col h-full min-h-0">
+            <CardHeader className="bg-grey-50 p-0" />
+            <CardContent className="p-0 flex-1 min-h-0 overflow-auto">
+              {orphanPhases.length > 0 && (
+                <div className="flex items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-3">
+                  <div className="flex items-start gap-2 text-amber-800">
+                    <AlertTriangle className="mt-0.5 h-4 w-4" />
+                    <div>
+                      <p className="text-xs font-medium">Orphaned phases detected</p>
+                      <p className="text-xs text-amber-700">
+                        {orphanPhases.length} phase{orphanPhases.length > 1 ? "s" : ""} reference deleted signals.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDeleteOrphanPhases}
+                    className="h-7 px-2 text-xs text-amber-700 border-amber-200 hover:bg-amber-100"
+                  >
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    Delete Orphans
+                  </Button>
                 </div>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleDeleteOrphanPhases}
-                className="h-7 px-2 text-xs text-amber-700 border-amber-200 hover:bg-amber-100"
-              >
-                <Trash2 className="w-3 h-3 mr-1" />
-                Delete Orphans
-              </Button>
-            </div>
-          )}
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-grey-50 border-b border-grey-200">
-                  <SortableHeader field="signalId">Signal ID</SortableHeader>
-                  <SortableHeader field="phase">Phase</SortableHeader>
-                  <SortableHeader field="movementType">Movement</SortableHeader>
-                  <SortableHeader field="approachId">Approach</SortableHeader>
-                  <SortableHeader field="numOfLanes">Lanes</SortableHeader>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPhases.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-grey-500">
-                      {filterSignal === "all"
-                        ? "No phases configured. Add your first phase to get started."
-                        : "No phases found for the selected signal."
-                      }
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  getSortedPhases().map((phase) => (
-                    <TableRow
-                      key={phase.id}
-                      className="hover:bg-grey-50 cursor-pointer transition-colors"
-                      onClick={() => handleRowClick(phase)}
-                    >
-                      <TableCell className="font-medium text-grey-900 text-xs py-1 px-2">{phase.signalId}</TableCell>
-                      <TableCell className="text-grey-600 text-xs py-1 px-2">{phase.phase}</TableCell>
-                      <TableCell className="text-grey-600 text-xs py-1 px-2">{phase.movementType}</TableCell>
-                      <TableCell className="text-grey-600 text-xs py-1 px-2">
-                        {phase.approachId || '-'}
-                      </TableCell>
-                      <TableCell className="text-grey-600 text-xs py-1 px-2">
-                        {phase.numOfLanes}
-                      </TableCell>
+              )}
+              {signals.length > 0 && (
+                <div className="px-4 py-3 border-b border-grey-100 flex items-center gap-3">
+                  <div className="text-xs font-medium text-grey-700">Filter by Signals</div>
+                  <div className="flex-1">
+                    <Select value={filterSignal} onValueChange={setFilterSignal}>
+                      <SelectTrigger className="w-full h-8 text-sm">
+                        <SelectValue placeholder="Select Signal" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {signals.map((signal) => (
+                          <SelectItem key={signal.signalId} value={signal.signalId}>
+                            {getSignalDisplayName(signal, approaches)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-grey-50 border-b border-grey-200">
+                      <SortableHeader field="signalId">Signal ID</SortableHeader>
+                      <SortableHeader field="phase">Phase</SortableHeader>
+                      <SortableHeader field="movementType">Movement</SortableHeader>
+                      <SortableHeader field="approachId">Approach</SortableHeader>
+                      <SortableHeader field="numOfLanes">Lanes</SortableHeader>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPhases.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-grey-500">
+                          {filterSignal === "all"
+                            ? "No phases configured. Add your first phase to get started."
+                            : "No phases found for the selected signal."
+                          }
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      getSortedPhases().map((phase) => (
+                        <TableRow
+                          key={phase.id}
+                          className="hover:bg-grey-50 cursor-pointer transition-colors"
+                          onClick={() => handleRowClick(phase)}
+                        >
+                          <TableCell className="font-medium text-grey-900 text-xs py-1 px-2">{phase.signalId}</TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1 px-2">{phase.phase}</TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1 px-2">{phase.movementType}</TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1 px-2">
+                            {phase.approachId || '-'}
+                          </TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1 px-2">
+                            {phase.numOfLanes}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       {showModal && (
         <PhaseModal

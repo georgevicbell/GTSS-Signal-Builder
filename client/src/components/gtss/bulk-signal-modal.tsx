@@ -3,11 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import MapTileLayers from "@/components/ui/map-tile-layers";
 import { useToast } from "@/hooks/use-toast";
-import { useGTSSStore, useSignals, type InsertSignal } from "gtss";
+import { useGTSSStore, useSignals } from "gtss";
+import { type InsertSignal } from "gtss/schema";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapPin, Save, Trash2, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { MapContainer, Marker, useMapEvents } from "react-leaflet";
 

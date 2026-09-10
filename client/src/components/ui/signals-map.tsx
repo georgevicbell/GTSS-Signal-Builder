@@ -1,12 +1,13 @@
+import { approachColorFor } from "@/components/gtss/approach-colors";
 import { PhaseDiagram } from "@/components/gtss/phase-diagram-svg";
+import { Button } from "@/components/ui/button";
 import { getDerivedStreetNames, useGTSSStore } from "gtss";
-import {Approach,Phase,Signal} from"gtss/schema";
+import { Approach, Phase, Signal } from "gtss/schema";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo } from "react";
 import { MapContainer, Marker, Polyline, Popup, useMap, useMapEvents } from "react-leaflet";
 import MapTileLayers from "./map-tile-layers";
-import { approachColorFor } from "@/components/gtss/approach-colors";
 
 // Fix for default markers in react-leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;

@@ -1,14 +1,14 @@
+import { approachColorFor } from "@/components/gtss/approach-colors";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SignalsMap from "@/components/ui/signals-map";
-import { approachColorFor } from "@/components/gtss/approach-colors";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Approach, getSignalDisplayName, useApproaches, useGTSSStore } from "gtss";
-import { ChevronDown, ChevronUp, MapPin, Plus } from "lucide-react";
+import { getSignalDisplayName, useApproaches, useGTSSStore } from "gtss";
+import { Approach } from "gtss/schema";
+import { ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import ResizableBlock from "@/components/ui/resizable-block";
 import ApproachModal from "./approach-modal";
 import BulkApproachModal from "./bulk-approach-modal";
 
@@ -62,7 +62,6 @@ export default function ApproachesTable({ triggerAdd, triggerBulk }: ApproachesT
   const filteredApproaches = selectedSignalId
     ? approaches.filter(approach => approach.signalId === selectedSignalId)
     : [];
-
 
   const handleEdit = (approach: Approach) => {
     setEditingApproach(approach);
@@ -175,128 +174,130 @@ export default function ApproachesTable({ triggerAdd, triggerBulk }: ApproachesT
   );
 
   return (
-    <div className="max-w-6xl">
-      <Card>
-        <CardHeader className="bg-grey-50 border-b border-grey-200 p-3">
-          
+    <div className="max-w-6xl h-full">
+      <ResizablePanelGroup
+        direction="vertical"
+        autoSaveId="approaches-split"
+        className="flex-1 min-h-[420px] rounded-lg border border-grey-200 bg-white overflow-hidden"
+      >
+        <ResizablePanel defaultSize={40} minSize={12} className="relative z-0">
           {signals.length === 0 ? (
-            <div className="p-2 bg-warning-50 border border-warning-200 rounded-md">
-              <p className="text-xs text-warning-700">
-                No signals configured. Please add signals before creating approaches.
-              </p>
+            <div className="w-full h-full bg-grey-50 flex items-center justify-center">
+              <div className="text-center text-grey-500">
+                <MapPin className="w-6 h-6 mx-auto mb-1 text-grey-400" />
+                <p className="text-xs">No signals to display</p>
+              </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <Select value={selectedSignalId} onValueChange={setSelectedSignalId}>
-                  <SelectTrigger className="flex-1 h-8 text-sm">
-                    <SelectValue placeholder="Select Signal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {signals.map((signal) => (
-                      <SelectItem key={signal.signalId} value={signal.signalId}>
-                        {getSignalDisplayName(signal, approaches)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedSignalId && (
-                  <span className="text-xs text-grey-600 whitespace-nowrap">({filteredApproaches.length} approach{filteredApproaches.length !== 1 ? 'es' : ''})</span>
-                )}
-              </div>
-              {selectedSignalId && (() => {
-                const selectedSignal = signals.find(s => s.signalId === selectedSignalId);
-                return (
-                  <ResizableBlock initialHeight={288} minHeight={120} maxHeight={800}>
-                    {selectedSignal && selectedSignal.latitude && selectedSignal.longitude ? (
-                      <div className="w-full h-full border border-grey-300 rounded-md overflow-hidden bg-white relative z-0">
-                        <SignalsMap
-                          signals={[selectedSignal]}
-                          approaches={filteredApproaches}
-                          className="w-full h-full"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-full h-full border border-grey-300 rounded-md bg-grey-100 flex items-center justify-center">
-                        <MapPin className="w-6 h-6 text-grey-400" />
-                      </div>
-                    )}
-                  </ResizableBlock>
-                );
-              })()}
+            <div className="w-full h-full relative z-0">
+              {selectedSignalId ? (
+                <SignalsMap signals={[signals.find(s => s.signalId === selectedSignalId)!]} approaches={filteredApproaches} className="w-full h-full" />
+              ) : (
+                <div className="w-full h-full bg-grey-100 flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-grey-400" />
+                </div>
+              )}
             </div>
           )}
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-grey-50 border-b border-grey-200">
-                  <SortableHeader field="approachId">Approach ID</SortableHeader>
-                  <SortableHeader field="streetName">Street Name</SortableHeader>
-                  <SortableHeader field="compassBearing">Bearing</SortableHeader>
-                  <SortableHeader field="postedSpeed">Speed (mph)</SortableHeader>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {!selectedSignalId ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-4 text-xs text-grey-500">
-                      Please select a signal above to view its approaches.
-                    </TableCell>
-                  </TableRow>
-                ) : filteredApproaches.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-4 text-xs text-grey-500">
-                      No approaches configured for this signal. Add your first approach to get started.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  (() => {
-                    return getSortedApproaches().map((approach) => {
-                      // Sorting the table must not renumber the colors, so the
-                      // index comes from the unsorted list the map draws from.
-                      const color = approachColorFor(filteredApproaches, approach.approachId);
-                      return (
-                        <TableRow
-                          key={approach.id}
-                          className="cursor-pointer hover:bg-gray-50 transition-colors"
-                          onClick={() => handleRowClick(approach)}
-                        >
-                          <TableCell className="font-medium text-grey-900 text-xs py-1.5 px-2">{approach.approachId}</TableCell>
-                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">{approach.streetName}</TableCell>
-                          <TableCell className="py-1.5 px-2">
-                            {approach.compassBearing !== null && color ? (
-                              <Badge
-                                variant="secondary"
-                                className="text-xs py-0 px-1.5 h-4 text-white"
-                                style={{ backgroundColor: color }}
-                              >
-                                {approach.compassBearing}° {getBearingDirection(approach.compassBearing)}
-                              </Badge>
-                            ) : (
-                              <span className="text-grey-400 text-xs">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="py-1.5 px-2">
-                            {approach.postedSpeed !== null ? (
-                              <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs py-0 px-1.5 h-4">
-                                {approach.postedSpeed} mph
-                              </Badge>
-                            ) : (
-                              <span className="text-grey-400 text-xs">-</span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    });
-                  })()
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+        </ResizablePanel>
+        <ResizableHandle withHandle className="bg-grey-200 hover:bg-primary-300 transition-colors" />
+        <ResizablePanel defaultSize={60} minSize={20} className="flex flex-col min-h-0">
+          <Card className="rounded-none border-0 flex flex-col h-full min-h-0">
+            <CardHeader className="bg-grey-50 p-0" />
+            <CardContent className="p-0 flex-1 min-h-0 overflow-auto">
+              {signals.length > 0 && (
+                <div className="px-4 py-3 border-b border-grey-100 flex items-center gap-3">
+                  <div className="text-xs font-medium text-grey-700">Filter by Signals</div>
+                  <div className="flex-1">
+                    <Select value={selectedSignalId} onValueChange={setSelectedSignalId}>
+                      <SelectTrigger className="w-full h-8 text-sm">
+                        <SelectValue placeholder="Select Signal" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {signals.map((signal) => (
+                          <SelectItem key={signal.signalId} value={signal.signalId}>
+                            {getSignalDisplayName(signal, approaches)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {selectedSignalId && (
+                    <span className="text-xs text-grey-600 whitespace-nowrap">({filteredApproaches.length} approach{filteredApproaches.length !== 1 ? 'es' : ''})</span>
+                  )}
+                </div>
+              )}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-grey-50 border-b border-grey-200">
+                      <SortableHeader field="approachId">Approach ID</SortableHeader>
+                      <SortableHeader field="streetName">Street Name</SortableHeader>
+                      <SortableHeader field="compassBearing">Bearing</SortableHeader>
+                      <SortableHeader field="postedSpeed">Speed (mph)</SortableHeader>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {!selectedSignalId ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-4 text-xs text-grey-500">
+                          Please select a signal above to view its approaches.
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredApproaches.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-4 text-xs text-grey-500">
+                          No approaches configured for this signal. Add your first approach to get started.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      (() => {
+                        return getSortedApproaches().map((approach) => {
+                          // Sorting the table must not renumber the colors, so the
+                          // index comes from the unsorted list the map draws from.
+                          const color = approachColorFor(filteredApproaches, approach.approachId);
+                          return (
+                            <TableRow
+                              key={approach.id}
+                              className="cursor-pointer hover:bg-gray-50 transition-colors"
+                              onClick={() => handleRowClick(approach)}
+                            >
+                              <TableCell className="font-medium text-grey-900 text-xs py-1.5 px-2">{approach.approachId}</TableCell>
+                              <TableCell className="text-grey-600 text-xs py-1.5 px-2">{approach.streetName}</TableCell>
+                              <TableCell className="py-1.5 px-2">
+                                {approach.compassBearing !== null && color ? (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs py-0 px-1.5 h-4 text-white"
+                                    style={{ backgroundColor: color }}
+                                  >
+                                    {approach.compassBearing}° {getBearingDirection(approach.compassBearing)}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-grey-400 text-xs">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="py-1.5 px-2">
+                                {approach.postedSpeed !== null ? (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs py-0 px-1.5 h-4">
+                                    {approach.postedSpeed} mph
+                                  </Badge>
+                                ) : (
+                                  <span className="text-grey-400 text-xs">-</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        });
+                      })()
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       {showModal && (
         <ApproachModal

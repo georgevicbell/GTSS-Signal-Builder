@@ -1,16 +1,15 @@
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SignalsMap from "@/components/ui/signals-map";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Detector, getSignalDisplayName, useDetectors, useGTSSStore } from "gtss";
-import { ChevronDown, ChevronUp, Download, MapPin, Plus } from "lucide-react";
+import { getSignalDisplayName, useDetectors, useGTSSStore } from "gtss";
+import { Detector } from "gtss/schema";
+import { ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import ResizableBlock from "@/components/ui/resizable-block";
 import BulkDetectorModal from "./bulk-detector-modal";
-import DetectorDiagram from "./detector-diagram";
 import DetectorModal from "./detector-modal";
 
 type SortField = 'signalId' | 'channel' | 'phase' | 'technologyType' | 'purpose';
@@ -134,8 +133,6 @@ export default function DetectorsTable({ triggerAdd, triggerBulk }: DetectorsTab
     setShowModal(true);
   };
 
-
-
   const handleAdd = () => {
     setEditingDetector(null);
     setShowModal(true);
@@ -231,140 +228,112 @@ export default function DetectorsTable({ triggerAdd, triggerBulk }: DetectorsTab
 
 
   return (
-    <div className="max-w-6xl">
-      <Card>
-        <CardHeader className="bg-grey-50 border-b border-grey-200 p-3">
-          
+    <div className="max-w-6xl h-full">
+      <ResizablePanelGroup
+        direction="vertical"
+        autoSaveId="detectors-split"
+        className="flex-1 min-h-[420px] rounded-lg border border-grey-200 bg-white overflow-hidden"
+      >
+        <ResizablePanel defaultSize={42} minSize={12} className="relative z-0">
           {signals.length === 0 ? (
-            <div className="p-2 bg-warning-50 border border-warning-200 rounded-md">
-              <p className="text-xs text-warning-700">
-                No signals configured. Please add signals before creating detectors.
-              </p>
+            <div className="w-full h-full bg-grey-50 flex items-center justify-center">
+              <div className="text-center text-grey-500">
+                <MapPin className="w-6 h-6 mx-auto mb-1 text-grey-400" />
+                <p className="text-xs">No signals to display</p>
+              </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <Select value={selectedSignalId} onValueChange={setSelectedSignalId}>
-                  <SelectTrigger className="flex-1 h-8 text-sm">
-                    <SelectValue placeholder="Select Signal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {signals.map((signal) => (
-                      <SelectItem key={signal.signalId} value={signal.signalId}>
-                        {getSignalDisplayName(signal, approaches)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-              </div>
-              {selectedSignalId && (
-                <div className="flex flex-col gap-2">
-                  {filteredDetectors.length > 0 && (() => {
-                    const selectedSignal = signals.find(s => s.signalId === selectedSignalId);
-                    const signalName = selectedSignal ? getSignalDisplayName(selectedSignal, approaches) : selectedSignalId;
-                    return (
-                      <div className="flex flex-col items-center">
-                        <div className="text-sm font-semibold text-grey-700 mb-1 text-center">
-                          {signalName}
-                        </div>
-                        <div className="w-72 h-72 border border-grey-300 rounded-md overflow-hidden bg-white">
-                          <DetectorDiagram
-                            detectors={filteredDetectors}
-                            phases={signalPhases}
-                            approaches={signalApproaches}
-                            signal={selectedSignal}
-                            svgRef={svgRef}
-                          />
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleDownloadDiagram}
-                          className="mt-2 h-7 text-xs"
-                        >
-                          <Download className="w-3 h-3 mr-1" />
-                          Download JPG
-                        </Button>
-                      </div>
-                    );
-                  })()}
-                  {(() => {
-                    const selectedSignal = signals.find(s => s.signalId === selectedSignalId);
-                    return (
-                      <ResizableBlock initialHeight={288} minHeight={120} maxHeight={800}>
-                        {selectedSignal && selectedSignal.latitude && selectedSignal.longitude ? (
-                          <div className="w-full h-full border border-grey-300 rounded-md overflow-hidden bg-white relative z-0">
-                            <SignalsMap signals={[selectedSignal]} className="w-full h-full" />
-                          </div>
-                        ) : (
-                          <div className="w-full h-full border border-grey-300 rounded-md bg-grey-100 flex items-center justify-center">
-                            <MapPin className="w-6 h-6 text-grey-400" />
-                          </div>
-                        )}
-                      </ResizableBlock>
-                    );
-                  })()}
+            <div className="w-full h-full relative z-0">
+              {selectedSignalId ? (
+                <SignalsMap signals={[signals.find(s => s.signalId === selectedSignalId)!]} className="w-full h-full" />
+              ) : (
+                <div className="w-full h-full bg-grey-100 flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-grey-400" />
                 </div>
               )}
             </div>
           )}
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-grey-50 border-b border-grey-200">
-                  <SortableHeader field="signalId">Signal ID</SortableHeader>
-                  <SortableHeader field="channel">Channel</SortableHeader>
-                  <SortableHeader field="phase">Phase</SortableHeader>
-                  <TableHead className="text-xs">Approach</TableHead>
-                  <SortableHeader field="technologyType">Technology</SortableHeader>
-                  <SortableHeader field="purpose">Purpose</SortableHeader>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {!selectedSignalId ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-4 text-xs text-grey-500">
-                      Please select a signal above to view its detectors.
-                    </TableCell>
-                  </TableRow>
-                ) : filteredDetectors.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-4 text-xs text-grey-500">
-                      No detectors configured for this signal. Add your first detector to get started.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  getSortedDetectors().map((detector) => (
-                    <TableRow
-                      key={detector.id}
-                      className="cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => handleRowClick(detector)}
-                    >
-                      <TableCell className="font-medium text-grey-900 text-xs py-1.5 px-2">{detector.signalId}</TableCell>
-                      <TableCell className="text-grey-600 text-xs py-1.5 px-2">{detector.channel}</TableCell>
-                      <TableCell className="text-grey-600 text-xs py-1.5 px-2">
-                        {detector.phase ?? <span className="text-grey-400">&mdash;</span>}
-                      </TableCell>
-                      <TableCell className="text-grey-600 text-xs py-1.5 px-2">
-                        {detector.approachId ?? <span className="text-grey-400">&mdash;</span>}
-                      </TableCell>
-                      <TableCell className="py-1.5 px-2">
-                        <Badge variant="secondary" className="bg-purple-100 text-purple-800 text-xs py-0 px-1.5 h-4">
-                          {detector.technologyType}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-grey-600 text-xs py-1.5 px-2">{detector.purpose}</TableCell>
+        </ResizablePanel>
+        <ResizableHandle withHandle className="bg-grey-200 hover:bg-primary-300 transition-colors" />
+        <ResizablePanel defaultSize={58} minSize={20} className="flex flex-col min-h-0">
+          <Card className="rounded-none border-0 flex flex-col h-full min-h-0">
+            <CardHeader className="bg-grey-50 p-0" />
+            <CardContent className="p-0 flex-1 min-h-0 overflow-auto">
+              {signals.length > 0 && (
+                <div className="px-4 py-3 border-b border-grey-100 flex items-center gap-3">
+                  <div className="text-xs font-medium text-grey-700">Filter by Signals</div>
+                  <div className="flex-1">
+                    <Select value={selectedSignalId} onValueChange={setSelectedSignalId}>
+                      <SelectTrigger className="w-full h-8 text-sm">
+                        <SelectValue placeholder="Select Signal" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {signals.map((signal) => (
+                          <SelectItem key={signal.signalId} value={signal.signalId}>
+                            {getSignalDisplayName(signal, approaches)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-grey-50 border-b border-grey-200">
+                      <SortableHeader field="signalId">Signal ID</SortableHeader>
+                      <SortableHeader field="channel">Channel</SortableHeader>
+                      <SortableHeader field="phase">Phase</SortableHeader>
+                      <TableHead className="text-xs">Approach</TableHead>
+                      <SortableHeader field="technologyType">Technology</SortableHeader>
+                      <SortableHeader field="purpose">Purpose</SortableHeader>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {!selectedSignalId ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-4 text-xs text-grey-500">
+                          Please select a signal above to view its detectors.
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredDetectors.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-4 text-xs text-grey-500">
+                          No detectors configured for this signal. Add your first detector to get started.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      getSortedDetectors().map((detector) => (
+                        <TableRow
+                          key={detector.id}
+                          className="cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleRowClick(detector)}
+                        >
+                          <TableCell className="font-medium text-grey-900 text-xs py-1.5 px-2">{detector.signalId}</TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">{detector.channel}</TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">
+                            {detector.phase ?? <span className="text-grey-400">&mdash;</span>}
+                          </TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">
+                            {detector.approachId ?? <span className="text-grey-400">&mdash;</span>}
+                          </TableCell>
+                          <TableCell className="py-1.5 px-2">
+                            <Badge variant="secondary" className="bg-purple-100 text-purple-800 text-xs py-0 px-1.5 h-4">
+                              {detector.technologyType}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">{detector.purpose}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       {showModal && (
         <DetectorModal
