@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
-import { AgencyDefaults } from './agencyDefaults';
 import type { Agency, Approach, BasicTiming, Detector, InsertAgency, InsertApproach, InsertBasicTiming, InsertDetector, InsertPhase, InsertSignal, Phase, Signal } from '../schema/schema';
+import { AgencyDefaults } from './agencyDefaults';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -1280,8 +1280,8 @@ export function parseAgencyTXT(content: string): Agency | null {
 // Format: signal_id,agency_id,latitude,longitude
 export function parseSignalsTXT(content: string): Signal[] {
   const lines = content.trim().split('\n').filter(line => line.trim());
-  if (lines.length < 2) {
-    throw new Error('Signals file must contain header and at least one data row');
+  if (lines.length < 1) {
+    throw new Error('Signals file must contain header');
   }
 
   const signals: Signal[] = [];
@@ -1334,7 +1334,7 @@ export function parseSignalsTXT(content: string): Signal[] {
     throw new Error(`Signals validation errors:\n${errors.join('\n')}`);
   }
 
-  if (signals.length === 0) {
+  if (signals.length === 0 && lines.length > 1) {
     throw new Error('No valid signals found in file');
   }
 
@@ -1344,8 +1344,8 @@ export function parseSignalsTXT(content: string): Signal[] {
 // Parse approaches.txt file - new for GTSSv1.1
 export function parseApproachesTXT(content: string): Approach[] {
   const lines = content.trim().split('\n').filter(line => line.trim());
-  if (lines.length < 2) {
-    throw new Error('Approaches file must contain header and at least one data row');
+  if (lines.length < 1) {
+    throw new Error('Approaches file must contain header');
   }
 
   const approaches: Approach[] = [];
@@ -1434,7 +1434,7 @@ export function parseApproachesTXT(content: string): Approach[] {
     throw new Error(`Approaches validation errors:\n${errors.join('\n')}`);
   }
 
-  if (approaches.length === 0) {
+  if (approaches.length === 0 && lines.length > 1) {
     throw new Error('No valid approaches found in file');
   }
 
@@ -1444,8 +1444,8 @@ export function parseApproachesTXT(content: string): Approach[] {
 // Parse phases.txt file - updated for GTSSv1.1
 export function parsePhasesTXT(content: string): Phase[] {
   const lines = content.trim().split('\n').filter(line => line.trim());
-  if (lines.length < 2) {
-    throw new Error('Phases file must contain header and at least one data row');
+  if (lines.length < 1) {
+    throw new Error('Phases file must contain header');
   }
 
   const phases: Phase[] = [];
@@ -1565,7 +1565,7 @@ export function parsePhasesTXT(content: string): Phase[] {
     throw new Error(`Phases validation errors:\n${errors.join('\n')}`);
   }
 
-  if (phases.length === 0) {
+  if (phases.length === 0  && lines.length > 1) {
     throw new Error('No valid phases found in file');
   }
 
@@ -1575,8 +1575,8 @@ export function parsePhasesTXT(content: string): Phase[] {
 // Parse detectors.txt file
 export function parseDetectorsTXT(content: string): Detector[] {
   const lines = content.trim().split('\n').filter(line => line.trim());
-  if (lines.length < 2) {
-    throw new Error('Detectors file must contain header and at least one data row');
+  if (lines.length < 1) {
+    throw new Error('Detectors file must contain header');
   }
 
   const detectors: Detector[] = [];
@@ -1663,7 +1663,7 @@ export function parseDetectorsTXT(content: string): Detector[] {
     throw new Error(`Detectors validation errors:\n${errors.join('\n')}`);
   }
 
-  if (detectors.length === 0) {
+  if (detectors.length === 0  && lines.length > 1) {
     throw new Error('No valid detectors found in file');
   }
 
@@ -1673,8 +1673,8 @@ export function parseDetectorsTXT(content: string): Detector[] {
 // Parse basic_timings.txt file - new for GTSSv1.1
 export function parseBasicTimingsTXT(content: string): BasicTiming[] {
   const lines = content.trim().split('\n').filter(line => line.trim());
-  if (lines.length < 2) {
-    throw new Error('Basic timings file must contain header and at least one data row');
+  if (lines.length < 1) {
+    throw new Error('Basic timings file must contain header');
   }
 
   const timings: BasicTiming[] = [];
@@ -1755,7 +1755,7 @@ export function parseBasicTimingsTXT(content: string): BasicTiming[] {
     throw new Error(`Basic timings validation errors:\n${errors.join('\n')}`);
   }
 
-  if (timings.length === 0) {
+  if (timings.length === 0 && lines.length > 1) {
     throw new Error('No valid basic timings found in file');
   }
 
