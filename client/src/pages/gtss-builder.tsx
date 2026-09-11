@@ -239,7 +239,7 @@ export default function GTSSBuilder() {
     const params = new URLSearchParams(window.location.search);
     if (currentView === 'signal-details' && (window.location.search.indexOf('view=signal-details') === -1 || !params.get('signalId'))) {
       // signal-details view is managed by store; when active, set URL accordingly
-      if (window.history && navigateToSignalDetails) {
+      if (window.history) {
         const signalId = useGTSSStore.getState().currentSignalId;
         params.set('view', 'signal-details');
         if (signalId) params.set('signalId', signalId);
