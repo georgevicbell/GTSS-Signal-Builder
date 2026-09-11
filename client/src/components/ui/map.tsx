@@ -1,12 +1,16 @@
-import { useEffect, useState } from "react";
 import { useMapScrollZoom } from "gtss";
-import { MapContainer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { useEffect, useState } from "react";
+import { MapContainer, Marker, useMapEvents } from "react-leaflet";
 import MapTileLayers from "./map-tile-layers";
 
 // Fix for default markers in react-leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+// _getIconUrl is not declared on the Leaflet Default icon type — cast through a narrow explicit type for runtime delete
+interface IconDefaultPrototype {
+  _getIconUrl?: () => string | undefined;
+}
+delete (L.Icon.Default.prototype as unknown as IconDefaultPrototype)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
   iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
@@ -21,7 +25,10 @@ interface MapPickerProps {
   className?: string;
 }
 
-function LocationMarker({ onLocationSelect, selectedPosition }: { 
+function LocationMarker({
+  onLocationSelect,
+  selectedPosition,
+}: {
   onLocationSelect: (lat: number, lng: number) => void;
   selectedPosition?: [number, number];
 }) {
@@ -42,12 +49,16 @@ function LocationMarker({ onLocationSelect, selectedPosition }: {
     }
   }, [selectedPosition, map]);
 
-  return position === null ? null : (
-    <Marker position={position} />
-  );
+  return position === null ? null : <Marker position={position} />;
 }
 
-export function MapPicker({ center, zoom = 13, onLocationSelect, selectedPosition, className }: MapPickerProps) {
+export function MapPicker({
+  center,
+  zoom = 13,
+  onLocationSelect,
+  selectedPosition,
+  className,
+}: MapPickerProps) {
   const mapScrollZoom = useMapScrollZoom();
   return (
     <div className={className}>
@@ -59,10 +70,7 @@ export function MapPicker({ center, zoom = 13, onLocationSelect, selectedPositio
         className="rounded-lg border border-grey-200"
       >
         <MapTileLayers />
-        <LocationMarker 
-          onLocationSelect={onLocationSelect} 
-          selectedPosition={selectedPosition}
-        />
+        <LocationMarker onLocationSelect={onLocationSelect} selectedPosition={selectedPosition} />
       </MapContainer>
     </div>
   );

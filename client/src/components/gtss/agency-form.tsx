@@ -1,10 +1,23 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import MapTileLayers from "@/components/ui/map-tile-layers";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { agencyStorage, useGTSSStore, useMapScrollZoom } from "gtss";
@@ -15,7 +28,11 @@ import { useForm } from "react-hook-form";
 import { MapContainer, Marker, useMapEvents } from "react-leaflet";
 
 // Map picker component for location selection
-function LocationPicker({ onLocationSelect }: { onLocationSelect: (lat: number, lon: number) => void }) {
+function LocationPicker({
+  onLocationSelect,
+}: {
+  onLocationSelect: (lat: number, lon: number) => void;
+}) {
   useMapEvents({
     click(e) {
       onLocationSelect(e.latlng.lat, e.latlng.lng);
@@ -26,7 +43,7 @@ function LocationPicker({ onLocationSelect }: { onLocationSelect: (lat: number, 
 
 export default function AgencyForm() {
   const mapScrollZoom = useMapScrollZoom();
-  const { agency, setAgency, signals, phases, detectors } = useGTSSStore();
+  const { agency, setAgency, signals } = useGTSSStore();
   const { toast } = useToast();
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;
@@ -52,7 +69,7 @@ export default function AgencyForm() {
         title: "Success",
         description: "Agency information saved successfully",
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to save agency information",
@@ -101,7 +118,7 @@ export default function AgencyForm() {
         setSelectedLocation({
           lat: agency.latitude,
           lon: agency.longitude,
-          displayName: `${agency.agencyName} Location`
+          displayName: `${agency.agencyName} Location`,
         });
         setMapCenter([agency.latitude, agency.longitude]);
       }
@@ -118,34 +135,72 @@ export default function AgencyForm() {
     };
     saveAgency(saveData);
   };
-
+  /*
   const generateAgencyId = (state: string, agencyName: string): string => {
     // Get state abbreviation
     const stateAbbreviations: Record<string, string> = {
-      'California': 'CA', 'Texas': 'TX', 'Florida': 'FL', 'New York': 'NY',
-      'Pennsylvania': 'PA', 'Illinois': 'IL', 'Ohio': 'OH', 'Georgia': 'GA',
-      'North Carolina': 'NC', 'Michigan': 'MI', 'Virginia': 'VA', 'Washington': 'WA',
-      'Arizona': 'AZ', 'Massachusetts': 'MA', 'Tennessee': 'TN', 'Indiana': 'IN',
-      'Missouri': 'MO', 'Maryland': 'MD', 'Wisconsin': 'WI', 'Minnesota': 'MN',
-      'Colorado': 'CO', 'Alabama': 'AL', 'Louisiana': 'LA', 'Kentucky': 'KY',
-      'Oregon': 'OR', 'Oklahoma': 'OK', 'Connecticut': 'CT', 'Utah': 'UT',
-      'Iowa': 'IA', 'Nevada': 'NV', 'Arkansas': 'AR', 'Mississippi': 'MS',
-      'Kansas': 'KS', 'New Mexico': 'NM', 'Nebraska': 'NE', 'West Virginia': 'WV',
-      'Idaho': 'ID', 'Hawaii': 'HI', 'New Hampshire': 'NH', 'Maine': 'ME',
-      'Rhode Island': 'RI', 'Montana': 'MT', 'Delaware': 'DE', 'South Dakota': 'SD',
-      'North Dakota': 'ND', 'Alaska': 'AK', 'Vermont': 'VT', 'Wyoming': 'WY'
+      California: "CA",
+      Texas: "TX",
+      Florida: "FL",
+      "New York": "NY",
+      Pennsylvania: "PA",
+      Illinois: "IL",
+      Ohio: "OH",
+      Georgia: "GA",
+      "North Carolina": "NC",
+      Michigan: "MI",
+      Virginia: "VA",
+      Washington: "WA",
+      Arizona: "AZ",
+      Massachusetts: "MA",
+      Tennessee: "TN",
+      Indiana: "IN",
+      Missouri: "MO",
+      Maryland: "MD",
+      Wisconsin: "WI",
+      Minnesota: "MN",
+      Colorado: "CO",
+      Alabama: "AL",
+      Louisiana: "LA",
+      Kentucky: "KY",
+      Oregon: "OR",
+      Oklahoma: "OK",
+      Connecticut: "CT",
+      Utah: "UT",
+      Iowa: "IA",
+      Nevada: "NV",
+      Arkansas: "AR",
+      Mississippi: "MS",
+      Kansas: "KS",
+      "New Mexico": "NM",
+      Nebraska: "NE",
+      "West Virginia": "WV",
+      Idaho: "ID",
+      Hawaii: "HI",
+      "New Hampshire": "NH",
+      Maine: "ME",
+      "Rhode Island": "RI",
+      Montana: "MT",
+      Delaware: "DE",
+      "South Dakota": "SD",
+      "North Dakota": "ND",
+      Alaska: "AK",
+      Vermont: "VT",
+      Wyoming: "WY",
     };
 
     const stateCode = stateAbbreviations[state] || state.toUpperCase().substring(0, 2);
 
     // Extract city name from agency name
-    const words = agencyName.replace(/department|transportation|traffic|signals?|management|dot|city|county/gi, '')
-      .trim().split(/\s+/);
-    const cityCode = words[0] ? words[0].substring(0, 3).toUpperCase() : 'AGN';
+    const words = agencyName
+      .replace(/department|transportation|traffic|signals?|management|dot|city|county/gi, "")
+      .trim()
+      .split(/\s+/);
+    const cityCode = words[0] ? words[0].substring(0, 3).toUpperCase() : "AGN";
 
     return `${stateCode}_${cityCode}_001`;
   };
-
+*/
   const handleLocationClick = (lat: number, lon: number, isUserLocation = false) => {
     // Save coordinates without geocoding
     setSelectedLocation({
@@ -195,29 +250,27 @@ export default function AgencyForm() {
             variant: "destructive",
           });
           setIsGeocodingUserLocation(false);
-        }
+        },
       );
     } else {
       toast({
         title: "Not Supported",
-        description: "Geolocation is not supported by your browser. Please click on the map to set coordinates.",
+        description:
+          "Geolocation is not supported by your browser. Please click on the map to set coordinates.",
         variant: "destructive",
       });
       setIsGeocodingUserLocation(false);
     }
   };
 
-
-
-
-
-
   return (
     <div className="max-w-4xl space-y-6">
       {/* Agency Information Form */}
       <Card>
         <CardHeader className="bg-grey-50 border-b border-grey-200">
-          <CardTitle className="text-lg font-semibold text-grey-800">Agency Configuration</CardTitle>
+          <CardTitle className="text-lg font-semibold text-grey-800">
+            Agency Configuration
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-4">
           <Form {...form}>
@@ -228,7 +281,8 @@ export default function AgencyForm() {
                   <div>
                     <h3 className="text-base font-medium">Agency Location</h3>
                     <p className="text-xs text-grey-600">
-                      Select your agency's location. This will be used as the center point for signal maps.
+                      Select your agency's location. This will be used as the center point for
+                      signal maps.
                     </p>
                   </div>
                   <Button
@@ -267,12 +321,13 @@ export default function AgencyForm() {
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-medium text-green-800 text-sm">Selected Location</div>
+                          <div className="font-medium text-green-800 text-sm">
+                            Selected Location
+                          </div>
                           <div className="text-xs text-green-700">
                             {selectedLocation.city && selectedLocation.state
                               ? `${selectedLocation.city}, ${selectedLocation.state}`
-                              : selectedLocation.displayName
-                            }
+                              : selectedLocation.displayName}
                           </div>
                           <div className="text-xs text-green-600">
                             {selectedLocation.lat.toFixed(6)}, {selectedLocation.lon.toFixed(6)}
@@ -333,7 +388,12 @@ export default function AgencyForm() {
                     <FormItem>
                       <FormLabel>Agency URL</FormLabel>
                       <FormControl>
-                        <Input type="url" placeholder="https://agency-website.com" {...field} value={field.value || ""} />
+                        <Input
+                          type="url"
+                          placeholder="https://agency-website.com"
+                          {...field}
+                          value={field.value || ""}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -373,15 +433,17 @@ export default function AgencyForm() {
                     <FormItem>
                       <FormLabel>Agency Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="agency@domain.com" {...field} value={field.value || ""} />
+                        <Input
+                          type="email"
+                          placeholder="agency@domain.com"
+                          {...field}
+                          value={field.value || ""}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
-
-
               </div>
 
               <div className="flex justify-end">
@@ -401,7 +463,9 @@ export default function AgencyForm() {
       {/* Quick Preview */}
       <Card>
         <CardHeader className="bg-grey-50 border-b border-grey-200">
-          <CardTitle className="text-lg font-semibold text-grey-800">Configuration Preview</CardTitle>
+          <CardTitle className="text-lg font-semibold text-grey-800">
+            Configuration Preview
+          </CardTitle>
           <p className="text-sm text-grey-600">Current configuration summary</p>
         </CardHeader>
         <CardContent className="p-4">
@@ -418,8 +482,6 @@ export default function AgencyForm() {
           </div>
         </CardContent>
       </Card>
-
-
     </div>
   );
 }

@@ -1,5 +1,14 @@
-import { useEffect } from 'react';
-import { AgencyDefaults, isMapScrollZoomEnabled } from './agencyDefaults';
+import { useEffect } from "react";
+import {
+  InsertAgency,
+  InsertApproach,
+  InsertBasicTiming,
+  InsertDetector,
+  InsertPhase,
+  InsertSignal,
+} from "../schema/schema";
+import { useGTSSStore } from "../store/gtss-store";
+import { AgencyDefaults, isMapScrollZoomEnabled } from "./agencyDefaults";
 import {
   agencyDefaultsStorage,
   agencyStorage,
@@ -9,17 +18,8 @@ import {
   exportAsIndividualFiles,
   exportAsZip,
   phaseStorage,
-  signalStorage
-} from './localStorage';
-import {
-  InsertAgency,
-  InsertApproach,
-  InsertBasicTiming,
-  InsertDetector,
-  InsertPhase,
-  InsertSignal
-} from '../schema/schema';
-import { useGTSSStore } from '../store/gtss-store';
+  signalStorage,
+} from "./localStorage";
 
 // Custom hooks to replace TanStack Query for localStorage operations
 
@@ -69,7 +69,7 @@ export const useAgency = () => {
 };
 
 export const useSignals = () => {
-  const { signals, setSignals, addSignal, updateSignal, deleteSignal } = useGTSSStore();
+  const { signals, addSignal, updateSignal, deleteSignal } = useGTSSStore();
 
   const saveSignal = (data: InsertSignal) => {
     const savedSignal = signalStorage.save(data);
@@ -99,7 +99,15 @@ export const useSignals = () => {
 };
 
 export const useApproaches = () => {
-  const { approaches, setApproaches, addApproach, updateApproach, deleteApproach, phases, updatePhase } = useGTSSStore();
+  const {
+    approaches,
+
+    addApproach,
+    updateApproach,
+    deleteApproach,
+    phases,
+    updatePhase,
+  } = useGTSSStore();
 
   const saveApproach = (data: InsertApproach) => {
     const savedApproach = approachStorage.save(data);
@@ -109,7 +117,7 @@ export const useApproaches = () => {
 
   const updateApproachById = (id: string, data: Partial<InsertApproach>) => {
     // Get the current approach to check if approachId is being changed
-    const currentApproach = approaches.find(a => a.id === id);
+    const currentApproach = approaches.find((a) => a.id === id);
     const oldApproachId = currentApproach?.approachId;
     const newApproachId = data.approachId;
 
@@ -121,7 +129,7 @@ export const useApproaches = () => {
       if (oldApproachId && newApproachId && oldApproachId !== newApproachId) {
         const signalId = currentApproach?.signalId;
         const phasesToUpdate = phases.filter(
-          p => p.signalId === signalId && p.approachId === oldApproachId
+          (p) => p.signalId === signalId && p.approachId === oldApproachId,
         );
 
         for (const phase of phasesToUpdate) {
@@ -149,7 +157,7 @@ export const useApproaches = () => {
 };
 
 export const usePhases = () => {
-  const { phases, setPhases, addPhase, updatePhase, deletePhase } = useGTSSStore();
+  const { phases, addPhase, updatePhase, deletePhase } = useGTSSStore();
 
   const savePhase = (data: InsertPhase) => {
     const savedPhase = phaseStorage.save(data);
@@ -179,7 +187,7 @@ export const usePhases = () => {
 };
 
 export const useDetectors = () => {
-  const { detectors, setDetectors, addDetector, updateDetector, deleteDetector } = useGTSSStore();
+  const { detectors, addDetector, updateDetector, deleteDetector } = useGTSSStore();
 
   const saveDetector = (data: InsertDetector) => {
     const savedDetector = detectorStorage.save(data);
@@ -209,7 +217,7 @@ export const useDetectors = () => {
 };
 
 export const useBasicTimings = () => {
-  const { basicTimings, setBasicTimings, addBasicTiming, updateBasicTiming, deleteBasicTiming } = useGTSSStore();
+  const { basicTimings, addBasicTiming, updateBasicTiming, deleteBasicTiming } = useGTSSStore();
 
   const saveBasicTiming = (data: InsertBasicTiming) => {
     const savedTiming = basicTimingStorage.save(data);

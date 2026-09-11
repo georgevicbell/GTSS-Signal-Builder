@@ -1,12 +1,31 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import MapTileLayers from "@/components/ui/map-tile-layers";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getSignalDisplayName, suggestStreetNameForApproach, useApproaches, useGTSSStore, useMapScrollZoom } from "gtss";
+import {
+  getSignalDisplayName,
+  suggestStreetNameForApproach,
+  useApproaches,
+  useGTSSStore,
+  useMapScrollZoom,
+} from "gtss";
 import { type Approach, type InsertApproach, insertApproachSchema } from "gtss/schema";
 import { MapPin, Navigation, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -30,7 +49,11 @@ function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number
   return null;
 }
 
-export default function ApproachModal({ approach, onClose, preSelectedSignalId }: ApproachModalProps) {
+export default function ApproachModal({
+  approach,
+  onClose,
+  preSelectedSignalId,
+}: ApproachModalProps) {
   const mapScrollZoom = useMapScrollZoom();
   const { signals, approaches } = useGTSSStore();
   const { toast } = useToast();
@@ -58,20 +81,21 @@ export default function ApproachModal({ approach, onClose, preSelectedSignalId }
         streetName: approach.streetName,
         compassBearing: approach.compassBearing || undefined,
         postedSpeed: approach.postedSpeed || undefined,
-        freeRight: typeof approach.freeRight === "number" ? approach.freeRight : (approach.freeRight ? 1 : 0),
+        freeRight:
+          typeof approach.freeRight === "number" ? approach.freeRight : approach.freeRight ? 1 : 0,
         freeRightLanes: approach.freeRightLanes ?? 1,
       });
     }
   }, [approach, form]);
 
   const selectedSignalId = form.watch("signalId");
-  const selectedSignal = signals.find(s => s.signalId === selectedSignalId);
+  const selectedSignal = signals.find((s) => s.signalId === selectedSignalId);
   const compassBearing = form.watch("compassBearing");
 
   // Get unique street names from all approaches for autocomplete
   const uniqueStreetNames = useMemo(() => {
     const names = new Set<string>();
-    approaches.forEach(a => {
+    approaches.forEach((a) => {
       if (a.streetName && a.streetName.trim()) {
         names.add(a.streetName.trim());
       }
@@ -105,24 +129,29 @@ export default function ApproachModal({ approach, onClose, preSelectedSignalId }
     const signalLng = selectedSignal.longitude;
 
     // Calculate bearing from clicked point TO the signal (approach direction)
-    const dLng = (signalLng - clickLng) * Math.PI / 180;
-    const lat1 = clickLat * Math.PI / 180;
-    const lat2 = signalLat * Math.PI / 180;
+    const dLng = ((signalLng - clickLng) * Math.PI) / 180;
+    const lat1 = (clickLat * Math.PI) / 180;
+    const lat2 = (signalLat * Math.PI) / 180;
 
     const y = Math.sin(dLng) * Math.cos(lat2);
     const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
 
-    let bearing = Math.atan2(y, x) * 180 / Math.PI;
-    bearing = (bearing + 360) % 360;  // Normalize to 0-360
+    let bearing = (Math.atan2(y, x) * 180) / Math.PI;
+    bearing = (bearing + 360) % 360; // Normalize to 0-360
 
     const rounded = Math.round(bearing);
-    form.setValue('compassBearing', rounded);
+    form.setValue("compassBearing", rounded);
     maybeSuggestStreetName(rounded);
   };
 
   // Calculate end point for bearing visualization line (shows where traffic comes FROM)
   const getBearingEndPoint = () => {
-    if (!selectedSignal || !selectedSignal.latitude || !selectedSignal.longitude || !compassBearing) {
+    if (
+      !selectedSignal ||
+      !selectedSignal.latitude ||
+      !selectedSignal.longitude ||
+      !compassBearing
+    ) {
       return null;
     }
 
@@ -137,16 +166,16 @@ export default function ApproachModal({ approach, onClose, preSelectedSignalId }
   };
 
   const getBearingDirection = (bearing: number | null | undefined) => {
-    if (bearing === undefined || bearing === null) return '';
-    if (bearing >= 337.5 || bearing < 22.5) return 'N';
-    if (bearing >= 22.5 && bearing < 67.5) return 'NE';
-    if (bearing >= 67.5 && bearing < 112.5) return 'E';
-    if (bearing >= 112.5 && bearing < 157.5) return 'SE';
-    if (bearing >= 157.5 && bearing < 202.5) return 'S';
-    if (bearing >= 202.5 && bearing < 247.5) return 'SW';
-    if (bearing >= 247.5 && bearing < 292.5) return 'W';
-    if (bearing >= 292.5 && bearing < 337.5) return 'NW';
-    return '';
+    if (bearing === undefined || bearing === null) return "";
+    if (bearing >= 337.5 || bearing < 22.5) return "N";
+    if (bearing >= 22.5 && bearing < 67.5) return "NE";
+    if (bearing >= 67.5 && bearing < 112.5) return "E";
+    if (bearing >= 112.5 && bearing < 157.5) return "SE";
+    if (bearing >= 157.5 && bearing < 202.5) return "S";
+    if (bearing >= 202.5 && bearing < 247.5) return "SW";
+    if (bearing >= 247.5 && bearing < 292.5) return "W";
+    if (bearing >= 292.5 && bearing < 337.5) return "NW";
+    return "";
   };
 
   const onSubmit = async (data: InsertApproach) => {
@@ -166,7 +195,7 @@ export default function ApproachModal({ approach, onClose, preSelectedSignalId }
         });
       }
       onClose();
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: approach ? "Failed to update approach" : "Failed to create approach",
@@ -190,9 +219,7 @@ export default function ApproachModal({ approach, onClose, preSelectedSignalId }
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-screen overflow-auto">
         <DialogHeader>
-          <DialogTitle>
-            {approach ? "Edit Approach" : "Add Approach"}
-          </DialogTitle>
+          <DialogTitle>{approach ? "Edit Approach" : "Add Approach"}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -293,9 +320,13 @@ export default function ApproachModal({ approach, onClose, preSelectedSignalId }
                   name="freeRight"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Free Right (FR) — right-turn slip lane bypassing the signal</FormLabel>
+                      <FormLabel>
+                        Free Right (FR) — right-turn slip lane bypassing the signal
+                      </FormLabel>
                       <Select
-                        value={String(typeof field.value === "number" ? field.value : (field.value ? 1 : 0))}
+                        value={String(
+                          typeof field.value === "number" ? field.value : field.value ? 1 : 0,
+                        )}
                         onValueChange={(v) => field.onChange(parseInt(v, 10))}
                       >
                         <FormControl>
@@ -306,8 +337,12 @@ export default function ApproachModal({ approach, onClose, preSelectedSignalId }
                         <SelectContent>
                           <SelectItem value="0">None</SelectItem>
                           <SelectItem value="1">FR — slip lane</SelectItem>
-                          <SelectItem value="2">FR-P — slip lane with pedestrian crossing</SelectItem>
-                          <SelectItem value="3">FR-P-I — improved traffic-calmed crossing</SelectItem>
+                          <SelectItem value="2">
+                            FR-P — slip lane with pedestrian crossing
+                          </SelectItem>
+                          <SelectItem value="3">
+                            FR-P-I — improved traffic-calmed crossing
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -393,8 +428,8 @@ export default function ApproachModal({ approach, onClose, preSelectedSignalId }
                   Click Map to Set Approach Direction
                 </h3>
                 <p className="text-sm text-grey-600 mb-3">
-                  Click anywhere on the map to define the direction vehicles travel on this approach.
-                  The bearing angle will be calculated automatically.
+                  Click anywhere on the map to define the direction vehicles travel on this
+                  approach. The bearing angle will be calculated automatically.
                 </p>
                 <div className="h-72 rounded-lg overflow-hidden border">
                   {selectedSignal && selectedSignal.latitude && selectedSignal.longitude ? (
@@ -420,7 +455,7 @@ export default function ApproachModal({ approach, onClose, preSelectedSignalId }
                         <Polyline
                           positions={[
                             [selectedSignal.latitude, selectedSignal.longitude],
-                            [bearingEndPoint.lat, bearingEndPoint.lng]
+                            [bearingEndPoint.lat, bearingEndPoint.lng],
                           ]}
                           color="#2563eb"
                           weight={4}
@@ -460,7 +495,7 @@ export default function ApproachModal({ approach, onClose, preSelectedSignalId }
                   className="bg-primary-600 hover:bg-primary-700"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Saving..." : (approach ? "Save Changes" : "Create Approach")}
+                  {isLoading ? "Saving..." : approach ? "Save Changes" : "Create Approach"}
                 </Button>
               </div>
             </div>
