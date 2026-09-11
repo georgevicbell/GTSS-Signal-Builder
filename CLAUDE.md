@@ -21,6 +21,7 @@ npm run db:push      # Push Drizzle schema to database (if using server-side sto
 ### Data Flow
 
 The app has a **dual storage architecture**:
+
 - **Primary (client-side)**: Browser localStorage via `packages/gtss/localStorage.ts` - all data persists locally
 - **Server-side (development only)**: Express API routes exist in `server/` but the production app runs entirely client-side
 
@@ -39,12 +40,14 @@ The app has a **dual storage architecture**:
 ### State Management
 
 Zustand store (`gtss-store.ts`) manages:
+
 - GTSS data entities (agency, signals, phases, detectors)
 - Navigation state (`currentView`, `currentSignalId`) for single-page navigation without URL routing
 
 ### Data Models
 
 Four main entities defined in `schema/schema.ts`:
+
 - **Agency**: Organization info (id, name, timezone, location)
 - **Signal**: Traffic signal locations (signalId, street names, lat/lng)
 - **Phase**: Signal timing phases (phase number, movement type, bearing, overlap flags)
@@ -53,6 +56,7 @@ Four main entities defined in `schema/schema.ts`:
 ### Export Format
 
 Data exports as TXT files (CSV format):
+
 - `agency.txt`, `signals.txt`, `phases.txt`, `detectors.txt`
 - Movement types are encoded (Through -> T, Left Turn -> L, etc.)
 - Export as ZIP or individual files

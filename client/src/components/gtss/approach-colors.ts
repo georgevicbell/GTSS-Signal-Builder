@@ -8,10 +8,22 @@
 
 /** Approach polyline / swatch colors, assigned by index. */
 export const approachColors = [
-  "#3b82f6", "#22c55e", "#ef4444", "#f97316", // blue, green, red, orange
-  "#8b5cf6", "#ec4899", "#14b8a6", "#eab308", // violet, pink, teal, yellow
-  "#6366f1", "#84cc16", "#f43f5e", "#06b6d4", // indigo, lime, rose, cyan
-  "#a855f7", "#10b981", "#f59e0b", "#64748b", // purple, emerald, amber, slate
+  "#3b82f6",
+  "#22c55e",
+  "#ef4444",
+  "#f97316", // blue, green, red, orange
+  "#8b5cf6",
+  "#ec4899",
+  "#14b8a6",
+  "#eab308", // violet, pink, teal, yellow
+  "#6366f1",
+  "#84cc16",
+  "#f43f5e",
+  "#06b6d4", // indigo, lime, rose, cyan
+  "#a855f7",
+  "#10b981",
+  "#f59e0b",
+  "#64748b", // purple, emerald, amber, slate
 ];
 
 /**
@@ -25,6 +37,6 @@ export const approachColorFor = (
   signalApproaches: { approachId: string; compassBearing: number | null }[],
   approachId: string,
 ): string | undefined => {
-  const idx = signalApproaches.findIndex(a => a.approachId === approachId);
+  const idx = signalApproaches.findIndex((a) => a.approachId === approachId);
   return idx >= 0 ? approachColors[idx % approachColors.length] : undefined;
 };

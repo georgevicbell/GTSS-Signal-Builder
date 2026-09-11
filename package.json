@@ -18,13 +18,16 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "client/**/*.{js,ts,tsx}": ["prettier --write --ignore-unknown",
+    "client/**/*.{js,ts,tsx}": [
+      "prettier --write --ignore-unknown",
       "eslint --cache --fix"
     ],
-    "server/**/*.{js,ts,tsx}": ["prettier --write --ignore-unknown",
+    "server/**/*.{js,ts,tsx}": [
+      "prettier --write --ignore-unknown",
       "eslint --cache --fix"
     ],
-    "packages/**/*.{js,ts,tsx}": ["prettier --write --ignore-unknown",
+    "packages/**/*.{js,ts,tsx}": [
+      "prettier --write --ignore-unknown",
       "eslint --cache --fix"
     ]
   },

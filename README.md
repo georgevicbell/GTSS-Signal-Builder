@@ -5,6 +5,7 @@ A comprehensive web application for configuring and exporting traffic signal sys
 ## 🚦 Features
 
 ### Core Functionality
+
 - **Agency Management**: Configure traffic signal agencies with location-based setup
 - **Signal Location Management**: Interactive map-based signal placement and editing
 - **Phase Configuration**: Visual phase editor with map-based bearing selection
@@ -12,6 +13,7 @@ A comprehensive web application for configuring and exporting traffic signal sys
 - **Data Export**: Generate standardized GTSS TXT packages for interoperability
 
 ### Advanced Capabilities
+
 - **Interactive Mapping**: Leaflet-based maps with reverse geocoding
 - **Bulk Signal Creation**: Click-to-add multiple signals on map interface
 - **Visual Phase Editor**: Interactive direction selection with automatic bearing calculation
@@ -21,6 +23,7 @@ A comprehensive web application for configuring and exporting traffic signal sys
 ## 🛠 Technology Stack
 
 ### Frontend
+
 - **React 18** with TypeScript for type-safe development
 - **Vite** for fast development and optimized builds
 - **Tailwind CSS** with shadcn/ui components for modern styling
@@ -30,12 +33,14 @@ A comprehensive web application for configuring and exporting traffic signal sys
 - **Wouter** for client-side routing
 
 ### Data Management
+
 - **Browser localStorage** for client-side data persistence
 - **Custom localStorage hooks** for React integration
 - **Drizzle ORM schemas** for type-safe data structures
 - **TXT file generation** for standardized data export
 
 ### Development Tools
+
 - **TypeScript** for static type checking
 - **ESBuild** for fast compilation
 - **PostCSS** with Autoprefixer for CSS processing
@@ -49,6 +54,7 @@ Before installing GTSS Builder, ensure you have the following installed on your 
 - **Git** for version control
 
 ### Verify Installation
+
 ```bash
 node --version  # Should show v18.0.0 or higher
 npm --version   # Should show 8.0.0 or higher
@@ -58,17 +64,20 @@ git --version   # Should show git version info
 ## 🚀 Installation & Setup
 
 ### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/your-username/gtss-builder.git
 cd gtss-builder
 ```
 
 ### 2. Install Dependencies
+
 ```bash
 npm install
 ```
 
 ### 3. Start Development Server
+
 ```bash
 npm run dev
 ```
@@ -76,6 +85,7 @@ npm run dev
 The application will be available at `http://localhost:5001`
 
 ### 4. Build for Production
+
 ```bash
 npm run build
 ```
@@ -89,22 +99,26 @@ GTSS Builder is a client-side application that runs entirely in the browser. It 
 ### Option 1: Static Web Server (Nginx)
 
 #### Prerequisites
+
 - Ubuntu/Debian or similar Linux distribution
 - Root or sudo access
 - Domain name (optional)
 
 #### Step 1: Install Nginx
+
 ```bash
 sudo apt update
 sudo apt install nginx
 ```
 
 #### Step 2: Build the Application
+
 ```bash
 npm run build
 ```
 
 #### Step 3: Copy Build Files to Web Server
+
 ```bash
 # Create application directory
 sudo mkdir -p /var/www/gtss-builder
@@ -118,30 +132,33 @@ sudo chmod -R 755 /var/www/gtss-builder
 ```
 
 #### Step 4: Configure Nginx
+
 Create a new Nginx configuration file:
+
 ```bash
 sudo nano /etc/nginx/sites-available/gtss-builder
 ```
 
 Add the following configuration:
+
 ```nginx
 server {
     listen 80;
     listen [::]:80;
-    
+
     server_name your-domain.com;  # Replace with your domain or server IP
-    
+
     root /var/www/gtss-builder;
     index index.html;
-    
+
     # Enable gzip compression
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
-    
+
     location / {
         try_files $uri $uri/ /index.html;
     }
-    
+
     # Cache static assets
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
         expires 1y;
@@ -151,6 +168,7 @@ server {
 ```
 
 #### Step 5: Enable the Site
+
 ```bash
 # Create symbolic link
 sudo ln -s /etc/nginx/sites-available/gtss-builder /etc/nginx/sites-enabled/
@@ -163,6 +181,7 @@ sudo systemctl restart nginx
 ```
 
 #### Step 6: Configure Firewall (if applicable)
+
 ```bash
 sudo ufw allow 'Nginx Full'
 sudo ufw enable
@@ -173,12 +192,14 @@ Your application is now accessible at `http://your-domain.com` or `http://your-s
 ### Option 2: Apache Server
 
 #### Step 1: Install Apache
+
 ```bash
 sudo apt update
 sudo apt install apache2
 ```
 
 #### Step 2: Build and Deploy
+
 ```bash
 npm run build
 sudo mkdir -p /var/www/gtss-builder
@@ -187,21 +208,23 @@ sudo chown -R www-data:www-data /var/www/gtss-builder
 ```
 
 #### Step 3: Configure Apache
+
 ```bash
 sudo nano /etc/apache2/sites-available/gtss-builder.conf
 ```
 
 Add configuration:
+
 ```apache
 <VirtualHost *:80>
     ServerName your-domain.com
     DocumentRoot /var/www/gtss-builder
-    
+
     <Directory /var/www/gtss-builder>
         Options -Indexes +FollowSymLinks
         AllowOverride All
         Require all granted
-        
+
         # Enable SPA routing
         RewriteEngine On
         RewriteBase /
@@ -210,7 +233,7 @@ Add configuration:
         RewriteCond %{REQUEST_FILENAME} !-d
         RewriteRule . /index.html [L]
     </Directory>
-    
+
     # Enable compression
     <IfModule mod_deflate.c>
         AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
@@ -219,6 +242,7 @@ Add configuration:
 ```
 
 #### Step 4: Enable and Restart
+
 ```bash
 sudo a2enmod rewrite
 sudo a2ensite gtss-builder.conf
@@ -228,6 +252,7 @@ sudo systemctl restart apache2
 ### Option 3: Docker Deployment
 
 #### Create Dockerfile
+
 ```dockerfile
 # Build stage
 FROM node:18-alpine AS builder
@@ -253,28 +278,30 @@ CMD ["nginx", "-g", "daemon off;"]
 ```
 
 #### Create nginx.conf
+
 ```nginx
 server {
     listen 80;
     server_name localhost;
     root /usr/share/nginx/html;
     index index.html;
-    
+
     location / {
         try_files $uri $uri/ /index.html;
     }
-    
+
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
-    
+
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
 }
 ```
 
 #### Build and Run
+
 ```bash
 # Build Docker image
 docker build -t gtss-builder .
@@ -287,8 +314,9 @@ docker-compose up -d
 ```
 
 #### docker-compose.yml
+
 ```yaml
-version: '3.8'
+version: "3.8"
 services:
   gtss-builder:
     build: .
@@ -300,17 +328,20 @@ services:
 ### Option 4: Cloud Platforms
 
 #### Netlify
+
 1. Connect your GitHub repository to Netlify
 2. Set build command: `npm run build`
 3. Set publish directory: `dist`
 4. Deploy automatically on git push
 
 #### Vercel
+
 1. Import project from GitHub
 2. Vercel auto-detects Vite configuration
 3. Deploy with zero configuration
 
 #### AWS S3 + CloudFront
+
 1. Build: `npm run build`
 2. Create S3 bucket and enable static website hosting
 3. Upload `dist` folder contents to S3
@@ -320,6 +351,7 @@ services:
 ### SSL/HTTPS Configuration
 
 #### Using Let's Encrypt (Certbot)
+
 ```bash
 # Install Certbot
 sudo apt install certbot python3-certbot-nginx
@@ -362,6 +394,7 @@ gtss-builder/
 ## 🎯 Usage Guide
 
 ### Getting Started
+
 1. **Configure Agency**: Set up your traffic signal agency with location details
 2. **Add Signal Locations**: Use the interactive map to place signal locations
 3. **Define Phases**: Configure signal timing phases with the visual editor
@@ -371,23 +404,27 @@ gtss-builder/
 ### Key Workflows
 
 #### Agency Setup
+
 - Navigate to the Agency tab
 - Fill in agency details (name, contact information, timezone)
 - Use the location picker to set agency coordinates
 - Agency location will be used as the default map center
 
 #### Signal Management
+
 - **Individual Signals**: Use "Add Signal" for single signal creation
 - **Bulk Creation**: Use "Bulk Add" for map-based multiple signal placement
 - **Map Integration**: Signals automatically populate street names via reverse geocoding
 
 #### Phase Configuration
+
 - Access via the Phases tab
 - Use Visual Phase Editor for interactive phase direction selection
 - Click on map to draw phase directions with automatic bearing calculation
 - Support for up to 8 phases per signal
 
 #### Data Export
+
 - Export tab generates complete GTSS package
 - Includes agency.txt, signals.txt, phases.txt, and detectors.txt
 - Download as ZIP file or individual TXT files
@@ -395,6 +432,7 @@ gtss-builder/
 ## 🔧 Development
 
 ### Available Scripts
+
 ```bash
 npm run dev          # Start development server
 npm run build        # Build for production
@@ -403,11 +441,13 @@ npm run check        # Run TypeScript type checking
 ```
 
 ### Environment Configuration
+
 The application uses browser localStorage for data persistence. No environment variables or external databases are required for basic functionality.
 
 ## 📊 Data Format
 
 ### GTSS Export Structure
+
 GTSS Builder generates standardized TXT files following GTSS specification:
 
 - **agency.txt**: Agency information and contact details
@@ -416,11 +456,13 @@ GTSS Builder generates standardized TXT files following GTSS specification:
 - **detectors.txt**: Detection equipment specifications
 
 ### Data Persistence
+
 All application data is stored in browser localStorage with automatic serialization. Data persists across browser sessions and survives application updates.
 
 ## 🔒 Security Considerations
 
 ### Production Deployment Best Practices
+
 1. **Always use HTTPS** in production environments
 2. **Set proper security headers** in your web server configuration:
    ```nginx
@@ -436,21 +478,25 @@ All application data is stored in browser localStorage with automatic serializat
 ### Common Issues
 
 **Application Not Loading**
+
 - Check web server logs: `sudo tail -f /var/log/nginx/error.log`
 - Verify file permissions are correct
 - Ensure JavaScript files are served with correct MIME type
 
 **Map Not Loading**
+
 - Verify internet connection for OpenStreetMap tiles
 - Check if server allows outbound HTTPS connections
 - Ensure CSP headers allow map tile domains
 
 **Export Not Working**
+
 - Modern browsers required for ZIP file generation
 - Check browser console for JavaScript errors
 - Verify sufficient browser storage available
 
 ### Server Logs
+
 ```bash
 # Nginx logs
 sudo tail -f /var/log/nginx/access.log
@@ -468,6 +514,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🔄 Version History
 
 ### Current Version
+
 - Complete localStorage conversion for offline functionality
 - Enhanced visual phase editor with map-based bearing selection
 - TXT file export format (agency.txt, signals.txt, phases.txt, detectors.txt)

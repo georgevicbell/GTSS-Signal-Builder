@@ -17,6 +17,7 @@ OpenSignal requires only static file hosting since it operates entirely in the b
 Netlify provides excellent static hosting with automatic deployments from GitHub.
 
 #### Automatic Deployment
+
 1. **Connect Repository**:
    - Go to [Netlify](https://netlify.com) and sign in
    - Click "New site from Git"
@@ -33,11 +34,13 @@ Netlify provides excellent static hosting with automatic deployments from GitHub
    - Future pushes to the main branch will trigger automatic rebuilds
 
 #### Manual Deployment
+
 1. Build locally: `npm run build`
 2. Drag and drop the `dist` folder to Netlify's deploy area
 3. Your site will be live immediately
 
 #### Custom Domain (Optional)
+
 1. In your Netlify site dashboard, go to "Domain management"
 2. Add your custom domain
 3. Configure DNS settings as instructed by Netlify
@@ -47,6 +50,7 @@ Netlify provides excellent static hosting with automatic deployments from GitHub
 Vercel offers seamless deployment with automatic optimizations.
 
 #### Automatic Deployment
+
 1. **Import Project**:
    - Go to [Vercel](https://vercel.com) and sign in
    - Click "New Project"
@@ -64,6 +68,7 @@ Vercel offers seamless deployment with automatic optimizations.
    - Site will be live at `your-project.vercel.app`
 
 #### Manual Deployment
+
 1. Install Vercel CLI: `npm i -g vercel`
 2. Build project: `npm run build`
 3. Deploy: `vercel --prod`
@@ -74,43 +79,45 @@ Vercel offers seamless deployment with automatic optimizations.
 GitHub Pages provides free hosting directly from your repository.
 
 #### Setup GitHub Actions Deployment
+
 1. **Create Workflow File**:
    Create `.github/workflows/deploy.yml`:
+
    ```yaml
    name: Deploy to GitHub Pages
 
    on:
      push:
-       branches: [ main ]
+       branches: [main]
      pull_request:
-       branches: [ main ]
+       branches: [main]
 
    jobs:
      build-and-deploy:
        runs-on: ubuntu-latest
-       
+
        steps:
-       - name: Checkout
-         uses: actions/checkout@v4
+         - name: Checkout
+           uses: actions/checkout@v4
 
-       - name: Setup Node.js
-         uses: actions/setup-node@v4
-         with:
-           node-version: '18'
-           cache: 'npm'
+         - name: Setup Node.js
+           uses: actions/setup-node@v4
+           with:
+             node-version: "18"
+             cache: "npm"
 
-       - name: Install dependencies
-         run: npm ci
+         - name: Install dependencies
+           run: npm ci
 
-       - name: Build application
-         run: npm run build
+         - name: Build application
+           run: npm run build
 
-       - name: Deploy to GitHub Pages
-         uses: peaceiris/actions-gh-pages@v3
-         if: github.ref == 'refs/heads/main'
-         with:
-           github_token: ${{ secrets.GITHUB_TOKEN }}
-           publish_dir: ./dist
+         - name: Deploy to GitHub Pages
+           uses: peaceiris/actions-gh-pages@v3
+           if: github.ref == 'refs/heads/main'
+           with:
+             github_token: ${{ secrets.GITHUB_TOKEN }}
+             publish_dir: ./dist
    ```
 
 2. **Enable GitHub Pages**:
@@ -127,6 +134,7 @@ GitHub Pages provides free hosting directly from your repository.
 ### Self-Hosted Options
 
 #### Nginx
+
 1. Build the application: `npm run build`
 2. Copy `dist` folder contents to your web server directory
 3. Configure Nginx:
@@ -148,6 +156,7 @@ GitHub Pages provides free hosting directly from your repository.
    ```
 
 #### Apache
+
 1. Build and copy files to your web server directory
 2. Create `.htaccess` file in the root:
    ```apache
@@ -177,6 +186,7 @@ GitHub Pages provides free hosting directly from your repository.
 ## Environment Configuration
 
 ### Production Build Optimization
+
 The default build configuration is optimized for production:
 
 - **Code Splitting**: Automatic chunking for better loading performance
@@ -185,12 +195,14 @@ The default build configuration is optimized for production:
 - **Asset Optimization**: Images and other assets are optimized
 
 ### Custom Build Configuration
+
 If you need to customize the build:
 
 1. **Base URL**: For subdirectory deployment, update `vite.config.ts`:
+
    ```typescript
    export default defineConfig({
-     base: '/your-subdirectory/',
+     base: "/your-subdirectory/",
      // ... other config
    });
    ```
@@ -199,7 +211,7 @@ If you need to customize the build:
    ```typescript
    export default defineConfig({
      build: {
-       outDir: 'build', // instead of 'dist'
+       outDir: "build", // instead of 'dist'
      },
    });
    ```
@@ -207,6 +219,7 @@ If you need to customize the build:
 ## Domain and SSL Configuration
 
 ### Custom Domain Setup
+
 1. **DNS Configuration**:
    - Create a CNAME record pointing to your hosting provider
    - Or use A records for apex domains
@@ -217,7 +230,9 @@ If you need to customize the build:
    - For self-hosted: Use Let's Encrypt or purchase SSL certificate
 
 ### Subdomain Deployment
+
 If deploying to a subdomain:
+
 1. Update the base URL in `vite.config.ts`
 2. Ensure routing handles the subdirectory correctly
 3. Test all navigation and asset loading
@@ -225,13 +240,17 @@ If deploying to a subdomain:
 ## Performance Optimization
 
 ### CDN Configuration
+
 For better global performance:
+
 1. **Netlify**: Automatic global CDN
 2. **Vercel**: Global Edge Network included
 3. **Self-hosted**: Consider CloudFlare or AWS CloudFront
 
 ### Caching Strategy
+
 Ensure proper caching headers:
+
 ```
 index.html: no-cache
 assets/*: 1 year cache with immutable filenames
@@ -242,12 +261,15 @@ Most static hosts configure this automatically.
 ## Monitoring and Analytics
 
 ### Basic Monitoring
+
 - **Netlify**: Built-in analytics and performance monitoring
 - **Vercel**: Analytics dashboard with Core Web Vitals
 - **Google Analytics**: Add tracking code to `index.html`
 
 ### Error Monitoring
+
 Consider adding error tracking:
+
 - Sentry for JavaScript error monitoring
 - LogRocket for session replay and debugging
 
@@ -256,23 +278,28 @@ Consider adding error tracking:
 ### Common Issues
 
 **404 Errors on Page Refresh**
+
 - Ensure client-side routing is configured properly
 - Add fallback rules to serve `index.html` for SPA routes
 
 **Assets Not Loading**
+
 - Check base URL configuration in `vite.config.ts`
 - Verify asset paths are relative and correct
 
 **JavaScript Module Errors**
+
 - Ensure hosting platform serves `.js` files with correct MIME type
 - Modern browsers required for ES modules
 
 **Performance Issues**
+
 - Enable gzip/brotli compression
-- Verify CDN is working properly  
+- Verify CDN is working properly
 - Check for large bundle sizes
 
 ### Getting Help
+
 - Check hosting platform documentation
 - Review browser console for specific error messages
 - Test deployment locally with `npm run preview`
@@ -281,6 +308,7 @@ Consider adding error tracking:
 ## Security Considerations
 
 Since OpenSignal runs entirely in the browser:
+
 - **Data Privacy**: All data stays in user's browser localStorage
 - **HTTPS**: Always deploy with SSL/TLS encryption
 - **Content Security Policy**: Consider adding CSP headers
@@ -289,13 +317,17 @@ Since OpenSignal runs entirely in the browser:
 ## Backup and Migration
 
 ### Data Export
+
 Users can export their GTSS data at any time:
+
 1. Use the Export tab in the application
 2. Download ZIP file containing all signal data
 3. Store backups of exported data files
 
 ### Browser Data Migration
+
 localStorage data is browser-specific:
+
 - Data doesn't sync between devices automatically
 - Users should export/import data when switching devices
 - Consider adding import functionality in future versions

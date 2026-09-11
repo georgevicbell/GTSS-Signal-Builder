@@ -73,7 +73,7 @@ const wrapWords = (text: string, fontSize: number, maxWidth: number): string[] =
   if (words.length === 0) return [];
   const lines: string[] = [];
   let current = "";
-  words.forEach(word => {
+  words.forEach((word) => {
     const candidate = current ? `${current} ${word}` : word;
     if (current && estTextWidth(candidate, fontSize) > maxWidth) {
       lines.push(current);
@@ -94,7 +94,7 @@ const packStreets = (names: string[], fontSize: number, maxWidth: number): strin
   const lines: string[][] = [];
   let current: string[] = [];
   let currentWidth = 0;
-  names.forEach(name => {
+  names.forEach((name) => {
     const width = estTextWidth(name, fontSize);
     const added = current.length > 0 ? separatorWidth + width : width;
     if (current.length > 0 && currentWidth + added > maxWidth) {
@@ -110,10 +110,16 @@ const packStreets = (names: string[], fontSize: number, maxWidth: number): strin
   return lines;
 };
 
-export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectionId, svgRef }: PhaseDiagramProps) => {
+export const PhaseDiagram = ({
+  phases,
+  approaches,
+  intersectionName,
+  intersectionId,
+  svgRef,
+}: PhaseDiagramProps) => {
   // Unique street names (in approach order).
   const uniqueStreets = Array.from(
-    new Set(approaches.map(a => (a.streetName || "").trim()).filter(Boolean))
+    new Set(approaches.map((a) => (a.streetName || "").trim()).filter(Boolean)),
   );
 
   // Color each street to match the phase(s) running on it. A street can carry
@@ -122,19 +128,19 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
   // the neutral palette so the legend still distinguishes them.
   const colorForStreet = (street: string, fallbackIndex: number): string => {
     const approachIds = approaches
-      .filter(a => (a.streetName || "").trim() === street)
-      .map(a => a.approachId);
+      .filter((a) => (a.streetName || "").trim() === street)
+      .map((a) => a.approachId);
     // Only vehicle phases name a street — pedestrian-only phases are excluded
     // so a crosswalk-only phase can't drive the street's color/legend entry.
     const streetPhases = phases.filter(
-      p =>
+      (p) =>
         p.approachId != null &&
         approachIds.includes(p.approachId) &&
         p.movementType !== "Pedestrian",
     );
     if (streetPhases.length > 0) {
       const through = streetPhases.filter(
-        p => p.movementType === "Through" || p.movementType === "Through-Right",
+        (p) => p.movementType === "Through" || p.movementType === "Through-Right",
       );
       const pool = through.length > 0 ? through : streetPhases;
       const rep = pool.reduce((min, p) => (p.phase < min.phase ? p : min), pool[0]);
@@ -145,46 +151,50 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
 
   const getApproachBearing = (approachId: string | null): number | null => {
     if (!approachId) return null;
-    const approach = approaches.find(a => a.approachId === approachId);
+    const approach = approaches.find((a) => a.approachId === approachId);
     return approach?.compassBearing ?? null;
   };
 
-  const getMovementType = (movementType: string): 'straight' | 'left' | 'right' | 'uturn' | 'pedestrian' | 'leftThrough' | 'permissive' => {
+  const getMovementType = (
+    movementType: string,
+  ): "straight" | "left" | "right" | "uturn" | "pedestrian" | "leftThrough" | "permissive" => {
     switch (movementType) {
-      case 'Left Turn':
-      case 'Left Protected-Permissive':
-      case 'Flashing Yellow Arrow':
-        return 'left';
-      case 'Left Through Shared':
-        return 'leftThrough';
-      case 'Permissive Phase':
-        return 'permissive';
-      case 'Right Turn':
-        return 'right';
-      case 'U-Turn':
-        return 'uturn';
-      case 'Pedestrian':
-        return 'pedestrian';
+      case "Left Turn":
+      case "Left Protected-Permissive":
+      case "Flashing Yellow Arrow":
+        return "left";
+      case "Left Through Shared":
+        return "leftThrough";
+      case "Permissive Phase":
+        return "permissive";
+      case "Right Turn":
+        return "right";
+      case "U-Turn":
+        return "uturn";
+      case "Pedestrian":
+        return "pedestrian";
       default:
-        return 'straight';
+        return "straight";
     }
   };
 
   // Count phases by approach and movement type to calculate offsets
   // With 180° bearing adjustment, perpAngle points LEFT, so positive = left
   const getPhaseOffset = (phase: PhaseDiagramPhase): number => {
-    const sameApproachPhases = phases.filter(p => p.approachId === phase.approachId);
+    const sameApproachPhases = phases.filter((p) => p.approachId === phase.approachId);
     const moveType = getMovementType(phase.movementType);
 
     let baseOffset = 0;
-    if (moveType === 'left') baseOffset = 7;
-    else if (moveType === 'right') baseOffset = -18;
-    else if (moveType === 'straight') baseOffset = -7;
-    else if (moveType === 'leftThrough') baseOffset = 0;
-    else if (moveType === 'permissive') baseOffset = 0;
+    if (moveType === "left") baseOffset = 7;
+    else if (moveType === "right") baseOffset = -18;
+    else if (moveType === "straight") baseOffset = -7;
+    else if (moveType === "leftThrough") baseOffset = 0;
+    else if (moveType === "permissive") baseOffset = 0;
 
-    const sameTypeCount = sameApproachPhases.filter(p => getMovementType(p.movementType) === moveType);
-    const typeIndex = sameTypeCount.findIndex(p => p.phase === phase.phase);
+    const sameTypeCount = sameApproachPhases.filter(
+      (p) => getMovementType(p.movementType) === moveType,
+    );
+    const typeIndex = sameTypeCount.findIndex((p) => p.phase === phase.phase);
     if (sameTypeCount.length > 1) {
       baseOffset += (typeIndex - (sameTypeCount.length - 1) / 2) * 8;
     }
@@ -218,7 +228,10 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
     return (
       <line
         key={key}
-        x1={x1} y1={y1} x2={x2} y2={y2}
+        x1={x1}
+        y1={y1}
+        x2={x2}
+        y2={y2}
         stroke={color}
         strokeWidth="2"
         strokeDasharray="4 3"
@@ -244,7 +257,7 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
     if (mode === 0) return null;
     const bearing = getApproachBearing(phase.approachId);
     if (bearing === null) return null;
-    const color = phaseColors[phase.phase] || '#6b7280';
+    const color = phaseColors[phase.phase] || "#6b7280";
 
     if (mode === 1) {
       return crosswalkDashAt(bearing, color, `ped-${index}-near`);
@@ -271,8 +284,10 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
     const diagonal = (dir: 1 | -1, key: string) => (
       <line
         key={key}
-        x1={150 - d * dir} y1={150 - d}
-        x2={150 + d * dir} y2={150 + d}
+        x1={150 - d * dir}
+        y1={150 - d}
+        x2={150 + d * dir}
+        y2={150 + d}
         stroke={color}
         strokeWidth="2"
         strokeDasharray="5 4"
@@ -338,12 +353,18 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
     ];
 
     switch (mode) {
-      case 1: return dashEnds(bearing);
-      case 2: return [...dashEnds(bearing), ...dashEnds((bearing + 180) % 360)];
-      case 3: return dashEnds((bearing + 180) % 360);
-      case 4: return diagEnds(1);
-      case 5: return diagEnds(-1);
-      case 6: return [...diagEnds(1), ...diagEnds(-1)];
+      case 1:
+        return dashEnds(bearing);
+      case 2:
+        return [...dashEnds(bearing), ...dashEnds((bearing + 180) % 360)];
+      case 3:
+        return dashEnds((bearing + 180) % 360);
+      case 4:
+        return diagEnds(1);
+      case 5:
+        return diagEnds(-1);
+      case 6:
+        return [...diagEnds(1), ...diagEnds(-1)];
       case 7:
         return [
           ...dashEnds(bearing),
@@ -353,7 +374,8 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
           ...diagEnds(1),
           ...diagEnds(-1),
         ];
-      default: return [];
+      default:
+        return [];
     }
   };
 
@@ -362,9 +384,9 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
     if (bearing === null) return null;
 
     const moveType = getMovementType(phase.movementType);
-    if (moveType === 'pedestrian') return null;
+    if (moveType === "pedestrian") return null;
 
-    const color = phaseColors[phase.phase] || '#6b7280';
+    const color = phaseColors[phase.phase] || "#6b7280";
     const strokeWidth = 3;
 
     const adjustedBearing = (bearing + 180) % 360;
@@ -380,7 +402,7 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
     const endX = 150 + innerRadius * Math.cos(angleRad) + offsetX;
     const endY = 150 + innerRadius * Math.sin(angleRad) + offsetY;
 
-    if (moveType === 'left') {
+    if (moveType === "left") {
       const bendPoint = 0.4;
       const bendX = startX + (endX - startX) * (1 - bendPoint);
       const bendY = startY + (endY - startY) * (1 - bendPoint);
@@ -390,33 +412,39 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
       const tipY = bendY + tipLength * Math.sin(leftPerpAngle);
 
       // LPP — protected-permissive left: the whole arrow shaft is dashed.
-      const isLpp = phase.movementType === 'Left Protected-Permissive';
+      const isLpp = phase.movementType === "Left Protected-Permissive";
       // FYA — flashing yellow arrow: the turning segment is drawn in yellow
       // with a yellow head, dashed so it reads as flashing on and off.
-      const isFya = phase.movementType === 'Flashing Yellow Arrow';
+      const isFya = phase.movementType === "Flashing Yellow Arrow";
 
       return (
         <g key={index}>
           <line
-            x1={startX} y1={startY} x2={bendX} y2={bendY}
+            x1={startX}
+            y1={startY}
+            x2={bendX}
+            y2={bendY}
             stroke={color}
             strokeWidth={strokeWidth}
             strokeLinecap="round"
-            strokeDasharray={isLpp ? '6 5' : undefined}
+            strokeDasharray={isLpp ? "6 5" : undefined}
           />
           <line
-            x1={bendX} y1={bendY} x2={tipX} y2={tipY}
-            stroke={isFya ? '#eab308' : color}
+            x1={bendX}
+            y1={bendY}
+            x2={tipX}
+            y2={tipY}
+            stroke={isFya ? "#eab308" : color}
             strokeWidth={strokeWidth}
             strokeLinecap="round"
-            strokeDasharray={isLpp ? '6 5' : isFya ? '4 4' : undefined}
-            markerEnd={isFya ? 'url(#arrowhead-fya)' : `url(#arrowhead-${phase.phase})`}
+            strokeDasharray={isLpp ? "6 5" : isFya ? "4 4" : undefined}
+            markerEnd={isFya ? "url(#arrowhead-fya)" : `url(#arrowhead-${phase.phase})`}
           />
         </g>
       );
     }
 
-    if (moveType === 'right') {
+    if (moveType === "right") {
       const bendPoint = 0.4;
       const bendX = startX + (endX - startX) * (1 - bendPoint);
       const bendY = startY + (endY - startY) * (1 - bendPoint);
@@ -427,13 +455,30 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
 
       return (
         <g key={index}>
-          <line x1={startX} y1={startY} x2={bendX} y2={bendY} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-          <line x1={bendX} y1={bendY} x2={tipX} y2={tipY} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" markerEnd={`url(#arrowhead-${phase.phase})`} />
+          <line
+            x1={startX}
+            y1={startY}
+            x2={bendX}
+            y2={bendY}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+          />
+          <line
+            x1={bendX}
+            y1={bendY}
+            x2={tipX}
+            y2={tipY}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            markerEnd={`url(#arrowhead-${phase.phase})`}
+          />
         </g>
       );
     }
 
-    if (moveType === 'uturn') {
+    if (moveType === "uturn") {
       const leftPerpAngle = angleRad + Math.PI / 2;
       const backAngle = angleRad + Math.PI;
       const stemEndX = startX + (endX - startX) * 0.7;
@@ -449,14 +494,39 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
 
       return (
         <g key={index}>
-          <line x1={startX} y1={startY} x2={stemEndX} y2={stemEndY} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-          <line x1={stemEndX} y1={stemEndY} x2={arrowStartX} y2={arrowStartY} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-          <line x1={arrowEndX} y1={arrowEndY} x2={arrowStartX} y2={arrowStartY} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" markerEnd={`url(#arrowhead-${phase.phase})`} />
+          <line
+            x1={startX}
+            y1={startY}
+            x2={stemEndX}
+            y2={stemEndY}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+          />
+          <line
+            x1={stemEndX}
+            y1={stemEndY}
+            x2={arrowStartX}
+            y2={arrowStartY}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+          />
+          <line
+            x1={arrowEndX}
+            y1={arrowEndY}
+            x2={arrowStartX}
+            y2={arrowStartY}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            markerEnd={`url(#arrowhead-${phase.phase})`}
+          />
         </g>
       );
     }
 
-    if (moveType === 'leftThrough') {
+    if (moveType === "leftThrough") {
       const leftPerpAngle = angleRad + Math.PI / 2;
       const splitX = startX + (endX - startX) * 0.65;
       const splitY = startY + (endY - startY) * 0.65;
@@ -468,14 +538,40 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
 
       return (
         <g key={index}>
-          <line x1={startX} y1={startY} x2={splitX} y2={splitY} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-          <line x1={splitX} y1={splitY} x2={throughTipX} y2={throughTipY} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" markerEnd={`url(#arrowhead-${phase.phase})`} />
-          <line x1={splitX} y1={splitY} x2={leftTipX} y2={leftTipY} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" markerEnd={`url(#arrowhead-${phase.phase})`} />
+          <line
+            x1={startX}
+            y1={startY}
+            x2={splitX}
+            y2={splitY}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+          />
+          <line
+            x1={splitX}
+            y1={splitY}
+            x2={throughTipX}
+            y2={throughTipY}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            markerEnd={`url(#arrowhead-${phase.phase})`}
+          />
+          <line
+            x1={splitX}
+            y1={splitY}
+            x2={leftTipX}
+            y2={leftTipY}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            markerEnd={`url(#arrowhead-${phase.phase})`}
+          />
         </g>
       );
     }
 
-    if (moveType === 'permissive') {
+    if (moveType === "permissive") {
       const leftPerpAngle = angleRad + Math.PI / 2;
       const splitX = startX + (endX - startX) * 0.65;
       const splitY = startY + (endY - startY) * 0.65;
@@ -485,15 +581,43 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
 
       return (
         <g key={index}>
-          <line x1={splitX} y1={splitY} x2={leftTipX} y2={leftTipY} stroke="#9ca3af" strokeWidth={strokeWidth} strokeLinecap="round" markerEnd="url(#arrowhead-grey)" />
-          <line x1={startX} y1={startY} x2={endX} y2={endY} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" markerEnd={`url(#arrowhead-${phase.phase})`} />
+          <line
+            x1={splitX}
+            y1={splitY}
+            x2={leftTipX}
+            y2={leftTipY}
+            stroke="#9ca3af"
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            markerEnd="url(#arrowhead-grey)"
+          />
+          <line
+            x1={startX}
+            y1={startY}
+            x2={endX}
+            y2={endY}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            markerEnd={`url(#arrowhead-${phase.phase})`}
+          />
         </g>
       );
     }
 
     // Straight (Through, Through-Right)
     return (
-      <line key={index} x1={startX} y1={startY} x2={endX} y2={endY} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" markerEnd={`url(#arrowhead-${phase.phase})`} />
+      <line
+        key={index}
+        x1={startX}
+        y1={startY}
+        x2={endX}
+        y2={endY}
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        markerEnd={`url(#arrowhead-${phase.phase})`}
+      />
     );
   };
 
@@ -510,7 +634,7 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
     const labelRadius = 135;
     const labelX = 150 + labelRadius * Math.cos(angleRad) + offsetX;
     const labelY = 150 + labelRadius * Math.sin(angleRad) + offsetY;
-    const color = phaseColors[phase.phase] || '#6b7280';
+    const color = phaseColors[phase.phase] || "#6b7280";
 
     return (
       <text
@@ -532,8 +656,8 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
   // (farthest from an approach leg, then from a badge already placed) and
   // float the badge just beyond it.
   const legAngles = approaches
-    .filter(a => a.compassBearing !== null)
-    .map(a => ((((a.compassBearing as number) + 180) % 360) - 90) * (Math.PI / 180));
+    .filter((a) => a.compassBearing !== null)
+    .map((a) => ((((a.compassBearing as number) + 180) % 360) - 90) * (Math.PI / 180));
 
   const angDist = (a: number, b: number) => {
     const diff = Math.abs(a - b) % (2 * Math.PI);
@@ -545,7 +669,7 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
     const placed: Array<{ angle: number; radius: number }> = [];
     const unanchored: Array<{ key: string; phase: number }> = [];
     phases.forEach((phase, idx) => {
-      if (phase.movementType !== 'Pedestrian') return;
+      if (phase.movementType !== "Pedestrian") return;
       const ends = pedCrossingEndpoints(phase);
       if (ends.length === 0) {
         unanchored.push({ key: `ped-badge-${idx}`, phase: phase.phase });
@@ -556,12 +680,12 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
       let bestScore = -Infinity;
       ends.forEach(([x, y]) => {
         const angle = Math.atan2(y - 150, x - 150);
-        const legClear = legAngles.length > 0
-          ? Math.min(...legAngles.map(l => angDist(angle, l)))
-          : Math.PI / 2;
-        const badgeClear = placed.length > 0
-          ? Math.min(...placed.map(pl => angDist(angle, pl.angle)))
-          : Math.PI / 2;
+        const legClear =
+          legAngles.length > 0 ? Math.min(...legAngles.map((l) => angDist(angle, l))) : Math.PI / 2;
+        const badgeClear =
+          placed.length > 0
+            ? Math.min(...placed.map((pl) => angDist(angle, pl.angle)))
+            : Math.PI / 2;
         const score = Math.min(legClear, Math.PI / 2) + Math.min(badgeClear, 0.6);
         if (score > bestScore) {
           bestScore = score;
@@ -571,7 +695,11 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
       });
       // Step outward if another badge already occupies that spot.
       let radius = bestRadius + 16;
-      while (placed.some(pl => angDist(bestAngle, pl.angle) < 0.35 && Math.abs(radius - pl.radius) < 18)) {
+      while (
+        placed.some(
+          (pl) => angDist(bestAngle, pl.angle) < 0.35 && Math.abs(radius - pl.radius) < 18,
+        )
+      ) {
         radius += 19;
       }
       placed.push({ angle: bestAngle, radius });
@@ -596,7 +724,9 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
   // Header layout. Extra title / street lines push the intersection drawing
   // down and grow the canvas, so nothing is clipped and the diagram keeps its
   // original position when everything fits on one line.
-  const titleLines = intersectionName ? wrapWords(intersectionName, TITLE_FONT, HEADER_MAX_WIDTH) : [];
+  const titleLines = intersectionName
+    ? wrapWords(intersectionName, TITLE_FONT, HEADER_MAX_WIDTH)
+    : [];
   const streetLines = packStreets(uniqueStreets, STREET_FONT, HEADER_MAX_WIDTH);
   const titleExtra = Math.max(0, titleLines.length - 1) * TITLE_LINE_H;
   const streetExtra = Math.max(0, streetLines.length - 1) * STREET_LINE_H;
@@ -679,13 +809,29 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
       ))}
 
       <g transform={`translate(0, ${diagramTop})`}>
-        <circle cx="150" cy="150" r="115" fill="none" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="4 4" />
+        <circle
+          cx="150"
+          cy="150"
+          r="115"
+          fill="none"
+          stroke="#e5e7eb"
+          strokeWidth="1"
+          strokeDasharray="4 4"
+        />
         <circle cx="150" cy="150" r="42" fill="#f3f4f6" stroke="#d1d5db" strokeWidth="2" />
 
-        <text x="150" y="22" textAnchor="middle" fontSize="11" fill="#9ca3af">N</text>
-        <text x="280" y="154" textAnchor="middle" fontSize="11" fill="#9ca3af">E</text>
-        <text x="150" y="288" textAnchor="middle" fontSize="11" fill="#9ca3af">S</text>
-        <text x="20" y="154" textAnchor="middle" fontSize="11" fill="#9ca3af">W</text>
+        <text x="150" y="22" textAnchor="middle" fontSize="11" fill="#9ca3af">
+          N
+        </text>
+        <text x="280" y="154" textAnchor="middle" fontSize="11" fill="#9ca3af">
+          E
+        </text>
+        <text x="150" y="288" textAnchor="middle" fontSize="11" fill="#9ca3af">
+          S
+        </text>
+        <text x="20" y="154" textAnchor="middle" fontSize="11" fill="#9ca3af">
+          W
+        </text>
 
         {approaches.map((approach, idx) => {
           if (approach.compassBearing === null) return null;
@@ -696,7 +842,16 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
           const innerX = 150 + 44 * Math.cos(angleRad);
           const innerY = 150 + 44 * Math.sin(angleRad);
           return (
-            <line key={idx} x1={outerX} y1={outerY} x2={innerX} y2={innerY} stroke="#e5e7eb" strokeWidth="20" strokeLinecap="butt" />
+            <line
+              key={idx}
+              x1={outerX}
+              y1={outerY}
+              x2={innerX}
+              y2={innerY}
+              stroke="#e5e7eb"
+              strokeWidth="20"
+              strokeLinecap="butt"
+            />
           );
         })}
 
@@ -707,9 +862,12 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
             pedestrian crosswalk across the arc's middle; mode 3 (FR-P-I) adds a
             traffic-calmed ladder crosswalk with a shark's-teeth yield line. */}
         {approaches.map((approach, idx) => {
-          const frMode = typeof approach.freeRight === "number"
-            ? approach.freeRight
-            : (approach.freeRight ? 1 : 0);
+          const frMode =
+            typeof approach.freeRight === "number"
+              ? approach.freeRight
+              : approach.freeRight
+                ? 1
+                : 0;
           if (frMode === 0 || approach.compassBearing === null) return null;
           const adjustedBearing = (approach.compassBearing + 180) % 360;
           const angleRad = (adjustedBearing - 90) * (Math.PI / 180);
@@ -718,18 +876,18 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
           // Sweep = clockwise gap to the nearest other approach on the right
           // side (10°–170°); falls back to 90° when there is none.
           const rightGaps = approaches
-            .filter(o => o !== approach && o.compassBearing !== null)
-            .map(o => {
+            .filter((o) => o !== approach && o.compassBearing !== null)
+            .map((o) => {
               const oRad = ((((o.compassBearing as number) + 180) % 360) - 90) * (Math.PI / 180);
               const gap = (angleRad - oRad) % (2 * Math.PI);
               return gap < 0 ? gap + 2 * Math.PI : gap;
             })
-            .filter(gap => gap > 0.17 && gap < Math.PI - 0.17);
+            .filter((gap) => gap > 0.17 && gap < Math.PI - 0.17);
           const sweep = rightGaps.length > 0 ? Math.min(...rightGaps) : Math.PI / 2;
-          const exitRad = angleRad - sweep;    // departure (exit leg) direction
+          const exitRad = angleRad - sweep; // departure (exit leg) direction
           const midRad = angleRad - sweep / 2; // bisector of the corner
           const p = (r: number, a: number) => [150 + r * Math.cos(a), 150 + r * Math.sin(a)];
-          const d = 98;         // peel-off / merge radius on each leg
+          const d = 98; // peel-off / merge radius on each leg
           const h = sweep / 2;
           // Preferred arc: 1.35× the tangent fillet radius for the corner
           // angle. Its closest approach to the center is pushed out to a
@@ -741,8 +899,8 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
             flatR;
           const clear = Math.max(50, flatMid); // island 42 + roadbed + margin
           const sag = d * Math.cos(h) - clear; // signed: + bows toward center
-          const [sx, sy] = p(d, angleRad);     // peel-off point on the approach leg
-          const [ex, ey] = p(d, exitRad);      // merge point on the exit leg
+          const [sx, sy] = p(d, angleRad); // peel-off point on the approach leg
+          const [ex, ey] = p(d, exitRad); // merge point on the exit leg
           // Circle through both endpoints and the bisector point at `clear`.
           const path =
             Math.abs(sag) < 0.5
@@ -757,11 +915,27 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
           const roadWidth = 10 + (frLanes - 1) * 6;
           return (
             <g key={`fr-${idx}`}>
-              <path d={path} fill="none" stroke="#e5e7eb" strokeWidth={roadWidth} strokeLinecap="butt" />
-              <path d={path} fill="none" stroke="#9ca3af" strokeWidth="1.25" strokeDasharray="3 3" />
+              <path
+                d={path}
+                fill="none"
+                stroke="#e5e7eb"
+                strokeWidth={roadWidth}
+                strokeLinecap="butt"
+              />
+              <path
+                d={path}
+                fill="none"
+                stroke="#9ca3af"
+                strokeWidth="1.25"
+                strokeDasharray="3 3"
+              />
               {freeRightPedMarkings(frMode, {
                 keyPrefix: `fr-mark-${idx}`,
-                cx: mcx, cy: mcy, midRad, halfWidth: roadWidth / 2 + 2, scale: 1,
+                cx: mcx,
+                cy: mcy,
+                midRad,
+                halfWidth: roadWidth / 2 + 2,
+                scale: 1,
               })}
             </g>
           );
@@ -772,35 +946,36 @@ export const PhaseDiagram = ({ phases, approaches, intersectionName, intersectio
         {phases.map((phase, idx) => renderArrow(phase, idx))}
 
         {/* Intersection ID, scaled to sit within the central crosswalk box */}
-        {intersectionId && (() => {
-          const maxWidth = 70; // stay within the central circle / crosswalk lines
-          const fontSize = Math.max(10, Math.min(38, maxWidth / (intersectionId.length * 0.62)));
-          return (
-            <text
-              x={150}
-              y={150 + fontSize * 0.34}
-              textAnchor="middle"
-              fontSize={fontSize}
-              fontWeight="bold"
-              fill="#6b7280"
-            >
-              {intersectionId}
-            </text>
-          );
-        })()}
+        {intersectionId &&
+          (() => {
+            const maxWidth = 70; // stay within the central circle / crosswalk lines
+            const fontSize = Math.max(10, Math.min(38, maxWidth / (intersectionId.length * 0.62)));
+            return (
+              <text
+                x={150}
+                y={150 + fontSize * 0.34}
+                textAnchor="middle"
+                fontSize={fontSize}
+                fontWeight="bold"
+                fill="#6b7280"
+              >
+                {intersectionId}
+              </text>
+            );
+          })()}
 
         {/* Outer phase-number labels — pedestrian-only phases have no arrow to
             label, so they get a badge instead (below). */}
         {phases
-          .filter(p => p.movementType !== 'Pedestrian')
+          .filter((p) => p.movementType !== "Pedestrian")
           .map((phase, idx) => renderLabel(phase, idx))}
 
         {/* Pedestrian-only phase numbers, color coded to match the phase and
             pinned beside the crossing they serve. */}
-        {pedBadges.map(badge => {
+        {pedBadges.map((badge) => {
           const label = `P${badge.phase}`;
           const width = 11 + label.length * 6.5;
-          const color = phaseColors[badge.phase] || '#6b7280';
+          const color = phaseColors[badge.phase] || "#6b7280";
           return (
             <g key={badge.key}>
               <rect

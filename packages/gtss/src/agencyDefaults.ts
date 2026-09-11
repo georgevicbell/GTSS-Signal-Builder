@@ -1,6 +1,6 @@
-import type { Approach } from '../schema/schema';
+import type { Approach } from "../schema/schema";
 
-export type CardinalDirection = 'N' | 'S' | 'E' | 'W';
+export type CardinalDirection = "N" | "S" | "E" | "W";
 
 export type PhaseDirectionStandard = {
   N?: number[];
@@ -19,7 +19,7 @@ export type PhaseDirectionStandard = {
  *            reachable; zoom with the +/- buttons instead.
  *   'zoom' — the wheel zooms the map and the page stays put.
  */
-export type MapScrollWheelMode = 'page' | 'zoom';
+export type MapScrollWheelMode = "page" | "zoom";
 
 export type AgencyDefaults = {
   agencyId: string;
@@ -50,12 +50,12 @@ export const NEMA_DEFAULTS: PhaseDirectionStandard = {
 };
 
 export const DEFAULT_AGENCY_DEFAULTS: AgencyDefaults = {
-  agencyId: '',
+  agencyId: "",
   phaseDirectionStandard: { ...NEMA_DEFAULTS },
   defaultPhaseCount: 8,
   // Page scrolling by default: a wheel that zooms the map traps the cursor and
   // makes the data below it hard to reach.
-  mapScrollWheel: 'page',
+  mapScrollWheel: "page",
   updatedAt: new Date().toISOString(),
 };
 
@@ -65,7 +65,7 @@ export const DEFAULT_AGENCY_DEFAULTS: AgencyDefaults = {
  * existed — falls back to page scrolling.
  */
 export function isMapScrollZoomEnabled(defaults: AgencyDefaults | null | undefined): boolean {
-  return defaults?.mapScrollWheel === 'zoom';
+  return defaults?.mapScrollWheel === "zoom";
 }
 
 /**
@@ -79,19 +79,30 @@ export function isMapScrollZoomEnabled(defaults: AgencyDefaults | null | undefin
 export function bearingToCardinal(bearing: number | null | undefined): CardinalDirection | null {
   if (bearing === null || bearing === undefined) return null;
   const normalized = ((bearing % 360) + 360) % 360;
-  if (normalized >= 315 || normalized < 45) return 'N';
-  if (normalized >= 45 && normalized < 135) return 'E';
-  if (normalized >= 135 && normalized < 225) return 'S';
-  return 'W';
+  if (normalized >= 315 || normalized < 45) return "N";
+  if (normalized >= 45 && normalized < 135) return "E";
+  if (normalized >= 135 && normalized < 225) return "S";
+  return "W";
 }
 
 /**
  * Sanitize a PhaseDirectionStandard: clamp phase numbers to 1–8,
  * remove duplicates within each key, remove invalid entries.
  */
-export function sanitizePhaseDirectionStandard(standard: PhaseDirectionStandard): PhaseDirectionStandard {
+export function sanitizePhaseDirectionStandard(
+  standard: PhaseDirectionStandard,
+): PhaseDirectionStandard {
   const result: PhaseDirectionStandard = {};
-  const keys: (keyof PhaseDirectionStandard)[] = ['N', 'S', 'E', 'W', 'N_left', 'S_left', 'E_left', 'W_left'];
+  const keys: (keyof PhaseDirectionStandard)[] = [
+    "N",
+    "S",
+    "E",
+    "W",
+    "N_left",
+    "S_left",
+    "E_left",
+    "W_left",
+  ];
 
   for (const key of keys) {
     const val = standard[key];
@@ -113,7 +124,16 @@ export function sanitizePhaseDirectionStandard(standard: PhaseDirectionStandard)
  */
 export function validatePhaseDirectionStandard(standard: PhaseDirectionStandard): string[] {
   const errors: string[] = [];
-  const keys: (keyof PhaseDirectionStandard)[] = ['N', 'S', 'E', 'W', 'N_left', 'S_left', 'E_left', 'W_left'];
+  const keys: (keyof PhaseDirectionStandard)[] = [
+    "N",
+    "S",
+    "E",
+    "W",
+    "N_left",
+    "S_left",
+    "E_left",
+    "W_left",
+  ];
 
   // Collect all assigned phase numbers to check for cross-direction duplicates
   const allPhaseNumbers: number[] = [];
@@ -139,7 +159,9 @@ export function validatePhaseDirectionStandard(standard: PhaseDirectionStandard)
     seen.add(num);
   }
   if (duplicates.size > 0) {
-    errors.push(`Phase numbers assigned to multiple directions: ${Array.from(duplicates).join(', ')}`);
+    errors.push(
+      `Phase numbers assigned to multiple directions: ${Array.from(duplicates).join(", ")}`,
+    );
   }
 
   return errors;
@@ -172,7 +194,16 @@ export function guessPhaseDirectionMapping({
 
   // Merge user standard over NEMA defaults: user values override, NEMA fills gaps
   const effectiveStandard: PhaseDirectionStandard = { ...NEMA_DEFAULTS };
-  const keys: (keyof PhaseDirectionStandard)[] = ['N', 'S', 'E', 'W', 'N_left', 'S_left', 'E_left', 'W_left'];
+  const keys: (keyof PhaseDirectionStandard)[] = [
+    "N",
+    "S",
+    "E",
+    "W",
+    "N_left",
+    "S_left",
+    "E_left",
+    "W_left",
+  ];
   for (const key of keys) {
     const userVal = userStandard[key];
     if (userVal && userVal.length > 0) {
@@ -194,7 +225,7 @@ export function guessPhaseDirectionMapping({
   // Build candidate list: { phaseNumber, approachId, isThrough }
   type Candidate = { phaseNumber: number; approachId: string; isThrough: boolean };
   const candidates: Candidate[] = [];
-  const cardinals: CardinalDirection[] = ['N', 'S', 'E', 'W'];
+  const cardinals: CardinalDirection[] = ["N", "S", "E", "W"];
 
   for (const dir of cardinals) {
     const approachId = directionToApproach[dir];
@@ -245,7 +276,9 @@ export function guessPhaseDirectionMapping({
   //    rather than two unrelated perpendicular lefts.
   const uniqueLefts: Candidate[] = [];
   const seenLeft = new Set<number>();
-  for (const c of candidates.filter((c) => !c.isThrough).sort((a, b) => a.phaseNumber - b.phaseNumber)) {
+  for (const c of candidates
+    .filter((c) => !c.isThrough)
+    .sort((a, b) => a.phaseNumber - b.phaseNumber)) {
     if (!seenLeft.has(c.phaseNumber)) {
       seenLeft.add(c.phaseNumber);
       uniqueLefts.push(c);

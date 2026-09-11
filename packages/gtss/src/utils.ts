@@ -1,10 +1,10 @@
 import { clsx, type ClassValue } from "clsx";
 import type { KeyboardEvent } from "react";
 import { twMerge } from "tailwind-merge";
-import type { Approach, Signal } from '../schema/schema';
+import type { Approach, Signal } from "../schema/schema";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 /**
@@ -19,8 +19,8 @@ export function handleColumnMajorTab(e: KeyboardEvent<HTMLElement>) {
   if (target.dataset.tabCol == null || target.dataset.tabRow == null) return;
 
   const cells = Array.from(
-    e.currentTarget.querySelectorAll<HTMLElement>("[data-tab-col][data-tab-row]")
-  ).filter(el => !(el as HTMLInputElement).disabled);
+    e.currentTarget.querySelectorAll<HTMLElement>("[data-tab-col][data-tab-row]"),
+  ).filter((el) => !(el as HTMLInputElement).disabled);
 
   // Column-major order: all rows of column 0, then column 1, etc.
   cells.sort((a, b) => {
@@ -46,11 +46,11 @@ export function handleColumnMajorTab(e: KeyboardEvent<HTMLElement>) {
  */
 export function getDerivedStreetNames(
   signalId: string,
-  approaches: Approach[]
+  approaches: Approach[],
 ): { streetName1: string; streetName2: string } {
-  const signalApproaches = approaches.filter(a => a.signalId === signalId);
+  const signalApproaches = approaches.filter((a) => a.signalId === signalId);
   const uniqueStreets = Array.from(
-    new Set(signalApproaches.map(a => a.streetName).filter(name => name && name.trim()))
+    new Set(signalApproaches.map((a) => a.streetName).filter((name) => name && name.trim())),
   );
 
   return {
@@ -112,7 +112,7 @@ export function suggestStreetNameForApproach(params: {
 
   // Angular distance in degrees on a 0..360 circle (always 0..180).
   const angDist = (a: number, b: number) => {
-    const d = Math.abs(((a - b) % 360 + 540) % 360 - 180);
+    const d = Math.abs(((((a - b) % 360) + 540) % 360) - 180);
     return d;
   };
 
@@ -122,7 +122,9 @@ export function suggestStreetNameForApproach(params: {
     const toRad = (d: number) => (d * Math.PI) / 180;
     const dLat = toRad(lat2 - lat1);
     const dLng = toRad(lng2 - lng1);
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(a));
   };
 
@@ -166,10 +168,7 @@ export function suggestStreetNameForApproach(params: {
  * Get display name for a signal using derived street names from approaches
  * Format: "ID# - Street Name 1 & Street Name 2" or "ID#" if no approaches
  */
-export function getSignalDisplayName(
-  signal: Signal,
-  approaches: Approach[]
-): string {
+export function getSignalDisplayName(signal: Signal, approaches: Approach[]): string {
   const derived = getDerivedStreetNames(signal.signalId, approaches);
 
   if (derived.streetName1 && derived.streetName2) {

@@ -4,7 +4,9 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const agencies = pgTable("agencies", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
   agencyId: text("agency_id").notNull().unique(),
   agencyName: text("agency_name").notNull(),
   agencyUrl: text("agency_url"),
@@ -16,7 +18,9 @@ export const agencies = pgTable("agencies", {
 });
 
 export const signals = pgTable("signals", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
   signalId: text("signal_id").notNull().unique(),
   agencyId: text("agency_id").notNull(),
   streetName1: text("street_name_1").notNull(),
@@ -27,7 +31,9 @@ export const signals = pgTable("signals", {
 
 // Approaches table - new for GTSSv1.1
 export const approaches = pgTable("approaches", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
   approachId: text("approach_id").notNull(),
   signalId: text("signal_id").notNull(),
   streetName: text("street_name").notNull(),
@@ -49,7 +55,9 @@ export const approaches = pgTable("approaches", {
 
 // Phases table - updated for GTSSv1.1 (removed compassBearing, postedSpeed; added approachId)
 export const phases = pgTable("phases", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
   phase: integer("phase").notNull(),
   signalId: text("signal_id").notNull(),
   movementType: text("movement_type").notNull(),
@@ -76,7 +84,9 @@ export const phases = pgTable("phases", {
 });
 
 export const detectors = pgTable("detectors", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
   channel: text("channel").notNull(),
   signalId: text("signal_id").notNull(),
   // Optional. Detectors that don't serve a signal phase — count detectors, in
@@ -98,7 +108,9 @@ export const detectors = pgTable("detectors", {
 
 // Basic Timings table - new for GTSSv1.1
 export const basicTimings = pgTable("basic_timings", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
   phase: integer("phase").notNull(),
   signalId: text("signal_id").notNull(),
   pedWalk: real("ped_walk"),
@@ -112,23 +124,29 @@ export const basicTimings = pgTable("basic_timings", {
   pedRecall: boolean("ped_recall").default(false),
 });
 
-export const insertAgencySchema = createInsertSchema(agencies).omit({
-  id: true,
-}).extend({
-  agencyLanguage: z.string().optional(),
-});
+export const insertAgencySchema = createInsertSchema(agencies)
+  .omit({
+    id: true,
+  })
+  .extend({
+    agencyLanguage: z.string().optional(),
+  });
 
-export const insertSignalSchema = createInsertSchema(signals).omit({
-  id: true,
-}).extend({
-  signalId: z.string().optional(),
-});
+export const insertSignalSchema = createInsertSchema(signals)
+  .omit({
+    id: true,
+  })
+  .extend({
+    signalId: z.string().optional(),
+  });
 
-export const insertApproachSchema = createInsertSchema(approaches).omit({
-  id: true,
-}).extend({
-  approachId: z.string().optional(),
-});
+export const insertApproachSchema = createInsertSchema(approaches)
+  .omit({
+    id: true,
+  })
+  .extend({
+    approachId: z.string().optional(),
+  });
 
 export const insertPhaseSchema = createInsertSchema(phases).omit({
   id: true,
@@ -138,11 +156,13 @@ export const insertDetectorSchema = createInsertSchema(detectors).omit({
   id: true,
 });
 
-export const insertBasicTimingSchema = createInsertSchema(basicTimings).omit({
-  id: true,
-}).extend({
-  vehRecallType: z.enum(["None", "Min", "Max", "Soft"]).optional(),
-});
+export const insertBasicTimingSchema = createInsertSchema(basicTimings)
+  .omit({
+    id: true,
+  })
+  .extend({
+    vehRecallType: z.enum(["None", "Min", "Max", "Soft"]).optional(),
+  });
 
 export type Agency = typeof agencies.$inferSelect;
 export type InsertAgency = z.infer<typeof insertAgencySchema>;
