@@ -78,6 +78,10 @@ export const useGTSSStore = create<GTSSStore>((set) => ({
   currentView: 'main',
   currentSignalId: null,
 
+  // Temporary coords when creating a new signal via map click
+  tempNewSignalLocation: null,
+  setTempNewSignalLocation: (loc) => set({ tempNewSignalLocation: loc }),
+
   // Shared signal selection (empty string = auto-select first signal)
   selectedSignalIdForTables: '',
   setSelectedSignalIdForTables: (signalId) => set({ selectedSignalIdForTables: signalId }),
@@ -150,14 +154,8 @@ export const useGTSSStore = create<GTSSStore>((set) => ({
   navigateToMain: () => set({ currentView: 'main', currentSignalId: null }),
   navigateToSignalDetails: (signalId) => set({ currentView: 'signal-details', currentSignalId: signalId }),
 
-<<<<<<< HEAD
-  // Temp location used when adding a new signal from the map click
-  tempNewSignalLocation: null,
-  setTempNewSignalLocation: (loc) => set({ tempNewSignalLocation: loc }),
-=======
   deepLinkTarget: { type: null, id: null },
   setDeepLinkTarget: (target) => set({ deepLinkTarget: target }),
->>>>>>> george-deeplink
 
   loadFromStorage: () => set({
     agency: agencyStorage.get(),
