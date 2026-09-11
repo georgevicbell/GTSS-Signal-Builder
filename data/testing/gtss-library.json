@@ -1,0 +1,26 @@
+
+{
+  "description":"List of files for testing gtss",
+  "originUrl":"https://github.com/gtss/data/testing/gtss-library.json",
+  "ownerEmail":"test@gtss.dev",
+  "ownerUrl":"https://gtss.dev",
+  "gtssLibrary":[
+      {
+          "title": "Toronto - Test Variety of Intersections",
+          "gtss-url": "./gtssFiles/gtss-toronto-test.zip",
+          "official": false,
+          "date-added": "2026-09-10T00:00:00.000Z",
+          "owner-email": "test@gtss.dev",
+          "owner-url": "https://gtss.dev",
+          "bounds": {
+            "min":{
+              "lat":43.636559455480125,
+              "lon":-79.40003871917726
+            },
+            "max": {
+              "lat": 43.67620743097197,
+              "lon": -79.35262262821199
+          }
+      }
+  ]
+}
