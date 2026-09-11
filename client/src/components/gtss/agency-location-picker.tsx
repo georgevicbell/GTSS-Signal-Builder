@@ -25,7 +25,11 @@ interface AgencyLocationPickerProps {
   suggestedLocation?: [number, number];
 }
 
-function LocationPicker({ onLocationSelect }: { onLocationSelect: (lat: number, lon: number) => void }) {
+function LocationPicker({
+  onLocationSelect,
+}: {
+  onLocationSelect: (lat: number, lon: number) => void;
+}) {
   useMapEvents({
     click(e) {
       onLocationSelect(e.latlng.lat, e.latlng.lng);
@@ -34,12 +38,19 @@ function LocationPicker({ onLocationSelect }: { onLocationSelect: (lat: number, 
   return null;
 }
 
-export default function AgencyLocationPicker({ isOpen, onClose, onLocationSelect, suggestedLocation }: AgencyLocationPickerProps) {
+export default function AgencyLocationPicker({
+  isOpen,
+  onClose,
+  onLocationSelect,
+  suggestedLocation,
+}: AgencyLocationPickerProps) {
   const mapScrollZoom = useMapScrollZoom();
   const [selectedLocation, setSelectedLocation] = useState<LocationInfo | null>(null);
   const [isGeocodingUserLocation, setIsGeocodingUserLocation] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
-  const [mapCenter, setMapCenter] = useState<[number, number]>(suggestedLocation || [39.8283, -98.5795]);
+  const [mapCenter, setMapCenter] = useState<[number, number]>(
+    suggestedLocation || [39.8283, -98.5795],
+  );
 
   useEffect(() => {
     if (suggestedLocation) {
@@ -50,9 +61,11 @@ export default function AgencyLocationPicker({ isOpen, onClose, onLocationSelect
   const handleLocationClick = async (lat: number, lon: number) => {
     try {
       // Reverse geocode the selected location
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`,
+      );
       const data = await response.json();
-      
+
       const locationInfo: LocationInfo = {
         lat,
         lon,
@@ -61,7 +74,7 @@ export default function AgencyLocationPicker({ isOpen, onClose, onLocationSelect
         country: data.address?.country || "",
         displayName: data.display_name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`,
       };
-      
+
       setSelectedLocation(locationInfo);
     } catch (error) {
       console.error("Geocoding failed:", error);
@@ -75,7 +88,7 @@ export default function AgencyLocationPicker({ isOpen, onClose, onLocationSelect
 
   const handleGetUserLocation = () => {
     setIsGeocodingUserLocation(true);
-    
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -90,9 +103,9 @@ export default function AgencyLocationPicker({ isOpen, onClose, onLocationSelect
           console.error("Geolocation failed:", error);
           setIsGeocodingUserLocation(false);
           // Try IP-based location as fallback
-          fetch('https://ipapi.co/json/')
-            .then(response => response.json())
-            .then(data => {
+          fetch("https://ipapi.co/json/")
+            .then((response) => response.json())
+            .then((data) => {
               if (data.latitude && data.longitude) {
                 const lat = data.latitude;
                 const lon = data.longitude;
@@ -104,13 +117,13 @@ export default function AgencyLocationPicker({ isOpen, onClose, onLocationSelect
             .catch(() => {
               setIsGeocodingUserLocation(false);
             });
-        }
+        },
       );
     } else {
       // Browser doesn't support geolocation, try IP-based location
-      fetch('https://ipapi.co/json/')
-        .then(response => response.json())
-        .then(data => {
+      fetch("https://ipapi.co/json/")
+        .then((response) => response.json())
+        .then((data) => {
           if (data.latitude && data.longitude) {
             const lat = data.latitude;
             const lon = data.longitude;
@@ -139,13 +152,14 @@ export default function AgencyLocationPicker({ isOpen, onClose, onLocationSelect
         <DialogHeader>
           <DialogTitle>Select Agency Location</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-grey-600">
-              Click on the map to select your agency's location, or use your current location as a starting point.
+              Click on the map to select your agency's location, or use your current location as a
+              starting point.
             </p>
-            <Button 
+            <Button
               onClick={handleGetUserLocation}
               disabled={isGeocodingUserLocation}
               variant="outline"
@@ -165,26 +179,28 @@ export default function AgencyLocationPicker({ isOpen, onClose, onLocationSelect
               className="rounded-lg border"
             >
               <MapTileLayers />
-              
+
               <LocationPicker onLocationSelect={handleLocationClick} />
-              
+
               {selectedLocation && (
                 <Marker position={[selectedLocation.lat, selectedLocation.lon]} />
               )}
-              
+
               {userLocation && (
-                <Marker 
+                <Marker
                   position={userLocation}
                   eventHandlers={{
                     add: (e) => {
                       const marker = e.target;
-                      marker.setIcon(L.divIcon({
-                        className: 'user-location-marker',
-                        html: '<div style="background: #3b82f6; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
-                        iconSize: [16, 16],
-                        iconAnchor: [8, 8]
-                      }));
-                    }
+                      marker.setIcon(
+                        L.divIcon({
+                          className: "user-location-marker",
+                          html: '<div style="background: #3b82f6; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+                          iconSize: [16, 16],
+                          iconAnchor: [8, 8],
+                        }),
+                      );
+                    },
                   }}
                 />
               )}
@@ -198,10 +214,9 @@ export default function AgencyLocationPicker({ isOpen, onClose, onLocationSelect
                   <div>
                     <div className="font-medium">Selected Location</div>
                     <div className="text-sm text-grey-600">
-                      {selectedLocation.city && selectedLocation.state 
+                      {selectedLocation.city && selectedLocation.state
                         ? `${selectedLocation.city}, ${selectedLocation.state}`
-                        : selectedLocation.displayName
-                      }
+                        : selectedLocation.displayName}
                     </div>
                     <div className="text-xs text-grey-500">
                       {selectedLocation.lat.toFixed(6)}, {selectedLocation.lon.toFixed(6)}
@@ -220,10 +235,7 @@ export default function AgencyLocationPicker({ isOpen, onClose, onLocationSelect
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleConfirmLocation}
-              disabled={!selectedLocation}
-            >
+            <Button onClick={handleConfirmLocation} disabled={!selectedLocation}>
               <Check className="w-4 h-4 mr-2" />
               Confirm Location
             </Button>

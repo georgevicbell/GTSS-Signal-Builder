@@ -38,8 +38,12 @@ export default function ExportPage() {
         {/* Tabs for Export and Import */}
         <Tabs defaultValue="export" className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="export" data-testid="tab-export">Export</TabsTrigger>
-            <TabsTrigger value="import" data-testid="tab-import">Import</TabsTrigger>
+            <TabsTrigger value="export" data-testid="tab-export">
+              Export
+            </TabsTrigger>
+            <TabsTrigger value="import" data-testid="tab-import">
+              Import
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="export" className="mt-3 sm:mt-4">

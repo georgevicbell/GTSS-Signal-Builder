@@ -1,4 +1,4 @@
-import type { Detector, Phase, Signal } from '../schema/schema';
+import type { Detector, Phase, Signal } from "../schema/schema";
 
 export interface ValidationResult {
   signalId: string;
@@ -8,7 +8,7 @@ export interface ValidationResult {
   phaseCompleteness: string;
   detectorCompleteness: string;
   overallScore: string;
-  status: 'complete' | 'partial' | 'incomplete';
+  status: "complete" | "partial" | "incomplete";
 }
 
 export interface ValidationSummary {
@@ -23,17 +23,17 @@ export interface ValidationSummary {
 export function evaluateGTSSCompleteness(
   signals: Signal[],
   phases: Phase[],
-  detectors: Detector[]
+  detectors: Detector[],
 ): ValidationSummary {
   const requiredPhaseCount = 8;
   const minRequiredDetectors = 4;
 
-  const results = signals.map(signal => {
+  const results = signals.map((signal) => {
     const sid = signal.signalId;
 
     // Filter relevant data
-    const signalPhases = phases.filter(p => p.signalId === sid);
-    const signalDetectors = detectors.filter(d => d.signalId === sid);
+    const signalPhases = phases.filter((p) => p.signalId === sid);
+    const signalDetectors = detectors.filter((d) => d.signalId === sid);
 
     const phaseCount = signalPhases.length;
     const detectorCount = signalDetectors.length;
@@ -43,7 +43,7 @@ export function evaluateGTSSCompleteness(
 
     const score = Math.round(((phaseCompleteness + detectorCompleteness) / 2) * 100);
 
-    let status: 'complete' | 'partial' | 'incomplete' = "incomplete";
+    let status: "complete" | "partial" | "incomplete" = "incomplete";
     if (score === 100) status = "complete";
     else if (score >= 60) status = "partial";
 
@@ -59,13 +59,12 @@ export function evaluateGTSSCompleteness(
     };
   });
 
-  const completeSignals = results.filter(r => r.status === 'complete').length;
-  const partialSignals = results.filter(r => r.status === 'partial').length;
-  const incompleteSignals = results.filter(r => r.status === 'incomplete').length;
+  const completeSignals = results.filter((r) => r.status === "complete").length;
+  const partialSignals = results.filter((r) => r.status === "partial").length;
+  const incompleteSignals = results.filter((r) => r.status === "incomplete").length;
 
-  const overallCompleteness = signals.length > 0
-    ? Math.round((completeSignals / signals.length) * 100)
-    : 0;
+  const overallCompleteness =
+    signals.length > 0 ? Math.round((completeSignals / signals.length) * 100) : 0;
 
   return {
     totalSignals: signals.length,
@@ -73,6 +72,6 @@ export function evaluateGTSSCompleteness(
     partialSignals,
     incompleteSignals,
     overallCompleteness,
-    results
+    results,
   };
 }

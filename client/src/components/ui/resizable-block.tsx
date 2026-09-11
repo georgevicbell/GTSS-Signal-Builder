@@ -8,7 +8,13 @@ interface ResizableBlockProps {
   onHeightChange?: (h: number) => void;
 }
 
-export default function ResizableBlock({ initialHeight = 288, minHeight = 120, maxHeight = 800, children, onHeightChange }: ResizableBlockProps) {
+export default function ResizableBlock({
+  initialHeight = 288,
+  minHeight = 120,
+  maxHeight = 800,
+  children,
+  onHeightChange,
+}: ResizableBlockProps) {
   const [height, setHeight] = useState(initialHeight);
   const draggingRef = useRef(false);
   const startYRef = useRef(0);

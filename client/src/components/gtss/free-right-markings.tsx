@@ -55,7 +55,10 @@ export function freeRightPedMarkings(
     return (
       <line
         key={keyPrefix}
-        x1={x1} y1={y1} x2={x2} y2={y2}
+        x1={x1}
+        y1={y1}
+        x2={x2}
+        y2={y2}
         stroke={color}
         strokeWidth={2 * scale}
         strokeDasharray={`${2 * scale} ${1.5 * scale}`}
@@ -66,9 +69,9 @@ export function freeRightPedMarkings(
 
   // FR-P-I: ladder crosswalk (two rails across the lane + longitudinal rungs)
   // and a shark's-teeth yield line upstream of it.
-  const depth = 9 * scale;      // crosswalk band length along travel
+  const depth = 9 * scale; // crosswalk band length along travel
   const halfDepth = depth / 2;
-  const rungHalf = hw * 0.85;   // rungs stop just inside the lane edges
+  const rungHalf = hw * 0.85; // rungs stop just inside the lane edges
   const rungCount = 4;
 
   const rails = [halfDepth, -halfDepth].map((up, i) => {
@@ -77,7 +80,10 @@ export function freeRightPedMarkings(
     return (
       <line
         key={`${keyPrefix}-rail-${i}`}
-        x1={x1} y1={y1} x2={x2} y2={y2}
+        x1={x1}
+        y1={y1}
+        x2={x2}
+        y2={y2}
         stroke={color}
         strokeWidth={1.4 * scale}
         opacity="0.9"
@@ -92,7 +98,10 @@ export function freeRightPedMarkings(
     return (
       <line
         key={`${keyPrefix}-rung-${i}`}
-        x1={x1} y1={y1} x2={x2} y2={y2}
+        x1={x1}
+        y1={y1}
+        x2={x2}
+        y2={y2}
         stroke={color}
         strokeWidth={2.4 * scale}
         strokeLinecap="butt"

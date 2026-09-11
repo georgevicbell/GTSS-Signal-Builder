@@ -1,8 +1,10 @@
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 
-export interface StreetNameInputProps
-  extends Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "ref"> {
+export interface StreetNameInputProps extends Omit<
+  React.ComponentProps<typeof Input>,
+  "value" | "onChange" | "ref"
+> {
   value: string;
   onChange: (value: string) => void;
   /** Previously-saved street names used to predict the rest of the text. */
@@ -49,8 +51,7 @@ export const StreetNameInput = React.forwardRef<HTMLInputElement, StreetNameInpu
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const native = e.nativeEvent as InputEvent;
       // Only autocomplete on real typing — not paste, delete, IME composition.
-      const isInsertText =
-        !native.inputType || native.inputType === "insertText";
+      const isInsertText = !native.inputType || native.inputType === "insertText";
       const input = e.target;
       const newVal = input.value;
       const cursorPos = input.selectionStart ?? newVal.length;
@@ -77,11 +78,7 @@ export const StreetNameInput = React.forwardRef<HTMLInputElement, StreetNameInpu
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
       const input = innerRef.current;
       // Escape dismisses the completion, keeping only what the user typed.
-      if (
-        input &&
-        e.key === "Escape" &&
-        input.selectionStart !== input.selectionEnd
-      ) {
+      if (input && e.key === "Escape" && input.selectionStart !== input.selectionEnd) {
         e.preventDefault();
         const typed = input.value.slice(0, input.selectionStart ?? 0);
         onChange(typed);

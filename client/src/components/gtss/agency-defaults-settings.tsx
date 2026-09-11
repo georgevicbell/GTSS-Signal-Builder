@@ -9,18 +9,19 @@ import {
   MapScrollWheelMode,
   NEMA_DEFAULTS,
   PhaseDirectionStandard,
-  sanitizePhaseDirectionStandard, useAgencyDefaults,
+  sanitizePhaseDirectionStandard,
+  useAgencyDefaults,
   useGTSSStore,
-  validatePhaseDirectionStandard
+  validatePhaseDirectionStandard,
 } from "gtss";
 import { Info, Move, RotateCcw, Save, Search, Settings, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const DIRECTIONS = [
-  { key: 'N' as const, label: 'Northbound', abbr: 'NB' },
-  { key: 'S' as const, label: 'Southbound', abbr: 'SB' },
-  { key: 'E' as const, label: 'Eastbound', abbr: 'EB' },
-  { key: 'W' as const, label: 'Westbound', abbr: 'WB' },
+  { key: "N" as const, label: "Northbound", abbr: "NB" },
+  { key: "S" as const, label: "Southbound", abbr: "SB" },
+  { key: "E" as const, label: "Eastbound", abbr: "EB" },
+  { key: "W" as const, label: "Westbound", abbr: "WB" },
 ];
 
 const PHASE_COUNT_OPTIONS = [2, 4, 6, 8];
@@ -29,7 +30,7 @@ const PHASE_COUNT_OPTIONS = [2, 4, 6, 8];
 function parsePhaseNumbers(input: string): number[] | null {
   const trimmed = input.trim();
   if (!trimmed) return [];
-  const parts = trimmed.split(',').map((s) => s.trim());
+  const parts = trimmed.split(",").map((s) => s.trim());
   const nums: number[] = [];
   for (const part of parts) {
     if (!part) continue;
@@ -42,11 +43,11 @@ function parsePhaseNumbers(input: string): number[] | null {
 
 /** Format a phase number array for display in an input. */
 function formatPhaseNumbers(nums: number[] | undefined): string {
-  if (!nums || nums.length === 0) return '';
-  return nums.join(', ');
+  if (!nums || nums.length === 0) return "";
+  return nums.join(", ");
 }
 
-type DirKey = 'N' | 'S' | 'E' | 'W';
+type DirKey = "N" | "S" | "E" | "W";
 type FieldKey = DirKey | `${DirKey}_left`;
 
 interface FormState {
@@ -75,7 +76,7 @@ function standardToForm(standard: PhaseDirectionStandard): FormState {
 
 function formToStandard(form: FormState): PhaseDirectionStandard | null {
   const result: PhaseDirectionStandard = {};
-  const keys: FieldKey[] = ['N', 'S', 'E', 'W', 'N_left', 'S_left', 'E_left', 'W_left'];
+  const keys: FieldKey[] = ["N", "S", "E", "W", "N_left", "S_left", "E_left", "W_left"];
   for (const key of keys) {
     const nums = parsePhaseNumbers(form[key]);
     if (nums === null) return null; // parse error
@@ -94,7 +95,7 @@ export default function AgencyDefaultsSettings() {
   const current = agencyDefaults ?? DEFAULT_AGENCY_DEFAULTS;
 
   const [formState, setFormState] = useState<FormState>(
-    standardToForm(current.phaseDirectionStandard)
+    standardToForm(current.phaseDirectionStandard),
   );
   const [defaultPhaseCount, setDefaultPhaseCount] = useState<number>(current.defaultPhaseCount);
   const [mapScrollWheel, setMapScrollWheel] = useState<MapScrollWheelMode>(current.mapScrollWheel);
@@ -141,7 +142,9 @@ export default function AgencyDefaultsSettings() {
   const handleSave = () => {
     const standard = formToStandard(formState);
     if (standard === null) {
-      setValidationErrors(['One or more phase number fields contain invalid values. Use integers 1–8, comma-separated.']);
+      setValidationErrors([
+        "One or more phase number fields contain invalid values. Use integers 1–8, comma-separated.",
+      ]);
       return;
     }
 
@@ -153,7 +156,7 @@ export default function AgencyDefaultsSettings() {
     }
 
     const updated: AgencyDefaults = {
-      agencyId: agency?.agencyId ?? '',
+      agencyId: agency?.agencyId ?? "",
       phaseDirectionStandard: sanitized,
       defaultPhaseCount,
       mapScrollWheel,
@@ -198,9 +201,7 @@ export default function AgencyDefaultsSettings() {
                 </Badge>
               )}
             </div>
-            {savedAt && (
-              <span className="text-xs text-grey-400">Last saved: {savedAt}</span>
-            )}
+            {savedAt && <span className="text-xs text-grey-400">Last saved: {savedAt}</span>}
           </div>
         </CardHeader>
         <CardContent className="p-4 space-y-1">
@@ -211,7 +212,9 @@ export default function AgencyDefaultsSettings() {
           {!agency?.agencyId && (
             <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
               <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-              <span>No agency configured. Go to <strong>Agency Info</strong> to set an Agency ID first.</span>
+              <span>
+                No agency configured. Go to <strong>Agency Info</strong> to set an Agency ID first.
+              </span>
             </div>
           )}
         </CardContent>
@@ -221,7 +224,9 @@ export default function AgencyDefaultsSettings() {
       <Card>
         <CardHeader className="bg-grey-50 border-b border-grey-200 p-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold text-grey-800">Phase Direction Standard</CardTitle>
+            <CardTitle className="text-sm font-semibold text-grey-800">
+              Phase Direction Standard
+            </CardTitle>
             <Button
               variant="outline"
               size="sm"
@@ -235,8 +240,8 @@ export default function AgencyDefaultsSettings() {
         </CardHeader>
         <CardContent className="p-4">
           <p className="text-xs text-grey-500 mb-4">
-            Enter phase numbers (1–8) for each direction. Use commas for multiple phases (e.g., <code className="bg-grey-100 px-1 rounded">2, 6</code>).
-            Leave blank if not applicable.
+            Enter phase numbers (1–8) for each direction. Use commas for multiple phases (e.g.,{" "}
+            <code className="bg-grey-100 px-1 rounded">2, 6</code>). Leave blank if not applicable.
           </p>
 
           {/* Grid header */}
@@ -260,7 +265,7 @@ export default function AgencyDefaultsSettings() {
                   <Input
                     value={formState[key]}
                     onChange={(e) => handleFieldChange(key, e.target.value)}
-                    placeholder={formatPhaseNumbers(NEMA_DEFAULTS[key]) || '—'}
+                    placeholder={formatPhaseNumbers(NEMA_DEFAULTS[key]) || "—"}
                     className="h-7 text-xs text-center"
                   />
                 </div>
@@ -268,7 +273,11 @@ export default function AgencyDefaultsSettings() {
                   <Input
                     value={formState[`${key}_left` as FieldKey]}
                     onChange={(e) => handleFieldChange(`${key}_left` as FieldKey, e.target.value)}
-                    placeholder={formatPhaseNumbers(NEMA_DEFAULTS[`${key}_left` as keyof PhaseDirectionStandard]) || '—'}
+                    placeholder={
+                      formatPhaseNumbers(
+                        NEMA_DEFAULTS[`${key}_left` as keyof PhaseDirectionStandard],
+                      ) || "—"
+                    }
                     className="h-7 text-xs text-center"
                   />
                 </div>
@@ -309,17 +318,19 @@ export default function AgencyDefaultsSettings() {
                 variant={defaultPhaseCount === count ? "default" : "outline"}
                 size="sm"
                 onClick={() => handlePhaseCountChange(count)}
-                className={`h-9 w-12 text-sm font-semibold ${defaultPhaseCount === count
-                  ? "bg-primary-600 hover:bg-primary-700 text-white"
-                  : "border-grey-200 text-grey-700 hover:bg-grey-100"
-                  }`}
+                className={`h-9 w-12 text-sm font-semibold ${
+                  defaultPhaseCount === count
+                    ? "bg-primary-600 hover:bg-primary-700 text-white"
+                    : "border-grey-200 text-grey-700 hover:bg-grey-100"
+                }`}
               >
                 {count}
               </Button>
             ))}
           </div>
           <p className="text-xs text-grey-400 mt-2">
-            {defaultPhaseCount === 8 && "8 phases: full 4-approach intersection with protected lefts"}
+            {defaultPhaseCount === 8 &&
+              "8 phases: full 4-approach intersection with protected lefts"}
             {defaultPhaseCount === 6 && "6 phases: 4-approach with 2 protected lefts"}
             {defaultPhaseCount === 4 && "4 phases: 4-approach through movements only"}
             {defaultPhaseCount === 2 && "2 phases: simple 2-approach intersection"}
@@ -337,20 +348,22 @@ export default function AgencyDefaultsSettings() {
             What the mouse wheel does when the cursor is over a map.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {([
+            {[
               {
-                mode: 'page' as const,
+                mode: "page" as const,
                 icon: Move,
-                title: 'Scroll the page',
-                blurb: 'The wheel scrolls past the map to the data below. Zoom with the +/− buttons.',
+                title: "Scroll the page",
+                blurb:
+                  "The wheel scrolls past the map to the data below. Zoom with the +/− buttons.",
               },
               {
-                mode: 'zoom' as const,
+                mode: "zoom" as const,
                 icon: Search,
-                title: 'Zoom the map',
-                blurb: 'The wheel zooms the map in and out. The page stays put while the cursor is over it.',
+                title: "Zoom the map",
+                blurb:
+                  "The wheel zooms the map in and out. The page stays put while the cursor is over it.",
               },
-            ]).map(({ mode, icon: Icon, title, blurb }) => {
+            ].map(({ mode, icon: Icon, title, blurb }) => {
               const selected = mapScrollWheel === mode;
               return (
                 <button
@@ -358,14 +371,19 @@ export default function AgencyDefaultsSettings() {
                   type="button"
                   onClick={() => handleMapScrollWheelChange(mode)}
                   aria-pressed={selected}
-                  className={`text-left rounded-md border p-3 transition-colors ${selected
-                    ? "border-primary-600 bg-primary-50"
-                    : "border-grey-200 hover:bg-grey-50"
-                    }`}
+                  className={`text-left rounded-md border p-3 transition-colors ${
+                    selected
+                      ? "border-primary-600 bg-primary-50"
+                      : "border-grey-200 hover:bg-grey-50"
+                  }`}
                 >
                   <span className="flex items-center gap-2">
-                    <Icon className={`w-4 h-4 ${selected ? "text-primary-600" : "text-grey-400"}`} />
-                    <span className={`text-sm font-medium ${selected ? "text-primary-700" : "text-grey-700"}`}>
+                    <Icon
+                      className={`w-4 h-4 ${selected ? "text-primary-600" : "text-grey-400"}`}
+                    />
+                    <span
+                      className={`text-sm font-medium ${selected ? "text-primary-700" : "text-grey-700"}`}
+                    >
                       {title}
                     </span>
                   </span>
@@ -385,7 +403,9 @@ export default function AgencyDefaultsSettings() {
       {validationErrors.length > 0 && (
         <div className="rounded-md border border-red-200 bg-red-50 p-3 space-y-1">
           {validationErrors.map((err, i) => (
-            <p key={i} className="text-xs text-red-700">{err}</p>
+            <p key={i} className="text-xs text-red-700">
+              {err}
+            </p>
           ))}
         </div>
       )}

@@ -5,11 +5,13 @@ Thank you for your interest in contributing to OpenSignal! This document outline
 ## Development Setup
 
 ### Prerequisites
-- Node.js 18.0 or higher  
+
+- Node.js 18.0 or higher
 - npm or yarn package manager
 - Git for version control
 
 ### Setup Instructions
+
 1. Fork the repository on GitHub
 2. Clone your fork locally:
    ```bash
@@ -29,6 +31,7 @@ Thank you for your interest in contributing to OpenSignal! This document outline
 ## Development Guidelines
 
 ### Code Style
+
 - Use TypeScript for all new code
 - Follow existing naming conventions and file structure
 - Use functional components with hooks for React components
@@ -36,18 +39,21 @@ Thank you for your interest in contributing to OpenSignal! This document outline
 - Add proper TypeScript types for all functions and components
 
 ### Component Architecture
+
 - Place reusable UI components in `client/src/components/ui/`
 - Place domain-specific components in `client/src/components/gtss/`
 - Use shadcn/ui components as base building blocks
 - Follow the existing pattern for form handling with React Hook Form + Zod
 
 ### Data Management
+
 - All data operations should use the localStorage service (`packages/gtss/localStorage.ts`)
 - Create corresponding React hooks in `packages/gtss/localStorageHooks.ts`
 - Update Zustand store for UI state management
 - Maintain type safety with shared schemas in `packages/gtss/schema/schema.ts`
 
 ### Testing Your Changes
+
 - Test functionality across different browsers (Chrome, Firefox, Safari, Edge)
 - Verify responsive design on mobile devices
 - Test data persistence across browser sessions
@@ -57,12 +63,14 @@ Thank you for your interest in contributing to OpenSignal! This document outline
 ## Contribution Process
 
 ### Creating Issues
+
 - Use GitHub Issues to report bugs or request features
 - Provide clear reproduction steps for bugs
 - Include browser version and operating system information
 - Attach screenshots or screen recordings when helpful
 
 ### Submitting Pull Requests
+
 1. Create a feature branch from main:
    ```bash
    git checkout -b feature/your-feature-name
@@ -78,6 +86,7 @@ Thank you for your interest in contributing to OpenSignal! This document outline
 7. Respond to code review feedback promptly
 
 ### Pull Request Guidelines
+
 - Keep changes focused and atomic
 - Include screenshots or GIFs for UI changes
 - Update documentation if you change functionality
@@ -87,19 +96,22 @@ Thank you for your interest in contributing to OpenSignal! This document outline
 ## Areas for Contribution
 
 ### High Priority
+
 - **Browser Compatibility**: Testing and fixes for various browsers
 - **Mobile Responsiveness**: Improvements for touch interfaces
 - **Accessibility**: ARIA labels, keyboard navigation, screen reader support
 - **Performance**: Optimizations for large datasets
 - **User Experience**: Interface improvements based on user feedback
 
-### Medium Priority  
+### Medium Priority
+
 - **Data Validation**: Enhanced form validation and error messages
 - **Export Formats**: Additional export formats beyond GTSS CSV
 - **Documentation**: Tutorials, guides, and API documentation
 - **Internationalization**: Multi-language support
 
 ### Future Features
+
 - **Collaborative Editing**: Multiple users working on same project
 - **Version Control**: Data versioning and rollback capabilities
 - **Import Functionality**: Import from other traffic signal systems
@@ -108,6 +120,7 @@ Thank you for your interest in contributing to OpenSignal! This document outline
 ## Code Review Process
 
 ### Review Criteria
+
 - Code follows established patterns and conventions
 - Changes are well-tested and don't break existing functionality
 - Documentation is updated for new features
@@ -115,6 +128,7 @@ Thank you for your interest in contributing to OpenSignal! This document outline
 - Responsive design principles are followed
 
 ### Review Timeline
+
 - Initial review within 48-72 hours
 - Follow-up reviews within 24 hours
 - Merging after approval from maintainers
@@ -122,12 +136,14 @@ Thank you for your interest in contributing to OpenSignal! This document outline
 ## Community Guidelines
 
 ### Behavior Standards
+
 - Be respectful and inclusive in all interactions
 - Provide constructive feedback in code reviews
 - Help newcomers get started with development
 - Focus on technical merit rather than personal preferences
 
 ### Communication Channels
+
 - GitHub Issues for bug reports and feature requests
 - GitHub Discussions for general questions and ideas
 - Pull Request comments for code-specific discussions
@@ -135,6 +151,7 @@ Thank you for your interest in contributing to OpenSignal! This document outline
 ## Recognition
 
 Contributors will be acknowledged in:
+
 - README.md contributors section
 - Release notes for significant contributions
 - GitHub contributor statistics
@@ -142,6 +159,7 @@ Contributors will be acknowledged in:
 ## Questions?
 
 If you have questions about contributing:
+
 1. Check existing GitHub Issues and Discussions
 2. Create a new Discussion for general questions
 3. Create an Issue for specific bugs or feature requests
