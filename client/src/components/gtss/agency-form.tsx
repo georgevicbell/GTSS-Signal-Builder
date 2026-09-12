@@ -25,7 +25,7 @@ import { Agency, type InsertAgency, insertAgencySchema } from "gtss/schema";
 import { Crosshair, Edit3, MapPin, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, Marker, useMap, useMapEvents } from "react-leaflet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -676,12 +676,7 @@ export default function AgencyForm() {
                         key={`agency-map-${mapCenter[0]}-${mapCenter[1]}`}
                       >
                         <MapTileLayers />
-                        <TileLayer
-                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                          attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
-                          // Overr  ides strict global site policies so the tile provider sees your origin
-                          referrerPolicy="strict-origin-when-cross-origin"
-                        />
+
                         <MapResizeObserverLocal />
                         <LocationPicker onLocationSelect={handleLocationClick} />
 

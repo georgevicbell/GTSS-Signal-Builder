@@ -89,7 +89,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, Marker, Polyline, useMap, useMapEvents } from "react-leaflet";
 
 // Location picker component for interactive map editing
 function LocationPicker({
@@ -1235,12 +1235,7 @@ export default function SignalDetails() {
               style={{ height: "100%", width: "100%", zIndex: 1 }}
             >
               <MapTileLayers />
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
-                // Overr  ides strict global site policies so the tile provider sees your origin
-                referrerPolicy="strict-origin-when-cross-origin"
-              />
+
               <ScrollZoomToggle locked={mapZoomLocked} />
               <MapRecenter lat={signal.latitude} lng={signal.longitude} />
               <Marker position={[signal.latitude, signal.longitude]} />
@@ -2925,12 +2920,7 @@ export default function SignalDetails() {
                       key={`edit-map-${signalForm.watch("latitude")}-${signalForm.watch("longitude")}`}
                     >
                       <MapTileLayers />
-                      <TileLayer
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
-                        // Overr  ides strict global site policies so the tile provider sees your origin
-                        referrerPolicy="strict-origin-when-cross-origin"
-                      />
+
                       <LocationPicker
                         onLocationSelect={(lat, lon) => {
                           signalForm.setValue("latitude", lat);

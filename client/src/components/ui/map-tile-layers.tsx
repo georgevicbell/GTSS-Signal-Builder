@@ -48,31 +48,33 @@ export default function MapTileLayers() {
   return (
     <>
       <LayersControl position="topright">
-      <LayersControl.BaseLayer checked name="Streets">
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-      </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer checked name="Streets">
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+        </LayersControl.BaseLayer>
 
-      <LayersControl.BaseLayer name="Satellite">
-        {mapboxAvailable ? (
-          <TileLayer
-            attribution='&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url={`https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`}
-            tileSize={512}
-            zoomOffset={-1}
-            maxZoom={22}
-            eventHandlers={{ tileloadstart: handleTileLoadStart }}
-          />
-        ) : (
-          <TileLayer
-            attribution='Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-            maxZoom={22}
-          />
-        )}
-      </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer name="Satellite">
+          {mapboxAvailable ? (
+            <TileLayer
+              attribution='&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url={`https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`}
+              tileSize={512}
+              zoomOffset={-1}
+              maxZoom={22}
+              eventHandlers={{ tileloadstart: handleTileLoadStart }}
+            />
+          ) : (
+            <TileLayer
+              attribution="Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              maxZoom={22}
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          )}
+        </LayersControl.BaseLayer>
       </LayersControl>
 
       {/* Ensure Leaflet invalidates size when the map container resizes */}
@@ -93,7 +95,11 @@ function MapResizeHandler() {
     const ro = new ResizeObserver(() => {
       if (raf) cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        try { map.invalidateSize(); } catch {}
+        try {
+          map.invalidateSize();
+        } catch {
+          //
+        }
       });
     });
     ro.observe(container);
@@ -101,7 +107,11 @@ function MapResizeHandler() {
     const onResize = () => {
       if (raf) cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        try { map.invalidateSize(); } catch {}
+        try {
+          map.invalidateSize();
+        } catch {
+          //
+        }
       });
     };
 
