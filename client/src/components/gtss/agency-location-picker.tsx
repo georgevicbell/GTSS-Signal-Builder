@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react";
-import { useMapScrollZoom } from "gtss";
-import { MapContainer, Marker, useMapEvents } from "react-leaflet";
-import MapTileLayers from "@/components/ui/map-tile-layers";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, Crosshair, Check } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import MapTileLayers from "@/components/ui/map-tile-layers";
+import { useMapScrollZoom } from "gtss";
 import L from "leaflet";
+import { Check, Crosshair, MapPin } from "lucide-react";
+import { useEffect, useState } from "react";
+import { MapContainer, Marker, TileLayer, useMapEvents } from "react-leaflet";
 
 interface LocationInfo {
   lat: number;
@@ -179,7 +179,12 @@ export default function AgencyLocationPicker({
               className="rounded-lg border"
             >
               <MapTileLayers />
-
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
+                // Overr  ides strict global site policies so the tile provider sees your origin
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
               <LocationPicker onLocationSelect={handleLocationClick} />
 
               {selectedLocation && (

@@ -3,16 +3,21 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import MapTileLayers from "@/components/ui/map-tile-layers";
 import { useToast } from "@/hooks/use-toast";
-import { useGTSSStore, useSignals, useMapScrollZoom } from "gtss";
+import { agencyListStorage, useGTSSStore, useMapScrollZoom, useSignals } from "gtss";
 import { type InsertSignal } from "gtss/schema";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapPin, Save, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { MapContainer, Marker, useMapEvents } from "react-leaflet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 // Fix Leaflet default markers
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+interface IconDefaultPrototype {
+  _getIconUrl?: () => string | undefined;
+}
+delete (L.Icon.Default.prototype as unknown as IconDefaultPrototype)._getIconUrl;
+
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
   iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
@@ -44,12 +49,21 @@ function MapClickHandler({ onLocationAdd }: { onLocationAdd: (lat: number, lon: 
 
 export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
   const mapScrollZoom = useMapScrollZoom();
-  const { agency, addSignal, signals } = useGTSSStore();
+  const { agency, signals } = useGTSSStore();
   const { toast } = useToast();
   const signalHooks = useSignals();
   const [pendingSignals, setPendingSignals] = useState<PendingSignal[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-
+  const [selectedAgencyId, setSelectedAgencyId] = useState<string>(() => {
+    try {
+      const defId = agencyListStorage.getDefaultId();
+      const list = agencyListStorage.getAll();
+      const defAgency = list.find((a) => a.id === defId);
+      return defAgency?.agencyId || agency?.agencyId || "";
+    } catch {
+      return agency?.agencyId || "";
+    }
+  });
   const getMapCenter = (): [number, number] => {
     // Use agency coordinates if available
     if (agency?.latitude && agency?.longitude) {
@@ -63,25 +77,26 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
     const agencyName = agency.agencyName.toLowerCase();
 
     // Major city mappings based on agency name patterns
-    if (agencyName.includes('new york') || agencyName.includes('nyc')) return [40.7589, -73.9851];
-    if (agencyName.includes('los angeles') || agencyName.includes('la ')) return [34.0522, -118.2437];
-    if (agencyName.includes('chicago')) return [41.8781, -87.6298];
-    if (agencyName.includes('houston')) return [29.7604, -95.3698];
-    if (agencyName.includes('phoenix')) return [33.4484, -112.0740];
-    if (agencyName.includes('philadelphia')) return [39.9526, -75.1652];
-    if (agencyName.includes('san antonio')) return [29.4241, -98.4936];
-    if (agencyName.includes('san diego')) return [32.7157, -117.1611];
-    if (agencyName.includes('dallas')) return [32.7767, -96.7970];
-    if (agencyName.includes('san jose')) return [37.3382, -121.8863];
-    if (agencyName.includes('austin')) return [30.2672, -97.7431];
-    if (agencyName.includes('seattle')) return [47.6062, -122.3321];
-    if (agencyName.includes('denver')) return [39.7392, -104.9903];
-    if (agencyName.includes('washington')) return [38.9072, -77.0369];
-    if (agencyName.includes('boston')) return [42.3601, -71.0589];
-    if (agencyName.includes('atlanta')) return [33.7490, -84.3880];
-    if (agencyName.includes('miami')) return [25.7617, -80.1918];
-    if (agencyName.includes('orlando')) return [28.5383, -81.3792];
-    if (agencyName.includes('tampa')) return [27.9506, -82.4572];
+    if (agencyName.includes("new york") || agencyName.includes("nyc")) return [40.7589, -73.9851];
+    if (agencyName.includes("los angeles") || agencyName.includes("la "))
+      return [34.0522, -118.2437];
+    if (agencyName.includes("chicago")) return [41.8781, -87.6298];
+    if (agencyName.includes("houston")) return [29.7604, -95.3698];
+    if (agencyName.includes("phoenix")) return [33.4484, -112.074];
+    if (agencyName.includes("philadelphia")) return [39.9526, -75.1652];
+    if (agencyName.includes("san antonio")) return [29.4241, -98.4936];
+    if (agencyName.includes("san diego")) return [32.7157, -117.1611];
+    if (agencyName.includes("dallas")) return [32.7767, -96.797];
+    if (agencyName.includes("san jose")) return [37.3382, -121.8863];
+    if (agencyName.includes("austin")) return [30.2672, -97.7431];
+    if (agencyName.includes("seattle")) return [47.6062, -122.3321];
+    if (agencyName.includes("denver")) return [39.7392, -104.9903];
+    if (agencyName.includes("washington")) return [38.9072, -77.0369];
+    if (agencyName.includes("boston")) return [42.3601, -71.0589];
+    if (agencyName.includes("atlanta")) return [33.749, -84.388];
+    if (agencyName.includes("miami")) return [25.7617, -80.1918];
+    if (agencyName.includes("orlando")) return [28.5383, -81.3792];
+    if (agencyName.includes("tampa")) return [27.9506, -82.4572];
 
     // Fallback to timezone-based coordinates
     const timezoneCoords: Record<string, [number, number]> = {
@@ -89,7 +104,7 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
       "America/Chicago": [41.8781, -87.6298],
       "America/Denver": [39.7392, -104.9903],
       "America/Los_Angeles": [34.0522, -118.2437],
-      "America/Phoenix": [33.4484, -112.0740],
+      "America/Phoenix": [33.4484, -112.074],
       "America/Anchorage": [61.2181, -149.9003],
       "Pacific/Honolulu": [21.3099, -157.8581],
     };
@@ -106,15 +121,15 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
     };
 
     // Add marker - street names can be edited from the signals table
-    setPendingSignals(prev => [...prev, newSignal]);
+    setPendingSignals((prev) => [...prev, newSignal]);
   };
 
   const handleUpdatePendingLocation = (id: string, lat: number, lon: number) => {
-    setPendingSignals(prev => prev.map(s => s.id === id ? { ...s, lat, lon } : s));
+    setPendingSignals((prev) => prev.map((s) => (s.id === id ? { ...s, lat, lon } : s)));
   };
 
   const handleRemoveSignal = (signalId: string) => {
-    setPendingSignals(prev => prev.filter(s => s.id !== signalId));
+    setPendingSignals((prev) => prev.filter((s) => s.id !== signalId));
   };
 
   const handleSaveAll = async () => {
@@ -132,24 +147,21 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
     try {
       const signalsToCreate: InsertSignal[] = pendingSignals.map((signal, index) => ({
         signalId: "", // Will be auto-generated
-        agencyId: agency?.agencyId || "",
+        agencyId: selectedAgencyId || agency?.agencyId || "",
         streetName1: signal.streetName1 || `Street ${index + 1}`,
         streetName2: signal.streetName2 || `Cross Street ${index + 1}`,
         latitude: signal.lat,
         longitude: signal.lon,
-
       }));
 
       // Create all signals using localStorage
       for (const signalData of signalsToCreate) {
-        const created = signalHooks.save(signalData);
+        signalHooks.save(signalData);
         // addSignal is already called in the hook, no need to call it again
       }
 
-
-
       onClose();
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to create some signals",
@@ -183,8 +195,8 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
               <span className="text-sm font-medium text-blue-800">Instructions</span>
             </div>
             <p className="text-sm text-blue-700">
-              Click anywhere on the map to add signal locations. Street names will be auto-populated when possible.
-              You can edit details later from the main signals table.
+              Click anywhere on the map to add signal locations. Street names will be auto-populated
+              when possible. You can edit details later from the main signals table.
             </p>
           </div>
 
@@ -201,23 +213,27 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
               <MapClickHandler onLocationAdd={handleLocationAdd} />
 
               {/* Existing signals in grey */}
-              {signals.map((signal) => (
-                signal.latitude && signal.longitude && (
-                  <Marker
-                    key={`existing-${signal.signalId}`}
-                    position={[signal.latitude, signal.longitude]}
-                    icon={L.icon({
-                      iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-                      shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-                      iconSize: [25, 41],
-                      iconAnchor: [12, 41],
-                      popupAnchor: [1, -34],
-                      shadowSize: [41, 41],
-                      className: "grayscale opacity-60" // Make existing signals grey
-                    })}
-                  />
-                )
-              ))}
+              {signals.map(
+                (signal) =>
+                  signal.latitude &&
+                  signal.longitude && (
+                    <Marker
+                      key={`existing-${signal.signalId}`}
+                      position={[signal.latitude, signal.longitude]}
+                      icon={L.icon({
+                        iconUrl:
+                          "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+                        shadowUrl:
+                          "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41],
+                        className: "grayscale opacity-60", // Make existing signals grey
+                      })}
+                    />
+                  ),
+              )}
 
               {/* New pending signals in blue (draggable) */}
               {pendingSignals.map((signal) => (
@@ -227,9 +243,9 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
                   draggable={true}
                   eventHandlers={{
                     dragend: (e) => {
-                      const latlng = (e.target as any).getLatLng();
+                      const latlng = e.target.getLatLng();
                       handleUpdatePendingLocation(signal.id, latlng.lat, latlng.lng);
-                    }
+                    },
                   }}
                 />
               ))}
@@ -238,46 +254,53 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
 
           {pendingSignals.length > 0 && (
             <div className="flex-shrink-0 mt-4 p-4 bg-grey-50 border border-grey-200 rounded-lg max-h-32 overflow-y-auto">
-              <h4 className="text-sm font-medium mb-3">Pending Signals ({pendingSignals.length})</h4>
+              <h4 className="text-sm font-medium mb-3">
+                Pending Signals ({pendingSignals.length})
+              </h4>
               <div className="space-y-2">
                 {pendingSignals.map((signal, index) => (
-                  <div key={signal.id} className="flex items-center justify-between text-xs bg-white p-2 rounded border">
-                      <div className="flex items-center gap-2">
-                        <div>
-                          <span className="font-medium">Signal {index + 1}</span>
-                          {signal.streetName1 && (
-                            <span className="text-grey-600 ml-2">
-                              {signal.streetName1}{signal.streetName2 ? ` & ${signal.streetName2}` : ""}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-grey-500 text-xs flex items-center gap-2">
-                          <label className="flex items-center gap-1">
-                            <span className="text-[11px] text-grey-500">Lat</span>
-                            <input
-                              type="text"
-                              defaultValue={signal.lat.toFixed(6)}
-                              onBlur={(e) => {
-                                const v = parseFloat(e.target.value);
-                                if (!isNaN(v) && v >= -90 && v <= 90) handleUpdatePendingLocation(signal.id, v, signal.lon);
-                              }}
-                              className="w-28 text-xs px-1 py-0.5 border rounded"
-                            />
-                          </label>
-                          <label className="flex items-center gap-1">
-                            <span className="text-[11px] text-grey-500">Lon</span>
-                            <input
-                              type="text"
-                              defaultValue={signal.lon.toFixed(6)}
-                              onBlur={(e) => {
-                                const v = parseFloat(e.target.value);
-                                if (!isNaN(v)) handleUpdatePendingLocation(signal.id, signal.lat, v);
-                              }}
-                              className="w-28 text-xs px-1 py-0.5 border rounded"
-                            />
-                          </label>
-                        </div>
+                  <div
+                    key={signal.id}
+                    className="flex items-center justify-between text-xs bg-white p-2 rounded border"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <span className="font-medium">Signal {index + 1}</span>
+                        {signal.streetName1 && (
+                          <span className="text-grey-600 ml-2">
+                            {signal.streetName1}
+                            {signal.streetName2 ? ` & ${signal.streetName2}` : ""}
+                          </span>
+                        )}
                       </div>
+                      <div className="text-grey-500 text-xs flex items-center gap-2">
+                        <label className="flex items-center gap-1">
+                          <span className="text-[11px] text-grey-500">Lat</span>
+                          <input
+                            type="text"
+                            defaultValue={signal.lat.toFixed(6)}
+                            onBlur={(e) => {
+                              const v = parseFloat(e.target.value);
+                              if (!isNaN(v) && v >= -90 && v <= 90)
+                                handleUpdatePendingLocation(signal.id, v, signal.lon);
+                            }}
+                            className="w-28 text-xs px-1 py-0.5 border rounded"
+                          />
+                        </label>
+                        <label className="flex items-center gap-1">
+                          <span className="text-[11px] text-grey-500">Lon</span>
+                          <input
+                            type="text"
+                            defaultValue={signal.lon.toFixed(6)}
+                            onBlur={(e) => {
+                              const v = parseFloat(e.target.value);
+                              if (!isNaN(v)) handleUpdatePendingLocation(signal.id, signal.lat, v);
+                            }}
+                            className="w-28 text-xs px-1 py-0.5 border rounded"
+                          />
+                        </label>
+                      </div>
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -294,7 +317,24 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
         </div>
 
         <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-t border-grey-200 bg-white">
-          <div className="flex space-x-2">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <label className="text-xs font-medium text-gray-700">Agency</label>
+              <div className="w-44">
+                <Select value={selectedAgencyId} onValueChange={setSelectedAgencyId}>
+                  <SelectTrigger className="h-8 w-full">
+                    <SelectValue placeholder="Select agency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {agencyListStorage.getAll().map((a) => (
+                      <SelectItem key={a.id} value={a.agencyId}>
+                        {a.agencyName} ({a.agencyId})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             {pendingSignals.length > 0 && (
               <Button
                 variant="outline"

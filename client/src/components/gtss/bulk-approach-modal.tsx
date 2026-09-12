@@ -4,11 +4,31 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import MapTileLayers from "@/components/ui/map-tile-layers";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { getSignalDisplayName, handleColumnMajorTab, suggestStreetNameForApproach, useApproaches, useGTSSStore, useMapScrollZoom } from "gtss";
+import {
+  getSignalDisplayName,
+  handleColumnMajorTab,
+  suggestStreetNameForApproach,
+  useApproaches,
+  useGTSSStore,
+  useMapScrollZoom,
+} from "gtss";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapPin, Minus, Plus, Save } from "lucide-react";
@@ -18,7 +38,12 @@ import { approachColors } from "./approach-colors";
 import { StreetNameInput } from "./street-name-input";
 
 // Fix Leaflet default markers
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+
+interface IconDefaultPrototype {
+  _getIconUrl?: () => string | undefined;
+}
+delete (L.Icon.Default.prototype as unknown as IconDefaultPrototype)._getIconUrl;
+
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
   iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
@@ -68,7 +93,11 @@ const getDirectionFromBearing = (bearing: number): string => {
 
 // Approach line colors (16 colors for up to 16 approaches)
 
-export default function BulkApproachModal({ onClose, preSelectedSignalId, inline = false }: BulkApproachModalProps) {
+export default function BulkApproachModal({
+  onClose,
+  preSelectedSignalId,
+  inline = false,
+}: BulkApproachModalProps) {
   const mapScrollZoom = useMapScrollZoom();
   const { signals, approaches: existingApproaches } = useGTSSStore();
   const { toast } = useToast();
@@ -87,13 +116,13 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
 
   // Get selected signal
   const selectedSignal = useMemo(() => {
-    return signals.find(s => s.signalId === selectedSignalId);
+    return signals.find((s) => s.signalId === selectedSignalId);
   }, [signals, selectedSignalId]);
 
   // Get unique street names from existing approaches for autocomplete
   const uniqueStreetNames = useMemo(() => {
     const names = new Set<string>();
-    existingApproaches.forEach(a => {
+    existingApproaches.forEach((a) => {
       if (a.streetName && a.streetName.trim()) {
         names.add(a.streetName.trim());
       }
@@ -105,15 +134,13 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
   const generateApproaches = (base: number, count: number, offset: number, preserveData = true) => {
     const angleStep = 360 / count;
     const newApproaches: PendingApproach[] = [];
-    const canSuggest =
-      selectedSignal?.latitude != null && selectedSignal?.longitude != null;
+    const canSuggest = selectedSignal?.latitude != null && selectedSignal?.longitude != null;
 
     for (let i = 0; i < count; i++) {
-      const bearing = (base + offset + (i * angleStep)) % 360;
+      const bearing = (base + offset + i * angleStep) % 360;
       const normalizedBearing = ((bearing % 360) + 360) % 360;
 
-      const carriedStreet =
-        (preserveData && pendingApproaches[i]?.streetName) || "";
+      const carriedStreet = (preserveData && pendingApproaches[i]?.streetName) || "";
       // If this row has no street name yet, try to suggest one from approaches
       // at nearby signals that point along the same street.
       let streetName = carriedStreet;
@@ -131,10 +158,11 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
 
       newApproaches.push({
         id: preserveData ? pendingApproaches[i]?.id : undefined,
-        approachId: preserveData && pendingApproaches[i]?.approachId || `${selectedSignalId}-${i + 1}`,
+        approachId:
+          (preserveData && pendingApproaches[i]?.approachId) || `${selectedSignalId}-${i + 1}`,
         bearing: Math.round(normalizedBearing),
         streetName,
-        postedSpeed: preserveData && pendingApproaches[i]?.postedSpeed || null,
+        postedSpeed: (preserveData && pendingApproaches[i]?.postedSpeed) || null,
         freeRight: (preserveData && pendingApproaches[i]?.freeRight) || 0,
         freeRightLanes: (preserveData && pendingApproaches[i]?.freeRightLanes) || 1,
         direction: getDirectionFromBearing(normalizedBearing),
@@ -154,13 +182,13 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
     const signalLng = selectedSignal.longitude;
 
     // Calculate bearing from clicked point TO the signal (approach direction)
-    const dLng = (signalLng - clickLng) * Math.PI / 180;
-    const lat1 = clickLat * Math.PI / 180;
-    const lat2 = signalLat * Math.PI / 180;
+    const dLng = ((signalLng - clickLng) * Math.PI) / 180;
+    const lat1 = (clickLat * Math.PI) / 180;
+    const lat2 = (signalLat * Math.PI) / 180;
 
     const y = Math.sin(dLng) * Math.cos(lat2);
     const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
-    let bearing = Math.atan2(y, x) * 180 / Math.PI;
+    let bearing = (Math.atan2(y, x) * 180) / Math.PI;
     bearing = (bearing + 360) % 360;
     const rounded = Math.round(bearing);
 
@@ -202,7 +230,7 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
     const bearing = value === "" ? 0 : parseInt(value);
     // Wrap around: -1 becomes 359, 360 becomes 0
     const normalizedBearing = ((bearing % 360) + 360) % 360;
-    setPendingApproaches(prev => {
+    setPendingApproaches((prev) => {
       const updated = [...prev];
       updated[index].bearing = normalizedBearing;
       updated[index].direction = getDirectionFromBearing(normalizedBearing);
@@ -210,7 +238,11 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
       // Try to auto-suggest a street name from nearby signals' approaches,
       // but only if this row's street name is still empty (so we never
       // overwrite a manually entered name).
-      if (!updated[index].streetName.trim() && selectedSignal?.latitude != null && selectedSignal?.longitude != null) {
+      if (
+        !updated[index].streetName.trim() &&
+        selectedSignal?.latitude != null &&
+        selectedSignal?.longitude != null
+      ) {
         const suggestion = suggestStreetNameForApproach({
           bearing: normalizedBearing,
           signalLat: selectedSignal.latitude,
@@ -230,7 +262,7 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
 
   // Handle approach ID change
   const handleApproachIdChange = (index: number, value: string) => {
-    setPendingApproaches(prev => {
+    setPendingApproaches((prev) => {
       const updated = [...prev];
       updated[index].approachId = value;
       return updated;
@@ -247,7 +279,10 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
   };
 
   // Find opposite approach index (approximately 180° away)
-  const findOppositeApproachIndex = (index: number, approaches: PendingApproach[]): number | null => {
+  const findOppositeApproachIndex = (
+    index: number,
+    approaches: PendingApproach[],
+  ): number | null => {
     if (approaches.length < 2) return null;
 
     const currentBearing = approaches[index].bearing;
@@ -260,7 +295,8 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
       if (i === index) continue;
 
       const diff = Math.abs(((approaches[i].bearing - targetBearing + 180) % 360) - 180);
-      if (diff < closestDiff && diff < 45) { // Within 45° of opposite
+      if (diff < closestDiff && diff < 45) {
+        // Within 45° of opposite
         closestDiff = diff;
         closestIndex = i;
       }
@@ -271,7 +307,7 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
 
   // Handle street name change with auto-fill for opposite approach
   const handleStreetNameChange = (index: number, value: string) => {
-    setPendingApproaches(prev => {
+    setPendingApproaches((prev) => {
       const updated = [...prev];
       updated[index].streetName = value;
 
@@ -294,7 +330,7 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
   // or if it equals the source's previous speed (i.e. it was tracking us).
   const handleSpeedChange = (index: number, value: string) => {
     const newSpeed = value ? parseInt(value) : null;
-    setPendingApproaches(prev => {
+    setPendingApproaches((prev) => {
       const updated = [...prev];
       const prevSpeed = updated[index].postedSpeed;
       updated[index].postedSpeed = newSpeed;
@@ -317,14 +353,19 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
   };
 
   // Calculate polyline endpoints for visualization
-  const getApproachLineEndpoint = (bearing: number, signalLat: number, signalLng: number): [number, number] => {
+  const getApproachLineEndpoint = (
+    bearing: number,
+    signalLat: number,
+    signalLng: number,
+  ): [number, number] => {
     // Extend line in direction traffic comes FROM (opposite of bearing)
     const oppositeBearing = (bearing + 180) % 360;
     const distance = 0.002; // About 200m
-    const bearingRad = oppositeBearing * Math.PI / 180;
+    const bearingRad = (oppositeBearing * Math.PI) / 180;
 
     const endLat = signalLat + distance * Math.cos(bearingRad);
-    const endLng = signalLng + distance * Math.sin(bearingRad) / Math.cos(signalLat * Math.PI / 180);
+    const endLng =
+      signalLng + (distance * Math.sin(bearingRad)) / Math.cos((signalLat * Math.PI) / 180);
 
     return [endLat, endLng];
   };
@@ -350,7 +391,7 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
     }
 
     // Validate that all approaches have street names
-    const missingNames = pendingApproaches.filter(a => !a.streetName.trim());
+    const missingNames = pendingApproaches.filter((a) => !a.streetName.trim());
     if (missingNames.length > 0) {
       toast({
         title: "Missing Street Names",
@@ -361,7 +402,7 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
     }
 
     // Validate that all approaches have IDs
-    const missingIds = pendingApproaches.filter(a => !a.approachId.trim());
+    const missingIds = pendingApproaches.filter((a) => !a.approachId.trim());
     if (missingIds.length > 0) {
       toast({
         title: "Missing Approach IDs",
@@ -415,7 +456,7 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
       });
 
       onClose();
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to save approaches",
@@ -430,7 +471,7 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
   useEffect(() => {
     if (selectedSignal) {
       // Check if this signal has existing approaches
-      const signalApproaches = existingApproaches.filter(a => a.signalId === selectedSignalId);
+      const signalApproaches = existingApproaches.filter((a) => a.signalId === selectedSignalId);
 
       if (signalApproaches.length > 0) {
         // Load existing approaches for editing
@@ -438,13 +479,13 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
         setNumApproaches(signalApproaches.length);
         setAngleOffset(0);
 
-        const loadedApproaches: PendingApproach[] = signalApproaches.map(a => ({
+        const loadedApproaches: PendingApproach[] = signalApproaches.map((a) => ({
           id: a.id,
           approachId: a.approachId,
           bearing: a.compassBearing || 0,
           streetName: a.streetName,
           postedSpeed: a.postedSpeed,
-          freeRight: typeof a.freeRight === "number" ? a.freeRight : (a.freeRight ? 1 : 0),
+          freeRight: typeof a.freeRight === "number" ? a.freeRight : a.freeRight ? 1 : 0,
           freeRightLanes: a.freeRightLanes ?? 1,
           direction: getDirectionFromBearing(a.compassBearing || 0),
         }));
@@ -468,8 +509,7 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
         // Generate after state updates
         setTimeout(() => {
           const angleStep = 360 / 4;
-          const canSuggest =
-            selectedSignal?.latitude != null && selectedSignal?.longitude != null;
+          const canSuggest = selectedSignal?.latitude != null && selectedSignal?.longitude != null;
           const newApproaches: PendingApproach[] = [];
           for (let i = 0; i < 4; i++) {
             const bearing = (i * angleStep) % 360;
@@ -504,7 +544,10 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
 
   const titleText = isEditMode ? "Edit Approaches" : "Add Multiple Approaches";
   const titleBadge = pendingApproaches.length > 0 && (
-    <Badge variant="secondary" className={isEditMode ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}>
+    <Badge
+      variant="secondary"
+      className={isEditMode ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}
+    >
       {pendingApproaches.length} approach{pendingApproaches.length !== 1 ? "es" : ""}
     </Badge>
   );
@@ -520,11 +563,13 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
               <SelectValue placeholder="Select a signal" />
             </SelectTrigger>
             <SelectContent>
-              {signals.filter(s => s.latitude && s.longitude).map((signal) => (
-                <SelectItem key={signal.signalId} value={signal.signalId}>
-                  {getSignalDisplayName(signal, existingApproaches)}
-                </SelectItem>
-              ))}
+              {signals
+                .filter((s) => s.latitude && s.longitude)
+                .map((signal) => (
+                  <SelectItem key={signal.signalId} value={signal.signalId}>
+                    {getSignalDisplayName(signal, existingApproaches)}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
         </div>
@@ -640,14 +685,14 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
                     const endpoint = getApproachLineEndpoint(
                       approach.bearing,
                       selectedSignal.latitude!,
-                      selectedSignal.longitude!
+                      selectedSignal.longitude!,
                     );
                     return (
                       <Polyline
                         key={idx}
                         positions={[
                           [selectedSignal.latitude!, selectedSignal.longitude!],
-                          endpoint
+                          endpoint,
                         ]}
                         color={approachColors[idx]}
                         weight={4}
@@ -671,8 +716,18 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
                       <TableHead className="w-60 text-xs">Angle</TableHead>
                       <TableHead className="w-48 text-xs">Street Name *</TableHead>
                       <TableHead className="w-20 text-xs">Speed (mph)</TableHead>
-                      <TableHead className="w-24 text-xs text-center" title="Free Right — right-turn slip lane bypassing the signal. FR-P adds a pedestrian crossing; FR-P-I is an improved traffic-calmed crossing.">FR</TableHead>
-                      <TableHead className="w-16 text-xs text-center" title="Number of free-right lanes">FR Lanes</TableHead>
+                      <TableHead
+                        className="w-24 text-xs text-center"
+                        title="Free Right — right-turn slip lane bypassing the signal. FR-P adds a pedestrian crossing; FR-P-I is an improved traffic-calmed crossing."
+                      >
+                        FR
+                      </TableHead>
+                      <TableHead
+                        className="w-16 text-xs text-center"
+                        title="Number of free-right lanes"
+                      >
+                        FR Lanes
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -749,7 +804,7 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
                           <Select
                             value={String(approach.freeRight ?? 0)}
                             onValueChange={(v) =>
-                              setPendingApproaches(prev => {
+                              setPendingApproaches((prev) => {
                                 const updated = [...prev];
                                 updated[idx] = { ...updated[idx], freeRight: parseInt(v, 10) };
                                 return updated;
@@ -780,10 +835,13 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
                             value={approach.freeRight ? (approach.freeRightLanes ?? 1) : ""}
                             disabled={!approach.freeRight}
                             onChange={(e) =>
-                              setPendingApproaches(prev => {
+                              setPendingApproaches((prev) => {
                                 const updated = [...prev];
                                 const n = parseInt(e.target.value, 10);
-                                updated[idx] = { ...updated[idx], freeRightLanes: Number.isFinite(n) && n >= 1 ? n : 1 };
+                                updated[idx] = {
+                                  ...updated[idx],
+                                  freeRightLanes: Number.isFinite(n) && n >= 1 ? n : 1,
+                                };
                                 return updated;
                               })
                             }
@@ -803,7 +861,8 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
         ) : selectedSignalId ? (
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
             <p className="text-sm text-amber-700">
-              Selected signal does not have coordinates. Please edit the signal to add latitude/longitude first.
+              Selected signal does not have coordinates. Please edit the signal to add
+              latitude/longitude first.
             </p>
           </div>
         ) : null}
@@ -823,8 +882,7 @@ export default function BulkApproachModal({ onClose, preSelectedSignalId, inline
               ? "Saving..."
               : isEditMode
                 ? `Save ${pendingApproaches.length} Approach${pendingApproaches.length !== 1 ? "es" : ""}`
-                : `Create ${pendingApproaches.length} Approach${pendingApproaches.length !== 1 ? "es" : ""}`
-            }
+                : `Create ${pendingApproaches.length} Approach${pendingApproaches.length !== 1 ? "es" : ""}`}
           </Button>
         </div>
       </div>
