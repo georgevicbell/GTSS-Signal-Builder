@@ -21,10 +21,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  referrerPolicy: "strict-origin-when-cross-origin",
-  attribution: "&copy; OpenStreetMap contributors",
-});
 
 interface SignalsMapProps {
   signals: Signal[];
@@ -311,7 +307,7 @@ export default function SignalsMap({
               eventHandlers={{
                 click: (e) => {
                   // Prevent marker clicks from bubbling up to the map (which would trigger click-to-add)
-                  e.originalEvent?.stopPropagation?.();
+(e as L.LeafletMouseEvent).originalEvent.stopPropagation();
                 },
               }}
             >
