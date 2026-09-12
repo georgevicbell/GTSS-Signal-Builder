@@ -168,17 +168,17 @@ export function validatePhaseDirectionStandard(standard: PhaseDirectionStandard)
 }
 
 /**
- * Guess phase → approachId mapping based on agency defaults and available approaches.
+ * Guess phase → approachId mapping based on configuration and available approaches.
  *
  * Algorithm:
  * 1. Convert each approach's compass bearing to N/S/E/W
- * 2. Look up phase numbers for each direction in the agency defaults (falling back to NEMA)
+ * 2. Look up phase numbers for each direction in the configuration (falling back to NEMA)
  * 3. Prefer through phases (even) over left turns (odd) when phaseCount is limited
  * 4. Return { phaseNumber: approachId } for up to phaseCount phases
  *
  * @param phaseCount - Target number of phases to assign
  * @param approaches - Approaches for the signal (with compassBearing)
- * @param agencyDefaults - Persisted agency defaults (or null for NEMA fallback)
+ * @param agencyDefaults - Persisted configuration (or null for NEMA fallback)
  * @returns Map of phaseNumber → approachId
  */
 export function guessPhaseDirectionMapping({

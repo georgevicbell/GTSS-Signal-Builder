@@ -127,16 +127,33 @@ function MapResizeObserver() {
     const container = map.getContainer();
     if (!container || typeof window.ResizeObserver === "undefined") return;
 
+    let timeoutId: number | null = null;
     const ro = new ResizeObserver(() => {
       // Give the browser a moment to finish layout before invalidating
       // size to avoid a race where tiles are requested for the wrong size.
-      setTimeout(() => map.invalidateSize(), 50);
+      if (timeoutId) window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(() => {
+        // Guard against the map having been removed/unmounted while the
+        // timeout was pending (calling invalidateSize then can throw).
+        try {
+          if (map && map.getContainer()) {
+            map.invalidateSize();
+          }
+        } catch (err) {
+          // Swallow errors — failing to invalidate is non-fatal.
+           
+          console.warn("SignalsMap: failed to invalidate map size", err);
+        }
+      }, 50);
     });
 
     ro.observe(container);
     if (container.parentElement) ro.observe(container.parentElement);
 
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
   }, [map]);
 
   return null;

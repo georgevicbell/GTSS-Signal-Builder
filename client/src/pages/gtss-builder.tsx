@@ -7,16 +7,50 @@ import ExportPanel from "@/components/gtss/export-panel";
 import { ImportPanel } from "@/components/gtss/import-panel";
 import PhasesTable from "@/components/gtss/phases-table";
 import SignalsTable from "@/components/gtss/signals-table";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import SignalDetails from "@/pages/signal-details";
 import { clearAllData, cn, useGTSSStore, useLoadFromStorage } from "gtss";
-import { ArrowUpDown, Building, Clock, Coffee, Compass, ExternalLink, FolderInput, FolderOutput, HelpCircle, MapPin, Menu, Navigation, Plus, SlidersHorizontal, Target, TrafficCone, Trash2, X } from "lucide-react";
-import { useState } from "react";
-import { useEffect } from "react";
+import {
+  ArrowUpDown,
+  Building,
+  Clock,
+  Coffee,
+  Compass,
+  ExternalLink,
+  FolderInput,
+  FolderOutput,
+  HelpCircle,
+  MapPin,
+  Menu,
+  Navigation,
+  Plus,
+  SlidersHorizontal,
+  Target,
+  TrafficCone,
+  Trash2,
+  X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 type TabType = "agency" | "signals" | "approaches" | "phases" | "detectors" | "basic-timings";
 
@@ -32,10 +66,16 @@ const tabs = [
 const tabTitles: Record<TabType, { title: string; desc: string }> = {
   agency: { title: "Agency Information", desc: "Configure your traffic management agency details" },
   signals: { title: "Traffic Signals", desc: "Manage traffic signal installation locations" },
-  approaches: { title: "Approaches", desc: "Configure approach directions and speeds for each signal" },
+  approaches: {
+    title: "Approaches",
+    desc: "Configure approach directions and speeds for each signal",
+  },
   phases: { title: "Signal Phases", desc: "Configure movement phases for each signal" },
   "basic-timings": { title: "Basic Timings", desc: "Configure timing parameters for each phase" },
-  detectors: { title: "Detection Systems", desc: "Configure vehicle and pedestrian detection equipment" },
+  detectors: {
+    title: "Detection Systems",
+    desc: "Configure vehicle and pedestrian detection equipment",
+  },
 };
 
 export default function GTSSBuilder() {
@@ -44,7 +84,22 @@ export default function GTSSBuilder() {
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [showImportPanel, setShowImportPanel] = useState(false);
   const [showAgencyDefaults, setShowAgencyDefaults] = useState(false);
-  const { agency, signals, approaches, phases, detectors, basicTimings, currentView, setAgency, setSignals, setApproaches, setPhases, setDetectors, setBasicTimings, navigateToSignalDetails } = useGTSSStore();
+  const {
+    agency,
+    signals,
+    approaches,
+    phases,
+    detectors,
+    basicTimings,
+    currentView,
+    setAgency,
+    setSignals,
+    setApproaches,
+    setPhases,
+    setDetectors,
+    setBasicTimings,
+    navigateToSignalDetails,
+  } = useGTSSStore();
   const { toast } = useToast();
   const { setSelectedSignalIdForTables, setDeepLinkTarget } = useGTSSStore();
 
@@ -82,7 +137,7 @@ export default function GTSSBuilder() {
       return <ImportPanel onImportComplete={() => window.location.reload()} />;
     }
 
-    // Agency defaults settings panel
+    // Configuration settings panel
     if (showAgencyDefaults) {
       return <AgencyDefaultsSettings />;
     }
@@ -93,7 +148,9 @@ export default function GTSSBuilder() {
       case "signals":
         return <SignalsTable triggerAdd={triggerAdd} triggerBulk={triggerBulk} />;
       case "approaches":
-        return <ApproachesTable triggerAdd={triggerAddApproach} triggerBulk={triggerBulkApproach} />;
+        return (
+          <ApproachesTable triggerAdd={triggerAddApproach} triggerBulk={triggerBulkApproach} />
+        );
       case "phases":
         return <PhasesTable triggerAdd={triggerAddPhase} triggerBulk={triggerBulkPhase} />;
       case "basic-timings":
@@ -128,35 +185,35 @@ export default function GTSSBuilder() {
       setActiveTab("agency");
       return;
     }
-    setTriggerBulk(prev => prev + 1);
+    setTriggerBulk((prev) => prev + 1);
   };
 
   const handleAddApproach = () => {
-    setTriggerAddApproach(prev => prev + 1);
+    setTriggerAddApproach((prev) => prev + 1);
   };
-
+  /*
   const handleBulkApproach = () => {
     setTriggerBulkApproach(prev => prev + 1);
   };
-
+*/
   const handleAddPhase = () => {
-    setTriggerAddPhase(prev => prev + 1);
+    setTriggerAddPhase((prev) => prev + 1);
   };
-
+  /*
   const handleBulkPhase = () => {
     setTriggerBulkPhase(prev => prev + 1);
-  };
+  };*/
 
   const handleAddDetector = () => {
-    setTriggerAddDetector(prev => prev + 1);
+    setTriggerAddDetector((prev) => prev + 1);
   };
-
+  /*
   const handleBulkDetector = () => {
     setTriggerBulkDetector(prev => prev + 1);
   };
-
+*/
   const handleAddBasicTiming = () => {
-    setTriggerAddBasicTiming(prev => prev + 1);
+    setTriggerAddBasicTiming((prev) => prev + 1);
   };
 
   const handleClearAllData = () => {
@@ -171,7 +228,8 @@ export default function GTSSBuilder() {
 
     toast({
       title: "Data Cleared",
-      description: "All signal, approach, phase, detector, timing, and agency data has been cleared",
+      description:
+        "All signal, approach, phase, detector, timing, and agency data has been cleared",
     });
   };
 
@@ -182,68 +240,70 @@ export default function GTSSBuilder() {
   // Parse URL params on mount to support deep linking
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const tab = params.get('tab') as TabType | null;
-    const view = params.get('view');
-    const signalId = params.get('signalId');
-    const approachId = params.get('approachId');
-    const phaseId = params.get('phaseId');
-    const detectorId = params.get('detectorId');
-    const timingId = params.get('timingId');
+    const tab = params.get("tab") as TabType | null;
+    const view = params.get("view");
+    const signalId = params.get("signalId");
+    const approachId = params.get("approachId");
+    const phaseId = params.get("phaseId");
+    const detectorId = params.get("detectorId");
+    const timingId = params.get("timingId");
 
     if (tab) {
       setActiveTab(tab);
     }
 
-    if (view === 'signal-details' && signalId) {
+    if (view === "signal-details" && signalId) {
       navigateToSignalDetails(signalId);
       return;
     }
 
     // If a specific child entity is requested, tell the tables to open it
     if (approachId) {
-      const approach = approaches.find(a => a.id === approachId);
+      const approach = approaches.find((a) => a.id === approachId);
       if (approach) {
         setSelectedSignalIdForTables(approach.signalId);
-        setDeepLinkTarget({ type: 'approach', id: approachId });
+        setDeepLinkTarget({ type: "approach", id: approachId });
       }
     }
 
     if (phaseId) {
-      const phase = phases.find(p => p.id === phaseId);
+      const phase = phases.find((p) => p.id === phaseId);
       if (phase) {
         setSelectedSignalIdForTables(phase.signalId);
-        setDeepLinkTarget({ type: 'phase', id: phaseId });
+        setDeepLinkTarget({ type: "phase", id: phaseId });
       }
     }
 
     if (detectorId) {
-      const det = detectors.find(d => d.id === detectorId);
+      const det = detectors.find((d) => d.id === detectorId);
       if (det) {
         setSelectedSignalIdForTables(det.signalId);
-        setDeepLinkTarget({ type: 'detector', id: detectorId });
+        setDeepLinkTarget({ type: "detector", id: detectorId });
       }
     }
 
     if (timingId) {
-      const t = basicTimings.find(bt => bt.id === timingId);
+      const t = basicTimings.find((bt) => bt.id === timingId);
       if (t) {
         setSelectedSignalIdForTables(t.signalId);
-        setDeepLinkTarget({ type: 'basicTiming', id: timingId });
+        setDeepLinkTarget({ type: "basicTiming", id: timingId });
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Keep URL in sync when navigating between tabs or opening signal details
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (currentView === 'signal-details' && (window.location.search.indexOf('view=signal-details') === -1 || !params.get('signalId'))) {
+    if (
+      currentView === "signal-details" &&
+      (window.location.search.indexOf("view=signal-details") === -1 || !params.get("signalId"))
+    ) {
       // signal-details view is managed by store; when active, set URL accordingly
       if (window.history) {
         const signalId = useGTSSStore.getState().currentSignalId;
-        params.set('view', 'signal-details');
-        if (signalId) params.set('signalId', signalId);
-        window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+        params.set("view", "signal-details");
+        if (signalId) params.set("signalId", signalId);
+        window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
       }
       return;
     }
@@ -251,17 +311,17 @@ export default function GTSSBuilder() {
     // Sync selected tab
     const tab = activeTab;
     if (tab) {
-      params.set('tab', tab);
+      params.set("tab", tab);
     }
     // Clear view-specific params when on main
-    if (currentView === 'main') {
-      params.delete('view');
-      params.delete('signalId');
+    if (currentView === "main") {
+      params.delete("view");
+      params.delete("signalId");
     }
-    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+    window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
   }, [activeTab, currentView, navigateToSignalDetails]);
 
-  if (currentView === 'signal-details') {
+  if (currentView === "signal-details") {
     return <SignalDetails />;
   }
 
@@ -276,11 +336,13 @@ export default function GTSSBuilder() {
       )}
 
       {/* Sidebar */}
-      <div className={cn(
-        "w-56 bg-white shadow-lg border-r border-grey-200 flex flex-col h-full transition-transform duration-300 z-50",
-        "fixed lg:static inset-y-0 left-0",
-        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-      )}>
+      <div
+        className={cn(
+          "w-56 bg-white shadow-lg border-r border-grey-200 flex flex-col h-full transition-transform duration-300 z-50",
+          "fixed lg:static inset-y-0 left-0",
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+        )}
+      >
         {/* Header */}
         <div className="flex-shrink-0 p-3 border-b border-grey-200">
           <div className="flex items-center space-x-2">
@@ -292,7 +354,11 @@ export default function GTSSBuilder() {
             </div>
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-grey-400 hover:text-grey-600">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-grey-400 hover:text-grey-600"
+                >
                   <HelpCircle className="w-4 h-4" />
                 </Button>
               </DialogTrigger>
@@ -302,20 +368,24 @@ export default function GTSSBuilder() {
                 </DialogHeader>
                 <div className="space-y-3 text-sm text-grey-700">
                   <p>
-                    <strong>GTSS Builder</strong> is a tool for configuring traffic signal systems and exporting data in the
-                    {" "}<strong>GTSS (General Traffic Signal Specification)</strong> format &mdash; an open standard for describing
-                    traffic signal configurations including signal locations, phases, detection equipment, and timing parameters.
+                    <strong>GTSS Builder</strong> is a tool for configuring traffic signal systems
+                    and exporting data in the{" "}
+                    <strong>GTSS (General Traffic Signal Specification)</strong> format &mdash; an
+                    open standard for describing traffic signal configurations including signal
+                    locations, phases, detection equipment, and timing parameters.
                   </p>
                   <p>
-                    All data is stored locally in your browser using localStorage. Nothing is sent to a server. Your work persists
-                    between sessions on the same browser.
+                    All data is stored locally in your browser using localStorage. Nothing is sent
+                    to a server. Your work persists between sessions on the same browser.
                   </p>
                   <p>
-                    Use the <strong>Export</strong> feature to download your configuration as GTSS-formatted files, and
-                    {" "}<strong>Import</strong> to load previously exported data or migrate between browsers.
+                    Use the <strong>Export</strong> feature to download your configuration as
+                    GTSS-formatted files, and <strong>Import</strong> to load previously exported
+                    data or migrate between browsers.
                   </p>
                   <p>
-                    GTSS Builder is <strong>open source and free to use</strong>. The full source is on{" "}
+                    GTSS Builder is <strong>open source and free to use</strong>. The full source is
+                    on{" "}
                     <a
                       href="https://github.com/redmond2742/GTSS-Signal-Builder"
                       target="_blank"
@@ -323,12 +393,17 @@ export default function GTSSBuilder() {
                       className="text-blue-600 hover:underline"
                     >
                       GitHub
-                    </a>
-                    {" "}&mdash; you're welcome to fork it and adapt it for your own agency.
+                    </a>{" "}
+                    &mdash; you're welcome to fork it and adapt it for your own agency.
                   </p>
                   <p className="text-xs text-grey-500">
                     Learn more about GTSS at{" "}
-                    <a href="https://gtss.dev" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                    <a
+                      href="https://gtss.dev"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
                       gtss.dev
                     </a>
                   </p>
@@ -369,7 +444,7 @@ export default function GTSSBuilder() {
                     "w-full flex items-center space-x-2 px-2 py-2 rounded-md text-left transition-all duration-200",
                     isActive
                       ? "bg-primary-100 text-primary-700 border border-primary-200 shadow-sm"
-                      : "text-grey-600 hover:bg-grey-100 hover:text-grey-800"
+                      : "text-grey-600 hover:bg-grey-100 hover:text-grey-800",
                   )}
                 >
                   <Icon size={16} className={isActive ? "text-primary-600" : "text-grey-500"} />
@@ -398,7 +473,7 @@ export default function GTSSBuilder() {
             <Button
               size="sm"
               className="w-full h-7 text-xs bg-blue-500 text-white hover:bg-blue-600 shadow-sm transition-all duration-200"
-              onClick={() => window.open('https://gtss.dev', '_blank')}
+              onClick={() => window.open("https://gtss.dev", "_blank")}
               data-testid="button-about-gtss"
             >
               <ExternalLink className="w-3 h-3 mr-1" />
@@ -412,7 +487,7 @@ export default function GTSSBuilder() {
             <Button
               size="sm"
               className="w-full h-7 text-xs bg-orange-500 text-white hover:bg-orange-600 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
-              onClick={() => window.open('https://buymeacoffee.com/mr2742', '_blank')}
+              onClick={() => window.open("https://buymeacoffee.com/mr2742", "_blank")}
             >
               <Coffee className="w-3 h-3 mr-1" />
               Buy me a Coffee
@@ -428,7 +503,7 @@ export default function GTSSBuilder() {
                 "w-full h-7 text-xs",
                 showAgencyDefaults
                   ? "bg-primary-100 text-primary-700 border-primary-200"
-                  : "bg-grey-100 text-grey-700 hover:bg-grey-200"
+                  : "bg-grey-100 text-grey-700 hover:bg-grey-200",
               )}
               onClick={() => {
                 setShowAgencyDefaults(true);
@@ -439,7 +514,7 @@ export default function GTSSBuilder() {
               data-testid="button-agency-defaults"
             >
               <SlidersHorizontal className="w-3 h-3 mr-1" />
-              Agency Defaults
+              Configuration
             </Button>
           </div>
 
@@ -453,7 +528,7 @@ export default function GTSSBuilder() {
                   "w-full h-7 text-xs",
                   showImportPanel
                     ? "bg-primary-100 text-primary-700 border-primary-200"
-                    : "bg-grey-100 text-grey-700 hover:bg-grey-200"
+                    : "bg-grey-100 text-grey-700 hover:bg-grey-200",
                 )}
                 onClick={() => {
                   setShowImportPanel(true);
@@ -472,7 +547,7 @@ export default function GTSSBuilder() {
                   "w-full h-7 text-xs",
                   showExportPanel
                     ? "bg-primary-100 text-primary-700 border-primary-200"
-                    : "bg-grey-100 text-grey-700 hover:bg-grey-200"
+                    : "bg-grey-100 text-grey-700 hover:bg-grey-200",
                 )}
                 onClick={() => {
                   setShowExportPanel(true);
@@ -503,8 +578,8 @@ export default function GTSSBuilder() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Clear All Data</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will permanently delete all agency information, signals, approaches, phases, timings, and detectors.
-                  This action cannot be undone.
+                  This will permanently delete all agency information, signals, approaches, phases,
+                  timings, and detectors. This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -539,64 +614,107 @@ export default function GTSSBuilder() {
               </Button>
               <div>
                 <h2 className="text-base lg:text-lg font-bold text-grey-800">
-                  {showExportPanel ? "Export Data" : showImportPanel ? "Import Data" : showAgencyDefaults ? "Agency Defaults" : tabTitles[activeTab].title}
+                  {showExportPanel
+                    ? "Export Data"
+                    : showImportPanel
+                      ? "Import Data"
+                      : showAgencyDefaults
+                        ? "Configuration"
+                        : tabTitles[activeTab].title}
                 </h2>
                 <p className="text-xs text-grey-500 hidden sm:block">
-                  {showExportPanel ? "Export your traffic signal data to files" : showImportPanel ? "Import traffic signal data from files or paste" : showAgencyDefaults ? "Configure default phase-to-direction standards for your agency" : tabTitles[activeTab].desc}
+                  {showExportPanel
+                    ? "Export your traffic signal data to files"
+                    : showImportPanel
+                      ? "Import traffic signal data from files or paste"
+                      : showAgencyDefaults
+                        ? "Configure default phase-to-direction standards for your agency"
+                        : tabTitles[activeTab].desc}
                 </p>
               </div>
             </div>
-            {!showExportPanel && !showImportPanel && (
-              activeTab === "signals" ? (
+            {!showExportPanel &&
+              !showImportPanel &&
+              (activeTab === "signals" ? (
                 <div className="flex space-x-1">
-                  <Button onClick={handleAddMultiple} variant="outline" className="h-7 px-2 text-xs border-primary-200 text-primary-700 hover:bg-primary-50 flex items-center gap-1">
+                  <Button
+                    onClick={handleAddMultiple}
+                    variant="outline"
+                    className="h-7 px-2 text-xs border-primary-200 text-primary-700 hover:bg-primary-50 flex items-center gap-1"
+                  >
                     <Navigation className="w-3 h-3" />
                     <span>Add Multiple</span>
                   </Button>
-                  <Button onClick={handleAddSignal} className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1">
+                  <Button
+                    onClick={handleAddSignal}
+                    className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
+                  >
                     <Plus className="w-3 h-3" />
                     <span>Add Signal</span>
                   </Button>
                 </div>
               ) : activeTab === "approaches" ? (
                 <div className="flex space-x-1">
-                  <Button onClick={handleAddApproach} className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1">
+                  <Button
+                    onClick={handleAddApproach}
+                    className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
+                  >
                     <Plus className="w-3 h-3" />
                     <span>Add Approaches</span>
                   </Button>
                 </div>
               ) : activeTab === "phases" ? (
                 <div className="flex space-x-1">
-                  <Button onClick={handleAddPhase} className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1">
+                  <Button
+                    onClick={handleAddPhase}
+                    className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
+                  >
                     <Plus className="w-3 h-3" />
                     <span>Add Phases</span>
                   </Button>
                 </div>
               ) : activeTab === "detectors" ? (
                 <div className="flex space-x-1">
-                  <Button onClick={handleAddDetector} className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1">
+                  <Button
+                    onClick={handleAddDetector}
+                    className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
+                  >
                     <Plus className="w-3 h-3" />
                     <span>Add Detectors</span>
                   </Button>
                 </div>
               ) : activeTab === "basic-timings" ? (
                 <div className="flex space-x-1">
-                  <Button onClick={handleAddBasicTiming} className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1">
+                  <Button
+                    onClick={handleAddBasicTiming}
+                    className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
+                  >
                     <Plus className="w-3 h-3" />
                     <span>Add Timing</span>
                   </Button>
                 </div>
-              ) : null
-            )}
+              ) : activeTab === "agency" ? (
+                <div className="flex space-x-1">
+                  <Button
+                    onClick={() => {
+                      setActiveTab("agency");
+                      // Tell the AgencyForm to open its modal for adding
+                      window.dispatchEvent(
+                        new CustomEvent("open-agency-modal", { detail: { editingId: null } }),
+                      );
+                    }}
+                    className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Add Agency</span>
+                  </Button>
+                </div>
+              ) : null)}
           </div>
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 overflow-auto p-3">
-          {renderTabContent()}
-        </main>
-
-
+        <main className="flex-1 overflow-auto p-3">{renderTabContent()}</main>
       </div>
     </div>
   );
