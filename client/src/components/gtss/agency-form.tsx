@@ -290,6 +290,7 @@ export default function AgencyForm() {
 
     // Perform cascade delete via storage helper
     agencyListStorage.deleteWithCascade(id);
+    store.loadFromStorage();
 
     // if deleted current, clear or set to default
     if (agency && agency.id === id) {
