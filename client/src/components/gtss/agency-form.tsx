@@ -439,6 +439,7 @@ export default function AgencyForm() {
         <ResizablePanel defaultSize={40} minSize={12} className="relative z-0">
           <div className="w-full h-full relative z-0">
             <MapContainer
+              key={agency?.id ?? "default"}
               center={
                 agency?.latitude && agency?.longitude
                   ? [agency.latitude, agency.longitude]
@@ -450,11 +451,7 @@ export default function AgencyForm() {
               className="rounded-lg border"
             >
               <MapTileLayers />
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
-                referrerPolicy="strict-origin-when-cross-origin"
-              />
+
               <MapResizeObserverLocal />
               {agency && agency.latitude && agency.longitude && (
                 <Marker position={[agency.latitude, agency.longitude]} />

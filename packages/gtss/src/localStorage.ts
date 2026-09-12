@@ -809,7 +809,7 @@ export const clearAllData = (): void => {
   phaseStorage.clear();
   detectorStorage.clear();
   basicTimingStorage.clear();
-  // Note: configuration are intentionally NOT cleared with clearAllData,
+  // Note: configurations are intentionally NOT cleared with clearAllData,
   // as they are a configuration preference, not signal data.
 };
 

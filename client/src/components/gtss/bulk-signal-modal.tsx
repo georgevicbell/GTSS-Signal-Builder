@@ -243,7 +243,7 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
                   draggable={true}
                   eventHandlers={{
                     dragend: (e) => {
-                      const latlng = e.target.getLatLng();
+                      const latlng = (e.target as L.Marker).getLatLng();
                       handleUpdatePendingLocation(signal.id, latlng.lat, latlng.lng);
                     },
                   }}

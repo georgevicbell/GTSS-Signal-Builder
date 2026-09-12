@@ -7,7 +7,7 @@ import { useMapScrollZoom } from "gtss";
 import L from "leaflet";
 import { Check, Crosshair, MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
-import { MapContainer, Marker, TileLayer, useMapEvents } from "react-leaflet";
+import { MapContainer, Marker, useMapEvents } from "react-leaflet";
 
 interface LocationInfo {
   lat: number;
@@ -179,12 +179,7 @@ export default function AgencyLocationPicker({
               className="rounded-lg border"
             >
               <MapTileLayers />
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
-                // Overr  ides strict global site policies so the tile provider sees your origin
-                referrerPolicy="strict-origin-when-cross-origin"
-              />
+
               <LocationPicker onLocationSelect={handleLocationClick} />
 
               {selectedLocation && (

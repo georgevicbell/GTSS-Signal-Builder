@@ -6,15 +6,7 @@ import { Approach, Phase, Signal } from "gtss/schema";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo, useState } from "react";
-import {
-  MapContainer,
-  Marker,
-  Polyline,
-  Popup,
-  TileLayer,
-  useMap,
-  useMapEvents,
-} from "react-leaflet";
+import { MapContainer, Marker, Polyline, Popup, useMap, useMapEvents } from "react-leaflet";
 import MapTileLayers from "./map-tile-layers";
 
 // Fix for default markers in react-leaflet
@@ -141,7 +133,7 @@ function MapResizeObserver() {
           }
         } catch (err) {
           // Swallow errors — failing to invalidate is non-fatal.
-           
+
           console.warn("SignalsMap: failed to invalidate map size", err);
         }
       }, 50);
@@ -290,12 +282,7 @@ export default function SignalsMap({
       >
         <CaptureMap onReady={(m) => setMap(m)} />
         <MapTileLayers />
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
-          // Overr  ides strict global site policies so the tile provider sees your origin
-          referrerPolicy="strict-origin-when-cross-origin"
-        />
+
         <MapResizeObserver />
         {map && <MapBounds signals={signals} />}
 
