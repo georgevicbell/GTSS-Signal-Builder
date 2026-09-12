@@ -1,17 +1,30 @@
-import { nanoid } from 'nanoid';
-import type { Agency, Approach, BasicTiming, Detector, InsertAgency, InsertApproach, InsertBasicTiming, InsertDetector, InsertPhase, InsertSignal, Phase, Signal } from '../schema/schema';
-import { AgencyDefaults } from './agencyDefaults';
+import { nanoid } from "nanoid";
+import type {
+  Agency,
+  Approach,
+  BasicTiming,
+  Detector,
+  InsertAgency,
+  InsertApproach,
+  InsertBasicTiming,
+  InsertDetector,
+  InsertPhase,
+  InsertSignal,
+  Phase,
+  Signal,
+} from "../schema/schema";
+import { AgencyDefaults } from "./agencyDefaults";
 
 // Storage keys
 const STORAGE_KEYS = {
-  AGENCY: 'gtss_agency', // now stores either a single Agency (legacy) or an array of Agency
-  DEFAULT_AGENCY: 'gtss_default_agency',
-  SIGNALS: 'gtss_signals',
-  PHASES: 'gtss_phases',
-  DETECTORS: 'gtss_detectors',
-  APPROACHES: 'gtss_approaches',
-  BASIC_TIMINGS: 'gtss_basic_timings',
-  AGENCY_DEFAULTS: 'gtss_agency_defaults',
+  AGENCY: "gtss_agency", // now stores either a single Agency (legacy) or an array of Agency
+  DEFAULT_AGENCY: "gtss_default_agency",
+  SIGNALS: "gtss_signals",
+  PHASES: "gtss_phases",
+  DETECTORS: "gtss_detectors",
+  APPROACHES: "gtss_approaches",
+  BASIC_TIMINGS: "gtss_basic_timings",
+  AGENCY_DEFAULTS: "gtss_agency_defaults",
 };
 
 // Maximum localStorage size (5MB)
@@ -19,10 +32,10 @@ const MAX_STORAGE_SIZE = 5 * 1024 * 1024;
 
 // CSV sanitization to prevent formula injection attacks
 function sanitizeCSVField(value: string | number | boolean | null | undefined): string {
-  if (value == null) return '';
+  if (value == null) return "";
 
   // For numeric and boolean values, just convert to string (no formula risk)
-  if (typeof value === 'number' || typeof value === 'boolean') {
+  if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
   }
 
@@ -47,7 +60,7 @@ function sanitizeCSVField(value: string | number | boolean | null | undefined): 
 // Proper CSV line parser that handles quoted fields
 function parseCSVLine(line: string): string[] {
   const fields: string[] = [];
-  let field = '';
+  let field = "";
   let inQuotes = false;
 
   for (let i = 0; i < line.length; i++) {
@@ -63,10 +76,10 @@ function parseCSVLine(line: string): string[] {
         // Toggle quote mode
         inQuotes = !inQuotes;
       }
-    } else if (char === ',' && !inQuotes) {
+    } else if (char === "," && !inQuotes) {
       // End of field
       fields.push(field.trim());
-      field = '';
+      field = "";
     } else {
       field += char;
     }
@@ -79,22 +92,24 @@ function parseCSVLine(line: string): string[] {
 
 // Safer number validation without ReDoS risk
 function isValidNumber(value: string): boolean {
-  if (!value || value.trim() === '') return false;
+  if (!value || value.trim() === "") return false;
   const num = Number(value);
   return !isNaN(num) && isFinite(num);
 }
 
 function isValidInteger(value: string): boolean {
-  if (!value || value.trim() === '') return false;
+  if (!value || value.trim() === "") return false;
   const num = Number(value);
   return !isNaN(num) && isFinite(num) && Number.isInteger(num);
 }
 
 // Check for prototype pollution attempts
 function hasPrototypePollution(obj: Record<string, unknown>): boolean {
-  return Object.prototype.hasOwnProperty.call(obj, '__proto__') ||
-    Object.prototype.hasOwnProperty.call(obj, 'constructor') ||
-    Object.prototype.hasOwnProperty.call(obj, 'prototype');
+  return (
+    Object.prototype.hasOwnProperty.call(obj, "__proto__") ||
+    Object.prototype.hasOwnProperty.call(obj, "constructor") ||
+    Object.prototype.hasOwnProperty.call(obj, "prototype")
+  );
 }
 
 // Helper function to safely parse JSON from localStorage
@@ -114,16 +129,18 @@ function saveToStorage<T>(key: string, data: T): void {
 
     // Check size before saving
     if (serialized.length > MAX_STORAGE_SIZE) {
-      throw new Error('Data too large for localStorage. Please reduce the number of records.');
+      throw new Error("Data too large for localStorage. Please reduce the number of records.");
     }
 
     localStorage.setItem(key, serialized);
   } catch (error) {
-    if (error instanceof Error && error.name === 'QuotaExceededError') {
-      console.error('localStorage quota exceeded');
-      throw new Error('Storage quota exceeded. Please delete some data before adding more.');
+    if (error instanceof Error && error.name === "QuotaExceededError") {
+      console.error("localStorage quota exceeded");
+      throw new Error("Storage quota exceeded. Please delete some data before adding more.", {
+        cause: error,
+      });
     }
-    console.error('Failed to save to localStorage:', error);
+    console.error("Failed to save to localStorage:", error);
     throw error;
   }
 }
@@ -134,7 +151,7 @@ export const agencyStorage = {
   // the newer array-of-agencies storage where a default is selected.
   get: (): Agency | null => {
     try {
-      const raw = getFromStorage<any>(STORAGE_KEYS.AGENCY, null);
+      const raw = getFromStorage<Agency[] | null>(STORAGE_KEYS.AGENCY, null);
       if (raw == null) return null;
       if (Array.isArray(raw)) {
         const defId = agencyListStorage.getDefaultId();
@@ -151,10 +168,10 @@ export const agencyStorage = {
 
   // Save a single agency by adding/updating the array stored at STORAGE_KEYS.AGENCY
   save: (agency: InsertAgency): Agency => {
-    const raw = getFromStorage<any>(STORAGE_KEYS.AGENCY, null);
-    const list: Agency[] = Array.isArray(raw) ? raw : (raw ? [raw as Agency] : []);
+    const raw = getFromStorage<Agency[] | null>(STORAGE_KEYS.AGENCY, null);
+    const list: Agency[] = Array.isArray(raw) ? raw : raw ? [raw as Agency] : [];
 
-    const existingIndex = list.findIndex(a => a.agencyId === agency.agencyId);
+    const existingIndex = list.findIndex((a) => a.agencyId === agency.agencyId);
     const newAgency: Agency = {
       id: existingIndex !== -1 ? list[existingIndex].id : nanoid(),
       agencyId: agency.agencyId,
@@ -197,19 +214,19 @@ export const agencyStorage = {
 // Agency list operations (support multiple agencies, default selection)
 export const agencyListStorage = {
   getAll: (): Agency[] => {
-    const raw = getFromStorage<any>(STORAGE_KEYS.AGENCY, null);
+    const raw = getFromStorage<Agency[] | null>(STORAGE_KEYS.AGENCY, null);
     if (!raw) return [];
     return Array.isArray(raw) ? raw : [raw as Agency];
   },
 
   get: (id: string): Agency | undefined => {
     const list = agencyListStorage.getAll();
-    return list.find(a => a.id === id);
+    return list.find((a) => a.id === id);
   },
 
   save: (agency: InsertAgency): Agency => {
     const list = agencyListStorage.getAll();
-    const existingIndex = list.findIndex(a => a.agencyId === agency.agencyId);
+    const existingIndex = list.findIndex((a) => a.agencyId === agency.agencyId);
     const newAgency: Agency = {
       id: existingIndex !== -1 ? list[existingIndex].id : nanoid(),
       agencyId: agency.agencyId,
@@ -256,12 +273,12 @@ export const agencyListStorage = {
     // Delete all signals associated with this agency's agencyId. The
     // signalStorage.delete call will cascade to phases, detectors,
     // approaches, and basic timings.
-    const signals = signalStorage.getAll().filter(s => s.agencyId === agency.agencyId);
-    signals.forEach(s => signalStorage.delete(s.signalId));
+    const signals = signalStorage.getAll().filter((s) => s.agencyId === agency.agencyId);
+    signals.forEach((s) => signalStorage.delete(s.signalId));
 
     // Now remove the agency itself
     const list = agencyListStorage.getAll();
-    const updated = list.filter(a => a.id !== id);
+    const updated = list.filter((a) => a.id !== id);
     saveToStorage(STORAGE_KEYS.AGENCY, updated);
 
     // If deleted agency was default, clear default or pick first remaining
@@ -309,7 +326,7 @@ export const signalStorage = {
 
   get: (signalId: string): Signal | undefined => {
     const signals = signalStorage.getAll();
-    return signals.find(s => s.signalId === signalId);
+    return signals.find((s) => s.signalId === signalId);
   },
 
   save: (signal: InsertSignal): Signal => {
@@ -317,7 +334,7 @@ export const signalStorage = {
     const newSignal: Signal = {
       id: nanoid(),
       agencyId: signal.agencyId,
-      signalId: signal.signalId || `SIG_${String(signals.length + 1).padStart(3, '0')}`,
+      signalId: signal.signalId || `SIG_${String(signals.length + 1).padStart(3, "0")}`,
       streetName1: signal.streetName1,
       streetName2: signal.streetName2,
       latitude: signal.latitude,
@@ -332,12 +349,12 @@ export const signalStorage = {
   update: (signalId: string, updates: Partial<InsertSignal>): Signal | null => {
     // Prevent prototype pollution
     if (hasPrototypePollution(updates as Record<string, unknown>)) {
-      console.error('Attempted prototype pollution in signal update');
+      console.error("Attempted prototype pollution in signal update");
       return null;
     }
 
     const signals = signalStorage.getAll();
-    const index = signals.findIndex(s => s.signalId === signalId);
+    const index = signals.findIndex((s) => s.signalId === signalId);
 
     if (index === -1) return null;
 
@@ -356,7 +373,7 @@ export const signalStorage = {
 
   delete: (signalId: string): void => {
     const signals = signalStorage.getAll();
-    const updatedSignals = signals.filter(s => s.signalId !== signalId);
+    const updatedSignals = signals.filter((s) => s.signalId !== signalId);
     saveToStorage(STORAGE_KEYS.SIGNALS, updatedSignals);
 
     // Also delete related phases, detectors, approaches, and basic timings
@@ -391,7 +408,7 @@ function normalizeFreeRightLanes(value: unknown): number {
 export const approachStorage = {
   getAll: (): Approach[] => {
     const raw = getFromStorage<Approach[]>(STORAGE_KEYS.APPROACHES, []);
-    return raw.map(a => ({
+    return raw.map((a) => ({
       ...a,
       freeRight: normalizeFreeRight((a as { freeRight?: unknown }).freeRight),
       freeRightLanes: normalizeFreeRightLanes((a as { freeRightLanes?: unknown }).freeRightLanes),
@@ -400,13 +417,13 @@ export const approachStorage = {
 
   getBySignal: (signalId: string): Approach[] => {
     const approaches = approachStorage.getAll();
-    return approaches.filter(a => a.signalId === signalId);
+    return approaches.filter((a) => a.signalId === signalId);
   },
 
   save: (approach: InsertApproach): Approach => {
     const approaches = approachStorage.getAll();
     // Count approaches for this specific signal to generate per-signal ID
-    const signalApproaches = approaches.filter(a => a.signalId === approach.signalId);
+    const signalApproaches = approaches.filter((a) => a.signalId === approach.signalId);
     const nextApproachNum = signalApproaches.length + 1;
     const newApproach: Approach = {
       id: nanoid(),
@@ -426,12 +443,12 @@ export const approachStorage = {
 
   update: (id: string, updates: Partial<InsertApproach>): Approach | null => {
     if (hasPrototypePollution(updates as Record<string, unknown>)) {
-      console.error('Attempted prototype pollution in approach update');
+      console.error("Attempted prototype pollution in approach update");
       return null;
     }
 
     const approaches = approachStorage.getAll();
-    const index = approaches.findIndex(a => a.id === id);
+    const index = approaches.findIndex((a) => a.id === id);
 
     if (index === -1) return null;
 
@@ -449,20 +466,20 @@ export const approachStorage = {
 
   delete: (id: string): void => {
     const approaches = approachStorage.getAll();
-    const updatedApproaches = approaches.filter(a => a.id !== id);
+    const updatedApproaches = approaches.filter((a) => a.id !== id);
     saveToStorage(STORAGE_KEYS.APPROACHES, updatedApproaches);
   },
 
   deleteBySignal: (signalId: string): void => {
     const approaches = approachStorage.getAll();
-    const updatedApproaches = approaches.filter(a => a.signalId !== signalId);
+    const updatedApproaches = approaches.filter((a) => a.signalId !== signalId);
     saveToStorage(STORAGE_KEYS.APPROACHES, updatedApproaches);
   },
 
   updateSignalId: (oldSignalId: string, newSignalId: string): void => {
     const approaches = approachStorage.getAll();
-    const updatedApproaches = approaches.map(approach =>
-      approach.signalId === oldSignalId ? { ...approach, signalId: newSignalId } : approach
+    const updatedApproaches = approaches.map((approach) =>
+      approach.signalId === oldSignalId ? { ...approach, signalId: newSignalId } : approach,
     );
     saveToStorage(STORAGE_KEYS.APPROACHES, updatedApproaches);
   },
@@ -493,9 +510,10 @@ export const phaseStorage = {
     const raw = getFromStorage<Phase[]>(STORAGE_KEYS.PHASES, []);
     // The overlap flag was removed from the data model entirely — strip it
     // from previously stored rows and persist the cleaned data once.
-    const hadOverlap = raw.some(p => "isOverlap" in (p as object));
-    const normalized = raw.map(p => {
-      const { isOverlap: _dropped, ...rest } = p as Phase & { isOverlap?: unknown };
+    const hadOverlap = raw.some((p) => "isOverlap" in (p as object));
+    const normalized = raw.map((p) => {
+      const rest = { ...p };
+      delete (rest as Phase & { isOverlap?: unknown }).isOverlap;
       return {
         ...rest,
         isPedestrian: normalizePedestrian((p as { isPedestrian?: unknown }).isPedestrian),
@@ -503,7 +521,7 @@ export const phaseStorage = {
     });
     try {
       if (typeof localStorage !== "undefined" && !localStorage.getItem(PED_RENUMBER_FLAG)) {
-        const renumbered = normalized.map(p => {
+        const renumbered = normalized.map((p) => {
           const v = p.isPedestrian;
           // 2/3/4 are the only renumbered values; 0 and 1 are unchanged, and
           // 5 (the new top of the range) won't exist in pre-rename data.
@@ -527,7 +545,7 @@ export const phaseStorage = {
 
   getBySignal: (signalId: string): Phase[] => {
     const phases = phaseStorage.getAll();
-    return phases.filter(p => p.signalId === signalId);
+    return phases.filter((p) => p.signalId === signalId);
   },
 
   save: (phase: InsertPhase): Phase => {
@@ -539,9 +557,7 @@ export const phaseStorage = {
       phase: phase.phase,
       movementType: phase.movementType,
       isPedestrian:
-        phase.isPedestrian == null
-          ? defaultPed
-          : normalizePedestrian(phase.isPedestrian),
+        phase.isPedestrian == null ? defaultPed : normalizePedestrian(phase.isPedestrian),
       numOfLanes: phase.numOfLanes ?? 1,
       approachId: phase.approachId ?? null,
       crosswalkLength: phase.crosswalkLength ?? null,
@@ -555,12 +571,12 @@ export const phaseStorage = {
   update: (id: string, updates: Partial<InsertPhase>): Phase | null => {
     // Prevent prototype pollution
     if (hasPrototypePollution(updates as Record<string, unknown>)) {
-      console.error('Attempted prototype pollution in phase update');
+      console.error("Attempted prototype pollution in phase update");
       return null;
     }
 
     const phases = phaseStorage.getAll();
-    const index = phases.findIndex(p => p.id === id);
+    const index = phases.findIndex((p) => p.id === id);
 
     if (index === -1) return null;
 
@@ -577,20 +593,20 @@ export const phaseStorage = {
 
   delete: (id: string): void => {
     const phases = phaseStorage.getAll();
-    const updatedPhases = phases.filter(p => p.id !== id);
+    const updatedPhases = phases.filter((p) => p.id !== id);
     saveToStorage(STORAGE_KEYS.PHASES, updatedPhases);
   },
 
   deleteBySignal: (signalId: string): void => {
     const phases = phaseStorage.getAll();
-    const updatedPhases = phases.filter(p => p.signalId !== signalId);
+    const updatedPhases = phases.filter((p) => p.signalId !== signalId);
     saveToStorage(STORAGE_KEYS.PHASES, updatedPhases);
   },
 
   updateSignalId: (oldSignalId: string, newSignalId: string): void => {
     const phases = phaseStorage.getAll();
-    const updatedPhases = phases.map(phase =>
-      phase.signalId === oldSignalId ? { ...phase, signalId: newSignalId } : phase
+    const updatedPhases = phases.map((phase) =>
+      phase.signalId === oldSignalId ? { ...phase, signalId: newSignalId } : phase,
     );
     saveToStorage(STORAGE_KEYS.PHASES, updatedPhases);
   },
@@ -606,7 +622,7 @@ export const detectorStorage = {
     const raw = getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
     // Rows stored before detectors could carry an approach (or stand without a
     // phase) are missing these keys entirely.
-    return raw.map(d => ({
+    return raw.map((d) => ({
       ...d,
       phase: d.phase ?? null,
       approachId: (d as { approachId?: string | null }).approachId ?? null,
@@ -615,7 +631,7 @@ export const detectorStorage = {
 
   getBySignal: (signalId: string): Detector[] => {
     const detectors = detectorStorage.getAll();
-    return detectors.filter(d => d.signalId === signalId);
+    return detectors.filter((d) => d.signalId === signalId);
   },
 
   save: (detector: InsertDetector): Detector => {
@@ -643,12 +659,12 @@ export const detectorStorage = {
   update: (id: string, updates: Partial<InsertDetector>): Detector | null => {
     // Prevent prototype pollution
     if (hasPrototypePollution(updates as Record<string, unknown>)) {
-      console.error('Attempted prototype pollution in detector update');
+      console.error("Attempted prototype pollution in detector update");
       return null;
     }
 
     const detectors = detectorStorage.getAll();
-    const index = detectors.findIndex(d => d.id === id);
+    const index = detectors.findIndex((d) => d.id === id);
 
     if (index === -1) return null;
 
@@ -660,20 +676,20 @@ export const detectorStorage = {
 
   delete: (id: string): void => {
     const detectors = detectorStorage.getAll();
-    const updatedDetectors = detectors.filter(d => d.id !== id);
+    const updatedDetectors = detectors.filter((d) => d.id !== id);
     saveToStorage(STORAGE_KEYS.DETECTORS, updatedDetectors);
   },
 
   deleteBySignal: (signalId: string): void => {
     const detectors = detectorStorage.getAll();
-    const updatedDetectors = detectors.filter(d => d.signalId !== signalId);
+    const updatedDetectors = detectors.filter((d) => d.signalId !== signalId);
     saveToStorage(STORAGE_KEYS.DETECTORS, updatedDetectors);
   },
 
   updateSignalId: (oldSignalId: string, newSignalId: string): void => {
     const detectors = detectorStorage.getAll();
-    const updatedDetectors = detectors.map(detector =>
-      detector.signalId === oldSignalId ? { ...detector, signalId: newSignalId } : detector
+    const updatedDetectors = detectors.map((detector) =>
+      detector.signalId === oldSignalId ? { ...detector, signalId: newSignalId } : detector,
     );
     saveToStorage(STORAGE_KEYS.DETECTORS, updatedDetectors);
   },
@@ -691,7 +707,7 @@ export const basicTimingStorage = {
 
   getBySignal: (signalId: string): BasicTiming[] => {
     const timings = basicTimingStorage.getAll();
-    return timings.filter(t => t.signalId === signalId);
+    return timings.filter((t) => t.signalId === signalId);
   },
 
   save: (timing: InsertBasicTiming): BasicTiming => {
@@ -718,12 +734,12 @@ export const basicTimingStorage = {
 
   update: (id: string, updates: Partial<InsertBasicTiming>): BasicTiming | null => {
     if (hasPrototypePollution(updates as Record<string, unknown>)) {
-      console.error('Attempted prototype pollution in basic timing update');
+      console.error("Attempted prototype pollution in basic timing update");
       return null;
     }
 
     const timings = basicTimingStorage.getAll();
-    const index = timings.findIndex(t => t.id === id);
+    const index = timings.findIndex((t) => t.id === id);
 
     if (index === -1) return null;
 
@@ -735,20 +751,20 @@ export const basicTimingStorage = {
 
   delete: (id: string): void => {
     const timings = basicTimingStorage.getAll();
-    const updatedTimings = timings.filter(t => t.id !== id);
+    const updatedTimings = timings.filter((t) => t.id !== id);
     saveToStorage(STORAGE_KEYS.BASIC_TIMINGS, updatedTimings);
   },
 
   deleteBySignal: (signalId: string): void => {
     const timings = basicTimingStorage.getAll();
-    const updatedTimings = timings.filter(t => t.signalId !== signalId);
+    const updatedTimings = timings.filter((t) => t.signalId !== signalId);
     saveToStorage(STORAGE_KEYS.BASIC_TIMINGS, updatedTimings);
   },
 
   updateSignalId: (oldSignalId: string, newSignalId: string): void => {
     const timings = basicTimingStorage.getAll();
-    const updatedTimings = timings.map(timing =>
-      timing.signalId === oldSignalId ? { ...timing, signalId: newSignalId } : timing
+    const updatedTimings = timings.map((timing) =>
+      timing.signalId === oldSignalId ? { ...timing, signalId: newSignalId } : timing,
     );
     saveToStorage(STORAGE_KEYS.BASIC_TIMINGS, updatedTimings);
   },
@@ -758,7 +774,7 @@ export const basicTimingStorage = {
   },
 };
 
-// Agency Defaults operations
+// Configuration operations
 export const agencyDefaultsStorage = {
   get: (): AgencyDefaults | null => {
     const stored = getFromStorage<AgencyDefaults | null>(STORAGE_KEYS.AGENCY_DEFAULTS, null);
@@ -767,7 +783,7 @@ export const agencyDefaultsStorage = {
     // anything unrecognized as page scrolling.
     return {
       ...stored,
-      mapScrollWheel: stored.mapScrollWheel === 'zoom' ? 'zoom' : 'page',
+      mapScrollWheel: stored.mapScrollWheel === "zoom" ? "zoom" : "page",
     };
   },
 
@@ -793,7 +809,7 @@ export const clearAllData = (): void => {
   phaseStorage.clear();
   detectorStorage.clear();
   basicTimingStorage.clear();
-  // Note: agency defaults are intentionally NOT cleared with clearAllData,
+  // Note: configurations are intentionally NOT cleared with clearAllData,
   // as they are a configuration preference, not signal data.
 };
 
@@ -811,7 +827,7 @@ export const exportData = () => {
 
 // Movement type encoding mapping
 const MOVEMENT_TYPE_MAP: { [key: string]: string } = {
-  "Through": "T",
+  Through: "T",
   "Left Turn": "L",
   "Left Protected-Permissive": "LPP",
   "Left Through Shared": "LT",
@@ -820,58 +836,62 @@ const MOVEMENT_TYPE_MAP: { [key: string]: string } = {
   "U-Turn": "U",
   "Right Turn": "R",
   "Through-Right": "TR",
-  "Pedestrian": "PED"
+  Pedestrian: "PED",
 };
 
 // Movement type reverse mapping for import
 const MOVEMENT_TYPE_REVERSE_MAP: { [key: string]: string } = {
-  "T": "Through",
-  "L": "Left Turn",
-  "LPP": "Left Protected-Permissive",
-  "LT": "Left Through Shared",
-  "TL": "Permissive Phase",
-  "FYA": "Flashing Yellow Arrow",
-  "U": "U-Turn",
-  "R": "Right Turn",
-  "TR": "Through-Right",
-  "PED": "Pedestrian"
+  T: "Through",
+  L: "Left Turn",
+  LPP: "Left Protected-Permissive",
+  LT: "Left Through Shared",
+  TL: "Permissive Phase",
+  FYA: "Flashing Yellow Arrow",
+  U: "U-Turn",
+  R: "Right Turn",
+  TR: "Through-Right",
+  PED: "Pedestrian",
 };
 
 // CSV export functions with sanitization to prevent formula injection
 export function generateAgencyCSV(agency: Agency | null): string {
-  if (!agency) return 'agency_id,agency_name,agency_url,agency_timezone,agency_email\n';
+  if (!agency) return "agency_id,agency_name,agency_url,agency_timezone,agency_email\n";
 
   return [
-    'agency_id,agency_name,agency_url,agency_timezone,agency_email',
-    `${sanitizeCSVField(agency.agencyId)},${sanitizeCSVField(agency.agencyName)},${sanitizeCSVField(agency.agencyUrl)},${sanitizeCSVField(agency.agencyTimezone)},${sanitizeCSVField(agency.agencyEmail)}`
-  ].join('\n');
+    "agency_id,agency_name,agency_url,agency_timezone,agency_email",
+    `${sanitizeCSVField(agency.agencyId)},${sanitizeCSVField(agency.agencyName)},${sanitizeCSVField(agency.agencyUrl)},${sanitizeCSVField(agency.agencyTimezone)},${sanitizeCSVField(agency.agencyEmail)}`,
+  ].join("\n");
 }
 
 // Generate a single agencies CSV containing multiple agency rows
 export function generateAgenciesCSV(agencies: Agency[]): string {
-  const header = 'agency_id,agency_name,agency_url,agency_timezone,agency_email';
-  if (!agencies || agencies.length === 0) return header + '\n';
-  const rows = agencies.map(a => `${sanitizeCSVField(a.agencyId)},${sanitizeCSVField(a.agencyName)},${sanitizeCSVField(a.agencyUrl)},${sanitizeCSVField(a.agencyTimezone)},${sanitizeCSVField(a.agencyEmail)}`);
-  return [header, ...rows].join('\n');
+  const header = "agency_id,agency_name,agency_url,agency_timezone,agency_email";
+  if (!agencies || agencies.length === 0) return header + "\n";
+  const rows = agencies.map(
+    (a) =>
+      `${sanitizeCSVField(a.agencyId)},${sanitizeCSVField(a.agencyName)},${sanitizeCSVField(a.agencyUrl)},${sanitizeCSVField(a.agencyTimezone)},${sanitizeCSVField(a.agencyEmail)}`,
+  );
+  return [header, ...rows].join("\n");
 }
 
 export function generateSignalsCSV(signals: Signal[]): string {
-  const headers = 'signal_id,agency_id,latitude,longitude';
+  const headers = "signal_id,agency_id,latitude,longitude";
 
-  if (signals.length === 0) return headers + '\n';
+  if (signals.length === 0) return headers + "\n";
 
-  const rows = signals.map(signal =>
-    `${sanitizeCSVField(signal.signalId)},${sanitizeCSVField(signal.agencyId)},${sanitizeCSVField(signal.latitude)},${sanitizeCSVField(signal.longitude)}`
+  const rows = signals.map(
+    (signal) =>
+      `${sanitizeCSVField(signal.signalId)},${sanitizeCSVField(signal.agencyId)},${sanitizeCSVField(signal.latitude)},${sanitizeCSVField(signal.longitude)}`,
   );
 
-  return [headers, ...rows].join('\n');
+  return [headers, ...rows].join("\n");
 }
 
 // New for GTSSv1.1
 export function generateApproachesCSV(approaches: Approach[]): string {
-  const headers = 'approach_id,signal_id,street_name,compass_bearing,posted_speed,free_right';
+  const headers = "approach_id,signal_id,street_name,compass_bearing,posted_speed,free_right";
 
-  if (approaches.length === 0) return headers + '\n';
+  if (approaches.length === 0) return headers + "\n";
 
   const sortedApproaches = [...approaches].sort((a, b) => {
     if (a.signalId !== b.signalId) return a.signalId.localeCompare(b.signalId);
@@ -882,16 +902,17 @@ export function generateApproachesCSV(approaches: Approach[]): string {
   // pedestrian crossing, 'FR-P-I' = improved (traffic-calmed) crossing. When
   // more than one free-right lane exists it is prefixed as '<n>-FR…'.
   const frLabel = (v: number | boolean | null | undefined, lanes: number | null | undefined) => {
-    const code = v === 3 ? 'FR-P-I' : v === 2 ? 'FR-P' : v === 1 || v === true ? 'FR' : '';
-    if (!code) return '';
-    const n = typeof lanes === 'number' && lanes > 1 ? lanes : 1;
+    const code = v === 3 ? "FR-P-I" : v === 2 ? "FR-P" : v === 1 || v === true ? "FR" : "";
+    if (!code) return "";
+    const n = typeof lanes === "number" && lanes > 1 ? lanes : 1;
     return n > 1 ? `${n}-${code}` : code;
   };
-  const rows = sortedApproaches.map(approach =>
-    `${sanitizeCSVField(approach.approachId)},${sanitizeCSVField(approach.signalId)},${sanitizeCSVField(approach.streetName)},${sanitizeCSVField(approach.compassBearing)},${sanitizeCSVField(approach.postedSpeed)},${frLabel(approach.freeRight, approach.freeRightLanes)}`
+  const rows = sortedApproaches.map(
+    (approach) =>
+      `${sanitizeCSVField(approach.approachId)},${sanitizeCSVField(approach.signalId)},${sanitizeCSVField(approach.streetName)},${sanitizeCSVField(approach.compassBearing)},${sanitizeCSVField(approach.postedSpeed)},${frLabel(approach.freeRight, approach.freeRightLanes)}`,
   );
 
-  return [headers, ...rows].join('\n');
+  return [headers, ...rows].join("\n");
 }
 
 // Crosswalk length code for phases.txt. Knowing the crosswalk distance is an
@@ -918,36 +939,37 @@ export function crosswalkLengthCode(
     return String(phase.crosswalkLength);
   }
 
-  const pedMode = typeof phase.isPedestrian === "number" ? phase.isPedestrian : (phase.isPedestrian ? 1 : 0);
-  if (pedMode === 0) return '';
+  const pedMode =
+    typeof phase.isPedestrian === "number" ? phase.isPedestrian : phase.isPedestrian ? 1 : 0;
+  if (pedMode === 0) return "";
 
   // LE — full street width at 12 ft per lane: the crossed leg's inbound
   // (approach) lanes plus its departure lanes.
   let laneEstimate: number | null = null;
   if (phase.approachId) {
-    const groupOf = (movementType: string): 'left' | 'right' | 'through' | 'ped' => {
+    const groupOf = (movementType: string): "left" | "right" | "through" | "ped" => {
       switch (movementType) {
-        case 'Left Turn':
-        case 'Left Protected-Permissive':
-        case 'Flashing Yellow Arrow':
-        case 'U-Turn':
-          return 'left';
-        case 'Right Turn':
-          return 'right';
-        case 'Pedestrian':
-          return 'ped';
+        case "Left Turn":
+        case "Left Protected-Permissive":
+        case "Flashing Yellow Arrow":
+        case "U-Turn":
+          return "left";
+        case "Right Turn":
+          return "right";
+        case "Pedestrian":
+          return "ped";
         default:
-          return 'through';
+          return "through";
       }
     };
 
     // Inbound lanes: max lanes per movement group on the approach, summed.
     const maxByGroup = { left: 0, right: 0, through: 0 };
     allPhases
-      .filter(p => p.signalId === phase.signalId && p.approachId === phase.approachId)
-      .forEach(p => {
+      .filter((p) => p.signalId === phase.signalId && p.approachId === phase.approachId)
+      .forEach((p) => {
         const g = groupOf(p.movementType);
-        if (g === 'ped') return;
+        if (g === "ped") return;
         maxByGroup[g] = Math.max(maxByGroup[g], p.numOfLanes || 1);
       });
     const inboundLanes = maxByGroup.left + maxByGroup.right + maxByGroup.through;
@@ -959,7 +981,7 @@ export function crosswalkLengthCode(
     // take the widest matching movement.
     let departureLanes = 0;
     const findApproach = (approachId: string | null) =>
-      approaches.find(a => a.approachId === approachId && a.signalId === phase.signalId);
+      approaches.find((a) => a.approachId === approachId && a.signalId === phase.signalId);
     const crossedLeg = findApproach(phase.approachId);
     if (crossedLeg?.compassBearing != null) {
       const outbound = (crossedLeg.compassBearing + 180) % 360;
@@ -968,26 +990,39 @@ export function crosswalkLengthCode(
         return Math.min(d, 360 - d);
       };
       allPhases
-        .filter(p => p.signalId === phase.signalId && p.approachId)
-        .forEach(p => {
+        .filter((p) => p.signalId === phase.signalId && p.approachId)
+        .forEach((p) => {
           const ap = findApproach(p.approachId);
           if (ap?.compassBearing == null) return;
           const b = ap.compassBearing;
           // Departure heading(s) for the movement, as compass bearings.
           const headings: number[] = [];
           switch (p.movementType) {
-            case 'Through': headings.push(b); break;
-            case 'Through-Right': headings.push(b, b + 90); break;
-            case 'Left Turn':
-            case 'Left Protected-Permissive':
-            case 'Flashing Yellow Arrow': headings.push(b - 90); break;
-            case 'Left Through Shared':
-            case 'Permissive Phase': headings.push(b, b - 90); break;
-            case 'Right Turn': headings.push(b + 90); break;
-            case 'U-Turn': headings.push(b + 180); break;
-            default: return; // Pedestrian
+            case "Through":
+              headings.push(b);
+              break;
+            case "Through-Right":
+              headings.push(b, b + 90);
+              break;
+            case "Left Turn":
+            case "Left Protected-Permissive":
+            case "Flashing Yellow Arrow":
+              headings.push(b - 90);
+              break;
+            case "Left Through Shared":
+            case "Permissive Phase":
+              headings.push(b, b - 90);
+              break;
+            case "Right Turn":
+              headings.push(b + 90);
+              break;
+            case "U-Turn":
+              headings.push(b + 180);
+              break;
+            default:
+              return; // Pedestrian
           }
-          if (headings.some(h => angDiff(h, outbound) <= 45)) {
+          if (headings.some((h) => angDiff(h, outbound) <= 45)) {
             departureLanes = Math.max(departureLanes, p.numOfLanes || 1);
           }
         });
@@ -999,7 +1034,7 @@ export function crosswalkLengthCode(
 
   // TE — from the phase's ped clearance interval at standard walking speed.
   let timeEstimate: number | null = null;
-  const timing = basicTimings.find(t => t.signalId === phase.signalId && t.phase === phase.phase);
+  const timing = basicTimings.find((t) => t.signalId === phase.signalId && t.phase === phase.phase);
   if (timing?.pedClearance && timing.pedClearance > 0) {
     timeEstimate = Math.round(timing.pedClearance * WALKING_SPEED_FPS);
   }
@@ -1009,17 +1044,21 @@ export function crosswalkLengthCode(
   }
   if (timeEstimate !== null) return `TE-${timeEstimate}`;
   if (laneEstimate !== null) return `LE-${laneEstimate}`;
-  return '';
+  return "";
 }
 
 // Updated for GTSSv1.1 - removed compass_bearing, posted_speed; added approach_id
-export function generatePhasesCSV(phases: Phase[], basicTimings: BasicTiming[] = [], approaches: Approach[] = []): string {
+export function generatePhasesCSV(
+  phases: Phase[],
+  basicTimings: BasicTiming[] = [],
+  approaches: Approach[] = [],
+): string {
   // PedX — Pedestrian Crossing mode (integer 0–7; legacy files may still
   // carry true/false or a pedestrian_phase_enabled header, both accepted on import).
   // crosswalk_length — LE-# / TE-# estimate or a measured value in feet.
-  const headers = 'phase,signal_id,movement_type,num_of_lanes,approach_id,PedX,crosswalk_length';
+  const headers = "phase,signal_id,movement_type,num_of_lanes,approach_id,PedX,crosswalk_length";
 
-  if (phases.length === 0) return headers + '\n';
+  if (phases.length === 0) return headers + "\n";
 
   // Sort phases by signal ID first, then by phase number
   const sortedPhases = [...phases].sort((a, b) => {
@@ -1029,59 +1068,65 @@ export function generatePhasesCSV(phases: Phase[], basicTimings: BasicTiming[] =
     return a.phase - b.phase;
   });
 
-  const rows = sortedPhases.map(phase => {
+  const rows = sortedPhases.map((phase) => {
     const encodedMovementType = MOVEMENT_TYPE_MAP[phase.movementType] || phase.movementType;
     // Pedestrian mode is now an integer 0–4 (see schema). Default Through phases
     // to 1 when the field is missing, so old exports stay readable.
     const pedMode =
       typeof phase.isPedestrian === "number"
         ? phase.isPedestrian
-        : (phase.movementType === "Through" ? 1 : 0);
+        : phase.movementType === "Through"
+          ? 1
+          : 0;
     const crosswalk = crosswalkLengthCode(phase, phases, basicTimings, approaches);
     return `${sanitizeCSVField(phase.phase)},${sanitizeCSVField(phase.signalId)},${sanitizeCSVField(encodedMovementType)},${sanitizeCSVField(phase.numOfLanes || 1)},${sanitizeCSVField(phase.approachId)},${sanitizeCSVField(pedMode)},${crosswalk}`;
   });
 
-  return [headers, ...rows].join('\n');
+  return [headers, ...rows].join("\n");
 }
 
 export function generateDetectionCSV(detectors: Detector[]): string {
   // approach_id is appended last so files written before it existed (10
   // columns) still import cleanly. phase is blank for detectors that serve no
   // signal phase, such as count detectors.
-  const headers = 'channel,signal_id,phase,description,purpose,vehicle_type,lane,technology_type,length,stopbar_setback_dist,approach_id';
+  const headers =
+    "channel,signal_id,phase,description,purpose,vehicle_type,lane,technology_type,length,stopbar_setback_dist,approach_id";
 
-  if (detectors.length === 0) return headers + '\n';
+  if (detectors.length === 0) return headers + "\n";
 
-  const rows = detectors.map(detector =>
-    `${sanitizeCSVField(detector.channel)},${sanitizeCSVField(detector.signalId)},${sanitizeCSVField(detector.phase ?? '')},${sanitizeCSVField(detector.description)},${sanitizeCSVField(detector.purpose)},${sanitizeCSVField(detector.vehicleType)},${sanitizeCSVField(detector.lane)},${sanitizeCSVField(detector.technologyType)},${sanitizeCSVField(detector.length)},${sanitizeCSVField(detector.stopbarSetbackDist)},${sanitizeCSVField(detector.approachId)}`
+  const rows = detectors.map(
+    (detector) =>
+      `${sanitizeCSVField(detector.channel)},${sanitizeCSVField(detector.signalId)},${sanitizeCSVField(detector.phase ?? "")},${sanitizeCSVField(detector.description)},${sanitizeCSVField(detector.purpose)},${sanitizeCSVField(detector.vehicleType)},${sanitizeCSVField(detector.lane)},${sanitizeCSVField(detector.technologyType)},${sanitizeCSVField(detector.length)},${sanitizeCSVField(detector.stopbarSetbackDist)},${sanitizeCSVField(detector.approachId)}`,
   );
 
-  return [headers, ...rows].join('\n');
+  return [headers, ...rows].join("\n");
 }
 
 // New for GTSSv1.1
 export function generateBasicTimingsCSV(timings: BasicTiming[]): string {
-  const headers = 'phase,signal_id,ped_walk,ped_clearance,leading_ped_interval,min_green,max_green,yellow,all_red,veh_recall_type,ped_recall';
+  const headers =
+    "phase,signal_id,ped_walk,ped_clearance,leading_ped_interval,min_green,max_green,yellow,all_red,veh_recall_type,ped_recall";
 
-  if (timings.length === 0) return headers + '\n';
+  if (timings.length === 0) return headers + "\n";
 
   const sortedTimings = [...timings].sort((a, b) => {
     if (a.signalId !== b.signalId) return a.signalId.localeCompare(b.signalId);
     return a.phase - b.phase;
   });
 
-  const rows = sortedTimings.map(t =>
-    `${sanitizeCSVField(t.phase)},${sanitizeCSVField(t.signalId)},${sanitizeCSVField(t.pedWalk)},${sanitizeCSVField(t.pedClearance)},${sanitizeCSVField(t.leadingPedInterval)},${sanitizeCSVField(t.minGreen)},${sanitizeCSVField(t.maxGreen)},${sanitizeCSVField(t.yellow)},${sanitizeCSVField(t.allRed)},${sanitizeCSVField(t.vehRecallType)},${sanitizeCSVField(t.pedRecall)}`
+  const rows = sortedTimings.map(
+    (t) =>
+      `${sanitizeCSVField(t.phase)},${sanitizeCSVField(t.signalId)},${sanitizeCSVField(t.pedWalk)},${sanitizeCSVField(t.pedClearance)},${sanitizeCSVField(t.leadingPedInterval)},${sanitizeCSVField(t.minGreen)},${sanitizeCSVField(t.maxGreen)},${sanitizeCSVField(t.yellow)},${sanitizeCSVField(t.allRed)},${sanitizeCSVField(t.vehRecallType)},${sanitizeCSVField(t.pedRecall)}`,
   );
 
-  return [headers, ...rows].join('\n');
+  return [headers, ...rows].join("\n");
 }
 
 // Download individual TXT files
 const downloadFile = (content: string, filename: string) => {
-  const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   link.href = url;
   link.download = filename;
   document.body.appendChild(link);
@@ -1099,8 +1144,15 @@ export const exportAsIndividualFiles = async (
     phases: boolean;
     detection: boolean;
     basicTimings: boolean;
-  } = { agency: true, signals: true, approaches: true, phases: true, detection: true, basicTimings: true },
-  agencyIds: string[] | null = null
+  } = {
+    agency: true,
+    signals: true,
+    approaches: true,
+    phases: true,
+    detection: true,
+    basicTimings: true,
+  },
+  agencyIds: string[] | null = null,
 ): Promise<void> => {
   try {
     const data = exportData();
@@ -1108,48 +1160,52 @@ export const exportAsIndividualFiles = async (
     // If agencyIds provided, filter data to only include those agencies' data
     let filteredAgencies = agencyListStorage.getAll();
     if (agencyIds && agencyIds.length > 0) {
-      filteredAgencies = filteredAgencies.filter(a => agencyIds!.includes(a.id));
+      filteredAgencies = filteredAgencies.filter((a) => agencyIds!.includes(a.id));
     }
-    const allowedAgencyIds = filteredAgencies.map(a => a.agencyId);
-    const filteredSignals = data.signals.filter(s => allowedAgencyIds.includes(s.agencyId));
-    const filteredSignalIds = filteredSignals.map(s => s.signalId);
-    const filteredApproaches = data.approaches.filter(ap => filteredSignalIds.includes(ap.signalId));
-    const filteredPhases = data.phases.filter(ph => filteredSignalIds.includes(ph.signalId));
-    const filteredDetectors = data.detectors.filter(d => filteredSignalIds.includes(d.signalId));
-    const filteredBasicTimings = data.basicTimings.filter(bt => filteredSignalIds.includes(bt.signalId));
+    const allowedAgencyIds = filteredAgencies.map((a) => a.agencyId);
+    const filteredSignals = data.signals.filter((s) => allowedAgencyIds.includes(s.agencyId));
+    const filteredSignalIds = filteredSignals.map((s) => s.signalId);
+    const filteredApproaches = data.approaches.filter((ap) =>
+      filteredSignalIds.includes(ap.signalId),
+    );
+    const filteredPhases = data.phases.filter((ph) => filteredSignalIds.includes(ph.signalId));
+    const filteredDetectors = data.detectors.filter((d) => filteredSignalIds.includes(d.signalId));
+    const filteredBasicTimings = data.basicTimings.filter((bt) =>
+      filteredSignalIds.includes(bt.signalId),
+    );
 
     if (includeFiles.agency) {
       // Download a single agency.txt containing all selected agencies
       const agenciesCSV = generateAgenciesCSV(filteredAgencies as Agency[]);
-      downloadFile(agenciesCSV, 'agency.txt');
+      downloadFile(agenciesCSV, "agency.txt");
     }
 
     if (includeFiles.signals) {
       const signalsCSV = generateSignalsCSV(filteredSignals);
-      downloadFile(signalsCSV, 'signals.txt');
+      downloadFile(signalsCSV, "signals.txt");
     }
 
     if (includeFiles.approaches) {
       const approachesCSV = generateApproachesCSV(filteredApproaches);
-      downloadFile(approachesCSV, 'approaches.txt');
+      downloadFile(approachesCSV, "approaches.txt");
     }
 
     if (includeFiles.phases) {
       const phasesCSV = generatePhasesCSV(filteredPhases);
-      downloadFile(phasesCSV, 'phases.txt');
+      downloadFile(phasesCSV, "phases.txt");
     }
 
     if (includeFiles.detection) {
       const detectionCSV = generateDetectionCSV(filteredDetectors);
-      downloadFile(detectionCSV, 'detectors.txt');
+      downloadFile(detectionCSV, "detectors.txt");
     }
 
     if (includeFiles.basicTimings) {
       const basicTimingsCSV = generateBasicTimingsCSV(filteredBasicTimings);
-      downloadFile(basicTimingsCSV, 'basic_timings.txt');
+      downloadFile(basicTimingsCSV, "basic_timings.txt");
     }
   } catch (error) {
-    console.error('Export failed:', error);
+    console.error("Export failed:", error);
     throw error;
   }
 };
@@ -1163,12 +1219,19 @@ export const exportAsZip = async (
     phases: boolean;
     detection: boolean;
     basicTimings: boolean;
-  } = { agency: true, signals: true, approaches: true, phases: true, detection: true, basicTimings: true },
-  agencyIds: string[] | null = null
+  } = {
+    agency: true,
+    signals: true,
+    approaches: true,
+    phases: true,
+    detection: true,
+    basicTimings: true,
+  },
+  agencyIds: string[] | null = null,
 ): Promise<void> => {
   try {
     // Dynamically import JSZip
-    const JSZip = (await import('jszip')).default;
+    const JSZip = (await import("jszip")).default;
     const zip = new JSZip();
 
     const data = exportData();
@@ -1176,59 +1239,63 @@ export const exportAsZip = async (
     // If agencyIds provided, filter data to only include those agencies' data
     let filteredAgencies = agencyListStorage.getAll();
     if (agencyIds && agencyIds.length > 0) {
-      filteredAgencies = filteredAgencies.filter(a => agencyIds!.includes(a.id));
+      filteredAgencies = filteredAgencies.filter((a) => agencyIds!.includes(a.id));
     }
-    const allowedAgencyIds = filteredAgencies.map(a => a.agencyId);
-    const filteredSignals = data.signals.filter(s => allowedAgencyIds.includes(s.agencyId));
-    const filteredSignalIds = filteredSignals.map(s => s.signalId);
-    const filteredApproaches = data.approaches.filter(ap => filteredSignalIds.includes(ap.signalId));
-    const filteredPhases = data.phases.filter(ph => filteredSignalIds.includes(ph.signalId));
-    const filteredDetectors = data.detectors.filter(d => filteredSignalIds.includes(d.signalId));
-    const filteredBasicTimings = data.basicTimings.filter(bt => filteredSignalIds.includes(bt.signalId));
+    const allowedAgencyIds = filteredAgencies.map((a) => a.agencyId);
+    const filteredSignals = data.signals.filter((s) => allowedAgencyIds.includes(s.agencyId));
+    const filteredSignalIds = filteredSignals.map((s) => s.signalId);
+    const filteredApproaches = data.approaches.filter((ap) =>
+      filteredSignalIds.includes(ap.signalId),
+    );
+    const filteredPhases = data.phases.filter((ph) => filteredSignalIds.includes(ph.signalId));
+    const filteredDetectors = data.detectors.filter((d) => filteredSignalIds.includes(d.signalId));
+    const filteredBasicTimings = data.basicTimings.filter((bt) =>
+      filteredSignalIds.includes(bt.signalId),
+    );
 
     if (includeFiles.agency) {
       // Add a single agency.txt containing all selected agencies
       const agenciesCSV = generateAgenciesCSV(filteredAgencies as Agency[]);
-      zip.file('agency.txt', agenciesCSV);
+      zip.file("agency.txt", agenciesCSV);
     }
 
     if (includeFiles.signals) {
       const signalsCSV = generateSignalsCSV(filteredSignals);
-      zip.file('signals.txt', signalsCSV);
+      zip.file("signals.txt", signalsCSV);
     }
 
     if (includeFiles.approaches) {
       const approachesCSV = generateApproachesCSV(filteredApproaches);
-      zip.file('approaches.txt', approachesCSV);
+      zip.file("approaches.txt", approachesCSV);
     }
 
     if (includeFiles.phases) {
       const phasesCSV = generatePhasesCSV(filteredPhases);
-      zip.file('phases.txt', phasesCSV);
+      zip.file("phases.txt", phasesCSV);
     }
 
     if (includeFiles.detection) {
       const detectionCSV = generateDetectionCSV(filteredDetectors);
-      zip.file('detectors.txt', detectionCSV);
+      zip.file("detectors.txt", detectionCSV);
     }
 
     if (includeFiles.basicTimings) {
       const basicTimingsCSV = generateBasicTimingsCSV(filteredBasicTimings);
-      zip.file('basic_timings.txt', basicTimingsCSV);
+      zip.file("basic_timings.txt", basicTimingsCSV);
     }
 
     // Generate ZIP file and download
-    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const zipBlob = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(zipBlob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = `gtss-export-${new Date().toISOString().split('T')[0]}.zip`;
+    link.download = `gtss-export-${new Date().toISOString().split("T")[0]}.zip`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   } catch (error) {
-    console.error('Export failed:', error);
+    console.error("Export failed:", error);
     throw error;
   }
 };
@@ -1236,9 +1303,12 @@ export const exportAsZip = async (
 // Parse agency.txt file
 // Parse agencies.txt file with potentially multiple agency rows
 export function parseAgenciesTXT(content: string): Agency[] {
-  const lines = content.trim().split('\n').filter(line => line.trim());
+  const lines = content
+    .trim()
+    .split("\n")
+    .filter((line) => line.trim());
   if (lines.length < 2) {
-    throw new Error('Agency file must contain header and at least one data row');
+    throw new Error("Agency file must contain header and at least one data row");
   }
 
   const agencies: Agency[] = [];
@@ -1246,7 +1316,9 @@ export function parseAgenciesTXT(content: string): Agency[] {
     const values = parseCSVLine(lines[i]);
 
     if (values.length < 5) {
-      throw new Error(`Row ${i + 1}: Agency data must have at least 5 fields: agencyId, agencyName, agencyUrl, agencyTimezone, agencyEmail`);
+      throw new Error(
+        `Row ${i + 1}: Agency data must have at least 5 fields: agencyId, agencyName, agencyUrl, agencyTimezone, agencyEmail`,
+      );
     }
 
     if (!values[0]) throw new Error(`Row ${i + 1}: Agency ID is required`);
@@ -1266,7 +1338,7 @@ export function parseAgenciesTXT(content: string): Agency[] {
     });
   }
 
-  if (agencies.length === 0) throw new Error('No valid agencies found in file');
+  if (agencies.length === 0) throw new Error("No valid agencies found in file");
   return agencies;
 }
 
@@ -1279,9 +1351,12 @@ export function parseAgencyTXT(content: string): Agency | null {
 // Parse signals.txt file
 // Format: signal_id,agency_id,latitude,longitude
 export function parseSignalsTXT(content: string): Signal[] {
-  const lines = content.trim().split('\n').filter(line => line.trim());
+  const lines = content
+    .trim()
+    .split("\n")
+    .filter((line) => line.trim());
   if (lines.length < 1) {
-    throw new Error('Signals file must contain header');
+    throw new Error("Signals file must contain header");
   }
 
   const signals: Signal[] = [];
@@ -1331,11 +1406,11 @@ export function parseSignalsTXT(content: string): Signal[] {
   }
 
   if (errors.length > 0) {
-    throw new Error(`Signals validation errors:\n${errors.join('\n')}`);
+    throw new Error(`Signals validation errors:\n${errors.join("\n")}`);
   }
 
   if (signals.length === 0 && lines.length > 1) {
-    throw new Error('No valid signals found in file');
+    throw new Error("No valid signals found in file");
   }
 
   return signals;
@@ -1343,9 +1418,12 @@ export function parseSignalsTXT(content: string): Signal[] {
 
 // Parse approaches.txt file - new for GTSSv1.1
 export function parseApproachesTXT(content: string): Approach[] {
-  const lines = content.trim().split('\n').filter(line => line.trim());
+  const lines = content
+    .trim()
+    .split("\n")
+    .filter((line) => line.trim());
   if (lines.length < 1) {
-    throw new Error('Approaches file must contain header');
+    throw new Error("Approaches file must contain header");
   }
 
   const approaches: Approach[] = [];
@@ -1355,7 +1433,9 @@ export function parseApproachesTXT(content: string): Approach[] {
     const values = parseCSVLine(lines[i]);
 
     if (values.length < 5) {
-      errors.push(`Row ${i + 1}: Must have at least 5 fields (approachId, signalId, streetName, compassBearing, postedSpeed[, freeRight])`);
+      errors.push(
+        `Row ${i + 1}: Must have at least 5 fields (approachId, signalId, streetName, compassBearing, postedSpeed[, freeRight])`,
+      );
       continue;
     }
 
@@ -1373,18 +1453,22 @@ export function parseApproachesTXT(content: string): Approach[] {
     }
 
     let compassBearing: number | null = null;
-    if (values[3] && values[3].trim() !== '') {
+    if (values[3] && values[3].trim() !== "") {
       if (!isValidInteger(values[3])) {
-        errors.push(`Row ${i + 1}: Compass bearing must be a valid integer or empty, got "${values[3]}"`);
+        errors.push(
+          `Row ${i + 1}: Compass bearing must be a valid integer or empty, got "${values[3]}"`,
+        );
         continue;
       }
       compassBearing = Number(values[3]);
     }
 
     let postedSpeed: number | null = null;
-    if (values[4] && values[4].trim() !== '') {
+    if (values[4] && values[4].trim() !== "") {
       if (!isValidInteger(values[4])) {
-        errors.push(`Row ${i + 1}: Posted speed must be a valid integer or empty, got "${values[4]}"`);
+        errors.push(
+          `Row ${i + 1}: Posted speed must be a valid integer or empty, got "${values[4]}"`,
+        );
         continue;
       }
       postedSpeed = Number(values[4]);
@@ -1399,7 +1483,7 @@ export function parseApproachesTXT(content: string): Approach[] {
     // Legacy 5-field rows default to 0 with 1 lane.
     let freeRight = 0;
     let freeRightLanes = 1;
-    if (values.length > 5 && values[5].trim() !== '') {
+    if (values.length > 5 && values[5].trim() !== "") {
       let raw = values[5].trim().toLowerCase();
       // Strip an optional "<n>-" lane-count prefix.
       const laneMatch = raw.match(/^(\d+)\s*-\s*(fr.*)$/);
@@ -1408,12 +1492,14 @@ export function parseApproachesTXT(content: string): Approach[] {
         if (n >= 1) freeRightLanes = n;
         raw = laneMatch[2];
       }
-      if (raw === 'false' || raw === '0') freeRight = 0;
-      else if (raw === 'fr' || raw === 'true' || raw === '1') freeRight = 1;
-      else if (raw === 'fr-p' || raw === 'frp' || raw === '2') freeRight = 2;
-      else if (raw === 'fr-p-i' || raw === 'frpi' || raw === '3') freeRight = 3;
+      if (raw === "false" || raw === "0") freeRight = 0;
+      else if (raw === "fr" || raw === "true" || raw === "1") freeRight = 1;
+      else if (raw === "fr-p" || raw === "frp" || raw === "2") freeRight = 2;
+      else if (raw === "fr-p-i" || raw === "frpi" || raw === "3") freeRight = 3;
       else {
-        errors.push(`Row ${i + 1}: Free right must be "FR", "FR-P", "FR-P-I" (optionally "<n>-" prefixed), or empty, got "${values[5]}"`);
+        errors.push(
+          `Row ${i + 1}: Free right must be "FR", "FR-P", "FR-P-I" (optionally "<n>-" prefixed), or empty, got "${values[5]}"`,
+        );
         continue;
       }
     }
@@ -1431,11 +1517,11 @@ export function parseApproachesTXT(content: string): Approach[] {
   }
 
   if (errors.length > 0) {
-    throw new Error(`Approaches validation errors:\n${errors.join('\n')}`);
+    throw new Error(`Approaches validation errors:\n${errors.join("\n")}`);
   }
 
   if (approaches.length === 0 && lines.length > 1) {
-    throw new Error('No valid approaches found in file');
+    throw new Error("No valid approaches found in file");
   }
 
   return approaches;
@@ -1443,9 +1529,12 @@ export function parseApproachesTXT(content: string): Approach[] {
 
 // Parse phases.txt file - updated for GTSSv1.1
 export function parsePhasesTXT(content: string): Phase[] {
-  const lines = content.trim().split('\n').filter(line => line.trim());
+  const lines = content
+    .trim()
+    .split("\n")
+    .filter((line) => line.trim());
   if (lines.length < 1) {
-    throw new Error('Phases file must contain header');
+    throw new Error("Phases file must contain header");
   }
 
   const phases: Phase[] = [];
@@ -1454,8 +1543,8 @@ export function parsePhasesTXT(content: string): Phase[] {
   // The overlap column was removed from the format. Older exports still carry
   // an is_overlap column between approach_id and the pedestrian mode — sniff
   // the header and drop that column so both layouts import cleanly.
-  const headerCols = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
-  const overlapIdx = headerCols.findIndex(h => h.includes('overlap'));
+  const headerCols = parseCSVLine(lines[0]).map((h) => h.trim().toLowerCase());
+  const overlapIdx = headerCols.findIndex((h) => h.includes("overlap"));
 
   for (let i = 1; i < lines.length; i++) {
     // Use proper CSV parser to handle quoted fields
@@ -1465,7 +1554,9 @@ export function parsePhasesTXT(content: string): Phase[] {
     }
 
     if (values.length < 5) {
-      errors.push(`Row ${i + 1}: Must have at least 5 fields (phase, signalId, movementType, numOfLanes, approachId)`);
+      errors.push(
+        `Row ${i + 1}: Must have at least 5 fields (phase, signalId, movementType, numOfLanes, approachId)`,
+      );
       continue;
     }
 
@@ -1500,34 +1591,45 @@ export function parsePhasesTXT(content: string): Phase[] {
     // Validate movement type is recognized - reject unrecognized types
     if (!MOVEMENT_TYPE_REVERSE_MAP[encodedMovement]) {
       // If it's not a known code, verify it's a valid full movement type name
-      const validTypes = ["Through", "Left Turn", "Left Protected-Permissive", "Left Through Shared", "Permissive Phase", "Flashing Yellow Arrow", "U-Turn", "Right Turn", "Through-Right", "Pedestrian"];
+      const validTypes = [
+        "Through",
+        "Left Turn",
+        "Left Protected-Permissive",
+        "Left Through Shared",
+        "Permissive Phase",
+        "Flashing Yellow Arrow",
+        "U-Turn",
+        "Right Turn",
+        "Through-Right",
+        "Pedestrian",
+      ];
       if (!validTypes.includes(encodedMovement)) {
-        errors.push(`Row ${i + 1}: Movement type "${encodedMovement}" is not recognized. Expected codes: T, L, LT, TL, FYA, U, R, TR, PED or full names.`);
+        errors.push(
+          `Row ${i + 1}: Movement type "${encodedMovement}" is not recognized. Expected codes: T, L, LT, TL, FYA, U, R, TR, PED or full names.`,
+        );
         continue;
       }
     }
 
     // Parse optional approach_id field
-    const approachId = values[4] && values[4].trim() !== '' ? values[4] : null;
+    const approachId = values[4] && values[4].trim() !== "" ? values[4] : null;
 
     // Pedestrian mode: integer 0–7. Accept legacy "true"/"false" too:
     //   true  → 1 (crosswalk on assigned approach)
     //   false → 0 (none)
-    let pedestrianMode = movementType === "Pedestrian"
-      ? 6
-      : movementType === "Through"
-        ? 1
-        : 0;
-    if (values.length > 5 && values[5].trim() !== '') {
+    let pedestrianMode = movementType === "Pedestrian" ? 6 : movementType === "Through" ? 1 : 0;
+    if (values.length > 5 && values[5].trim() !== "") {
       const raw = values[5].trim().toLowerCase();
-      if (raw === 'true') pedestrianMode = 1;
-      else if (raw === 'false') pedestrianMode = 0;
+      if (raw === "true") pedestrianMode = 1;
+      else if (raw === "false") pedestrianMode = 0;
       else {
         const n = parseInt(raw, 10);
         if (Number.isInteger(n) && n >= 0 && n <= 7) {
           pedestrianMode = n;
         } else {
-          errors.push(`Row ${i + 1}: Pedestrian mode must be 0–7 (or legacy "true"/"false"), got "${values[5]}"`);
+          errors.push(
+            `Row ${i + 1}: Pedestrian mode must be 0–7 (or legacy "true"/"false"), got "${values[5]}"`,
+          );
           continue;
         }
       }
@@ -1537,14 +1639,16 @@ export function parsePhasesTXT(content: string): Phase[] {
     //   LE-# / TE-# → lane/time estimates; recomputed on export, so not stored
     //   plain number → measured distance in feet (stored; overrides estimates)
     let crosswalkLength: number | null = null;
-    if (values.length > 6 && values[6].trim() !== '') {
+    if (values.length > 6 && values[6].trim() !== "") {
       const raw = values[6].trim().toLowerCase();
-      if (raw.startsWith('le-') || raw.startsWith('te-')) {
+      if (raw.startsWith("le-") || raw.startsWith("te-")) {
         // Estimated value — derived data, nothing to store.
       } else if (isValidInteger(values[6]) && Number(values[6]) > 0) {
         crosswalkLength = Number(values[6]);
       } else {
-        errors.push(`Row ${i + 1}: Crosswalk length must be "LE-#", "TE-#", or a positive number of feet, got "${values[6]}"`);
+        errors.push(
+          `Row ${i + 1}: Crosswalk length must be "LE-#", "TE-#", or a positive number of feet, got "${values[6]}"`,
+        );
         continue;
       }
     }
@@ -1562,11 +1666,11 @@ export function parsePhasesTXT(content: string): Phase[] {
   }
 
   if (errors.length > 0) {
-    throw new Error(`Phases validation errors:\n${errors.join('\n')}`);
+    throw new Error(`Phases validation errors:\n${errors.join("\n")}`);
   }
 
-  if (phases.length === 0  && lines.length > 1) {
-    throw new Error('No valid phases found in file');
+  if (phases.length === 0 && lines.length > 1) {
+    throw new Error("No valid phases found in file");
   }
 
   return phases;
@@ -1574,9 +1678,12 @@ export function parsePhasesTXT(content: string): Phase[] {
 
 // Parse detectors.txt file
 export function parseDetectorsTXT(content: string): Detector[] {
-  const lines = content.trim().split('\n').filter(line => line.trim());
+  const lines = content
+    .trim()
+    .split("\n")
+    .filter((line) => line.trim());
   if (lines.length < 1) {
-    throw new Error('Detectors file must contain header');
+    throw new Error("Detectors file must contain header");
   }
 
   const detectors: Detector[] = [];
@@ -1588,7 +1695,9 @@ export function parseDetectorsTXT(content: string): Detector[] {
 
     // approach_id (column 11) was added later, so a 10-field row is still valid.
     if (values.length < 10) {
-      errors.push(`Row ${i + 1}: Must have at least 10 fields (channel, signalId, phase, description, purpose, vehicleType, lane, technologyType, length, stopbarSetbackDist[, approachId])`);
+      errors.push(
+        `Row ${i + 1}: Must have at least 10 fields (channel, signalId, phase, description, purpose, vehicleType, lane, technologyType, length, stopbarSetbackDist[, approachId])`,
+      );
       continue;
     }
 
@@ -1605,8 +1714,8 @@ export function parseDetectorsTXT(content: string): Detector[] {
 
     // Phase is optional — a blank column means the detector serves no signal
     // phase (count detectors are located by approach and distance instead).
-    const phaseRaw = (values[2] ?? '').trim();
-    if (phaseRaw !== '' && !isValidInteger(phaseRaw)) {
+    const phaseRaw = (values[2] ?? "").trim();
+    if (phaseRaw !== "" && !isValidInteger(phaseRaw)) {
       errors.push(`Row ${i + 1}: Phase must be a valid integer or empty, got "${values[2]}"`);
       continue;
     }
@@ -1621,13 +1730,13 @@ export function parseDetectorsTXT(content: string): Detector[] {
       continue;
     }
 
-    const phase = phaseRaw === '' ? null : Number(phaseRaw);
+    const phase = phaseRaw === "" ? null : Number(phaseRaw);
 
     // Parse optional numeric fields using safer validation
     let length: number | null = null;
     let stopbarSetbackDist: number | null = null;
 
-    if (values[8] && values[8].trim() !== '') {
+    if (values[8] && values[8].trim() !== "") {
       if (!isValidNumber(values[8])) {
         errors.push(`Row ${i + 1}: Length must be a valid number or empty, got "${values[8]}"`);
         continue;
@@ -1635,9 +1744,11 @@ export function parseDetectorsTXT(content: string): Detector[] {
       length = Number(values[8]);
     }
 
-    if (values[9] && values[9].trim() !== '') {
+    if (values[9] && values[9].trim() !== "") {
       if (!isValidNumber(values[9])) {
-        errors.push(`Row ${i + 1}: Stopbar setback distance must be a valid number or empty, got "${values[9]}"`);
+        errors.push(
+          `Row ${i + 1}: Stopbar setback distance must be a valid number or empty, got "${values[9]}"`,
+        );
         continue;
       }
       stopbarSetbackDist = Number(values[9]);
@@ -1655,16 +1766,16 @@ export function parseDetectorsTXT(content: string): Detector[] {
       technologyType: values[7],
       length,
       stopbarSetbackDist,
-      approachId: (values[10] ?? '').trim() || null,
+      approachId: (values[10] ?? "").trim() || null,
     });
   }
 
   if (errors.length > 0) {
-    throw new Error(`Detectors validation errors:\n${errors.join('\n')}`);
+    throw new Error(`Detectors validation errors:\n${errors.join("\n")}`);
   }
 
-  if (detectors.length === 0  && lines.length > 1) {
-    throw new Error('No valid detectors found in file');
+  if (detectors.length === 0 && lines.length > 1) {
+    throw new Error("No valid detectors found in file");
   }
 
   return detectors;
@@ -1672,9 +1783,12 @@ export function parseDetectorsTXT(content: string): Detector[] {
 
 // Parse basic_timings.txt file - new for GTSSv1.1
 export function parseBasicTimingsTXT(content: string): BasicTiming[] {
-  const lines = content.trim().split('\n').filter(line => line.trim());
+  const lines = content
+    .trim()
+    .split("\n")
+    .filter((line) => line.trim());
   if (lines.length < 1) {
-    throw new Error('Basic timings file must contain header');
+    throw new Error("Basic timings file must contain header");
   }
 
   const timings: BasicTiming[] = [];
@@ -1684,7 +1798,9 @@ export function parseBasicTimingsTXT(content: string): BasicTiming[] {
     const values = parseCSVLine(lines[i]);
 
     if (values.length < 11) {
-      errors.push(`Row ${i + 1}: Must have 11 fields (phase, signalId, pedWalk, pedClearance, leadingPedInterval, minGreen, maxGreen, yellow, allRed, vehRecallType, pedRecall)`);
+      errors.push(
+        `Row ${i + 1}: Must have 11 fields (phase, signalId, pedWalk, pedClearance, leadingPedInterval, minGreen, maxGreen, yellow, allRed, vehRecallType, pedRecall)`,
+      );
       continue;
     }
 
@@ -1701,36 +1817,49 @@ export function parseBasicTimingsTXT(content: string): BasicTiming[] {
     const phase = Number(values[0]);
 
     // Parse optional numeric fields
-    const parseOptionalNumber = (val: string, fieldName: string, rowNum: number): number | null | 'error' => {
-      if (!val || val.trim() === '') return null;
+    const parseOptionalNumber = (
+      val: string,
+      fieldName: string,
+      rowNum: number,
+    ): number | null | "error" => {
+      if (!val || val.trim() === "") return null;
       if (!isValidNumber(val)) {
         errors.push(`Row ${rowNum}: ${fieldName} must be a valid number or empty, got "${val}"`);
-        return 'error';
+        return "error";
       }
       return Number(val);
     };
 
-    const pedWalk = parseOptionalNumber(values[2], 'Ped walk', i + 1);
-    const pedClearance = parseOptionalNumber(values[3], 'Ped clearance', i + 1);
-    const leadingPedInterval = parseOptionalNumber(values[4], 'Leading ped interval', i + 1);
-    const minGreen = parseOptionalNumber(values[5], 'Min green', i + 1);
-    const maxGreen = parseOptionalNumber(values[6], 'Max green', i + 1);
-    const yellow = parseOptionalNumber(values[7], 'Yellow', i + 1);
-    const allRed = parseOptionalNumber(values[8], 'All red', i + 1);
+    const pedWalk = parseOptionalNumber(values[2], "Ped walk", i + 1);
+    const pedClearance = parseOptionalNumber(values[3], "Ped clearance", i + 1);
+    const leadingPedInterval = parseOptionalNumber(values[4], "Leading ped interval", i + 1);
+    const minGreen = parseOptionalNumber(values[5], "Min green", i + 1);
+    const maxGreen = parseOptionalNumber(values[6], "Max green", i + 1);
+    const yellow = parseOptionalNumber(values[7], "Yellow", i + 1);
+    const allRed = parseOptionalNumber(values[8], "All red", i + 1);
 
-    if (pedWalk === 'error' || pedClearance === 'error' || leadingPedInterval === 'error' ||
-      minGreen === 'error' || maxGreen === 'error' || yellow === 'error' || allRed === 'error') {
+    if (
+      pedWalk === "error" ||
+      pedClearance === "error" ||
+      leadingPedInterval === "error" ||
+      minGreen === "error" ||
+      maxGreen === "error" ||
+      yellow === "error" ||
+      allRed === "error"
+    ) {
       continue;
     }
 
-    const vehRecallType = values[9] || 'None';
-    if (!['None', 'Min', 'Max', 'Soft'].includes(vehRecallType)) {
-      errors.push(`Row ${i + 1}: veh_recall_type must be None, Min, Max, or Soft, got "${vehRecallType}"`);
+    const vehRecallType = values[9] || "None";
+    if (!["None", "Min", "Max", "Soft"].includes(vehRecallType)) {
+      errors.push(
+        `Row ${i + 1}: veh_recall_type must be None, Min, Max, or Soft, got "${vehRecallType}"`,
+      );
       continue;
     }
 
-    const pedRecallStr = values[10]?.toLowerCase() || 'false';
-    if (pedRecallStr !== 'true' && pedRecallStr !== 'false') {
+    const pedRecallStr = values[10]?.toLowerCase() || "false";
+    if (pedRecallStr !== "true" && pedRecallStr !== "false") {
       errors.push(`Row ${i + 1}: ped_recall must be true or false, got "${values[10]}"`);
       continue;
     }
@@ -1747,16 +1876,16 @@ export function parseBasicTimingsTXT(content: string): BasicTiming[] {
       yellow: yellow as number | null,
       allRed: allRed as number | null,
       vehRecallType,
-      pedRecall: pedRecallStr === 'true',
+      pedRecall: pedRecallStr === "true",
     });
   }
 
   if (errors.length > 0) {
-    throw new Error(`Basic timings validation errors:\n${errors.join('\n')}`);
+    throw new Error(`Basic timings validation errors:\n${errors.join("\n")}`);
   }
 
   if (timings.length === 0 && lines.length > 1) {
-    throw new Error('No valid basic timings found in file');
+    throw new Error("No valid basic timings found in file");
   }
 
   return timings;
@@ -1772,9 +1901,9 @@ export function importData(
     detectors?: Detector[];
     basicTimings?: BasicTiming[];
   },
-  mode: 'replace' | 'merge' = 'replace'
+  mode: "replace" | "merge" = "replace",
 ): void {
-  if (mode === 'replace') {
+  if (mode === "replace") {
     // Replace all data
     if (parsedData.agency !== undefined) {
       if (parsedData.agency === null) {
@@ -1787,13 +1916,13 @@ export function importData(
         }
       } else if (Array.isArray(parsedData.agency)) {
         // Ensure each imported agency has an `id` (legacy imports may lack it)
-        const agencies = parsedData.agency.map(a => ({ ...(a as Agency), id: (a as any).id ?? nanoid() }));
+        const agencies = parsedData.agency.map((a) => ({ ...(a as Agency), id: a.id ?? nanoid() }));
         saveToStorage(STORAGE_KEYS.AGENCY, agencies);
 
         // Set default to first agency if none set or if the current default would be invalid
         try {
           const curDefault = localStorage.getItem(STORAGE_KEYS.DEFAULT_AGENCY);
-          if (!curDefault || !agencies.some(x => x.id === curDefault)) {
+          if (!curDefault || !agencies.some((x) => x.id === curDefault)) {
             if (agencies.length > 0) {
               localStorage.setItem(STORAGE_KEYS.DEFAULT_AGENCY, agencies[0].id);
             } else {
@@ -1806,7 +1935,7 @@ export function importData(
       } else {
         // single agency -> store as array for modern shape and set as default
         const a = parsedData.agency as Agency;
-        const stored = { ...a, id: (a as any).id ?? nanoid() };
+        const stored = { ...a, id: a.id ?? nanoid() };
         saveToStorage(STORAGE_KEYS.AGENCY, [stored]);
         try {
           localStorage.setItem(STORAGE_KEYS.DEFAULT_AGENCY, stored.id);
@@ -1841,7 +1970,7 @@ export function importData(
       const existing = agencyListStorage.getAll();
       const incoming = Array.isArray(parsedData.agency) ? parsedData.agency : [parsedData.agency];
       for (const a of incoming) {
-        const idx = existing.findIndex(e => e.agencyId === a.agencyId);
+        const idx = existing.findIndex((e) => e.agencyId === a.agencyId);
         if (idx !== -1) {
           // Preserve existing id but update fields
           existing[idx] = { ...existing[idx], ...a, id: existing[idx].id } as Agency;
@@ -1855,7 +1984,7 @@ export function importData(
       // If missing or invalid, set it to the first merged agency (or remove it when none).
       try {
         const curDefault = localStorage.getItem(STORAGE_KEYS.DEFAULT_AGENCY);
-        if (!curDefault || !existing.some(x => x.id === curDefault)) {
+        if (!curDefault || !existing.some((x) => x.id === curDefault)) {
           if (existing.length > 0) {
             localStorage.setItem(STORAGE_KEYS.DEFAULT_AGENCY, existing[0].id);
           } else {
@@ -1869,36 +1998,44 @@ export function importData(
 
     if (parsedData.signals && parsedData.signals.length > 0) {
       const existingSignals = getFromStorage<Signal[]>(STORAGE_KEYS.SIGNALS, []);
-      const existingSignalIds = new Set(existingSignals.map(s => s.signalId));
-      const newSignals = parsedData.signals.filter(s => !existingSignalIds.has(s.signalId));
+      const existingSignalIds = new Set(existingSignals.map((s) => s.signalId));
+      const newSignals = parsedData.signals.filter((s) => !existingSignalIds.has(s.signalId));
       saveToStorage(STORAGE_KEYS.SIGNALS, [...existingSignals, ...newSignals]);
     }
 
     if (parsedData.approaches && parsedData.approaches.length > 0) {
       const existingApproaches = getFromStorage<Approach[]>(STORAGE_KEYS.APPROACHES, []);
-      const existingKeys = new Set(existingApproaches.map(a => `${a.signalId}-${a.approachId}`));
-      const newApproaches = parsedData.approaches.filter(a => !existingKeys.has(`${a.signalId}-${a.approachId}`));
+      const existingKeys = new Set(existingApproaches.map((a) => `${a.signalId}-${a.approachId}`));
+      const newApproaches = parsedData.approaches.filter(
+        (a) => !existingKeys.has(`${a.signalId}-${a.approachId}`),
+      );
       saveToStorage(STORAGE_KEYS.APPROACHES, [...existingApproaches, ...newApproaches]);
     }
 
     if (parsedData.phases && parsedData.phases.length > 0) {
       const existingPhases = getFromStorage<Phase[]>(STORAGE_KEYS.PHASES, []);
-      const existingKeys = new Set(existingPhases.map(p => `${p.signalId}-${p.phase}`));
-      const newPhases = parsedData.phases.filter(p => !existingKeys.has(`${p.signalId}-${p.phase}`));
+      const existingKeys = new Set(existingPhases.map((p) => `${p.signalId}-${p.phase}`));
+      const newPhases = parsedData.phases.filter(
+        (p) => !existingKeys.has(`${p.signalId}-${p.phase}`),
+      );
       saveToStorage(STORAGE_KEYS.PHASES, [...existingPhases, ...newPhases]);
     }
 
     if (parsedData.detectors && parsedData.detectors.length > 0) {
       const existingDetectors = getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
-      const existingKeys = new Set(existingDetectors.map(d => `${d.signalId}-${d.channel}`));
-      const newDetectors = parsedData.detectors.filter(d => !existingKeys.has(`${d.signalId}-${d.channel}`));
+      const existingKeys = new Set(existingDetectors.map((d) => `${d.signalId}-${d.channel}`));
+      const newDetectors = parsedData.detectors.filter(
+        (d) => !existingKeys.has(`${d.signalId}-${d.channel}`),
+      );
       saveToStorage(STORAGE_KEYS.DETECTORS, [...existingDetectors, ...newDetectors]);
     }
 
     if (parsedData.basicTimings && parsedData.basicTimings.length > 0) {
       const existingTimings = getFromStorage<BasicTiming[]>(STORAGE_KEYS.BASIC_TIMINGS, []);
-      const existingKeys = new Set(existingTimings.map(t => `${t.signalId}-${t.phase}`));
-      const newTimings = parsedData.basicTimings.filter(t => !existingKeys.has(`${t.signalId}-${t.phase}`));
+      const existingKeys = new Set(existingTimings.map((t) => `${t.signalId}-${t.phase}`));
+      const newTimings = parsedData.basicTimings.filter(
+        (t) => !existingKeys.has(`${t.signalId}-${t.phase}`),
+      );
       saveToStorage(STORAGE_KEYS.BASIC_TIMINGS, [...existingTimings, ...newTimings]);
     }
   }

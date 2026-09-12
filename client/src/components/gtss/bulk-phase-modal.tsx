@@ -2,10 +2,32 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { downloadSvgAsJpg, getSignalDisplayName, guessPhaseDirectionMapping, handleColumnMajorTab, isTypicallyThroughPhase, phaseDiagramFileName, useGTSSStore, usePhases } from "gtss";
+import {
+  downloadSvgAsJpg,
+  getSignalDisplayName,
+  guessPhaseDirectionMapping,
+  handleColumnMajorTab,
+  isTypicallyThroughPhase,
+  phaseDiagramFileName,
+  useGTSSStore,
+  usePhases,
+} from "gtss";
 import { ChevronDown, ChevronUp, Download, Plus, Save, Trash2, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PhaseDiagram, phaseColors } from "./phase-diagram-svg";
@@ -45,7 +67,7 @@ const movementTypes = [
 ];
 
 // Left turn phase mapping: Through phase -> Left turn phase
-const leftTurnMapping: Record<number, number> = { 2: 5, 4: 7, 6: 1, 8: 3 };
+//const leftTurnMapping: Record<number, number> = { 2: 5, 4: 7, 6: 1, 8: 3 };
 
 // Get cardinal direction from bearing
 const getDirectionFromBearing = (bearing: number | null): string => {
@@ -63,8 +85,17 @@ const getDirectionFromBearing = (bearing: number | null): string => {
 
 const PHASE_COUNT_OPTIONS = [2, 4, 6, 8] as const;
 
-export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = false }: BulkPhaseModalProps) {
-  const { signals, approaches: allApproaches, phases: existingPhases, agencyDefaults } = useGTSSStore();
+export default function BulkPhaseModal({
+  onClose,
+  preSelectedSignalId,
+  inline = false,
+}: BulkPhaseModalProps) {
+  const {
+    signals,
+    approaches: allApproaches,
+    phases: existingPhases,
+    agencyDefaults,
+  } = useGTSSStore();
   const { toast } = useToast();
   const phaseHooks = usePhases();
   const svgRef = useRef<SVGSVGElement>(null);
@@ -74,29 +105,29 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [targetPhaseCount, setTargetPhaseCount] = useState<number>(
-    agencyDefaults?.defaultPhaseCount ?? 8
+    agencyDefaults?.defaultPhaseCount ?? 8,
   );
 
   // Sorting state. Default is `null` so the table preserves insertion order
   // — editing a row's phase number won't make it jump positions. The user
   // can still click a column header to sort manually; a third click on the
   // same header clears the sort back to insertion order.
-  type SortField = 'phase' | 'approachId' | 'movementType' | 'numOfLanes' | 'isPedestrian';
+  type SortField = "phase" | "approachId" | "movementType" | "numOfLanes" | "isPedestrian";
   const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   // Handle sort: 1st click → asc, 2nd click on same header → desc, 3rd → cleared.
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      if (sortDirection === 'asc') {
-        setSortDirection('desc');
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
       } else {
         setSortField(null);
-        setSortDirection('asc');
+        setSortDirection("asc");
       }
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
@@ -108,29 +139,37 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
       let comparison = 0;
 
       switch (sortField) {
-        case 'phase':
+        case "phase":
           comparison = a.phase - b.phase;
           break;
-        case 'approachId':
-          comparison = (a.approachId || '').localeCompare(b.approachId || '');
+        case "approachId":
+          comparison = (a.approachId || "").localeCompare(b.approachId || "");
           break;
-        case 'movementType':
+        case "movementType":
           comparison = a.movementType.localeCompare(b.movementType);
           break;
-        case 'numOfLanes':
+        case "numOfLanes":
           comparison = a.numOfLanes - b.numOfLanes;
           break;
-        case 'isPedestrian':
+        case "isPedestrian":
           comparison = (a.isPedestrian ? 1 : 0) - (b.isPedestrian ? 1 : 0);
           break;
       }
 
-      return sortDirection === 'asc' ? comparison : -comparison;
+      return sortDirection === "asc" ? comparison : -comparison;
     });
   };
 
   // Sortable header component
-  const SortableHeader = ({ field, children, className = "" }: { field: SortField; children: React.ReactNode; className?: string }) => (
+  const SortableHeader = ({
+    field,
+    children,
+    className = "",
+  }: {
+    field: SortField;
+    children: React.ReactNode;
+    className?: string;
+  }) => (
     <TableHead
       className={`text-xs py-2 cursor-pointer hover:bg-grey-100 transition-colors ${className}`}
       onClick={() => handleSort(field)}
@@ -139,10 +178,10 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
         {children}
         <div className="flex flex-col ml-1">
           <ChevronUp
-            className={`w-3 h-3 ${sortField === field && sortDirection === 'asc' ? 'text-primary-600' : 'text-grey-300'}`}
+            className={`w-3 h-3 ${sortField === field && sortDirection === "asc" ? "text-primary-600" : "text-grey-300"}`}
           />
           <ChevronDown
-            className={`w-3 h-3 -mt-1 ${sortField === field && sortDirection === 'desc' ? 'text-primary-600' : 'text-grey-300'}`}
+            className={`w-3 h-3 -mt-1 ${sortField === field && sortDirection === "desc" ? "text-primary-600" : "text-grey-300"}`}
           />
         </div>
       </div>
@@ -151,12 +190,12 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
 
   // Get approaches for selected signal
   const signalApproaches = useMemo(() => {
-    return allApproaches.filter(a => a.signalId === selectedSignalId);
+    return allApproaches.filter((a) => a.signalId === selectedSignalId);
   }, [allApproaches, selectedSignalId]);
 
   // Get intersection name for display
   const intersectionName = useMemo(() => {
-    const signal = signals.find(s => s.signalId === selectedSignalId);
+    const signal = signals.find((s) => s.signalId === selectedSignalId);
     if (!signal) return "";
     return getSignalDisplayName(signal, allApproaches);
   }, [signals, selectedSignalId, allApproaches]);
@@ -169,7 +208,7 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
 
   // Get next available phase number
   const getNextAvailablePhaseNumber = (): number => {
-    const usedPhases = new Set(pendingPhases.map(p => p.phase));
+    const usedPhases = new Set(pendingPhases.map((p) => p.phase));
     for (let i = 1; i <= 8; i++) {
       if (!usedPhases.has(i)) return i;
     }
@@ -181,7 +220,7 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
     const nextPhase = getNextAvailablePhaseNumber();
     const defaultApproach = signalApproaches[0]?.approachId || "";
 
-    setPendingPhases(prev => [
+    setPendingPhases((prev) => [
       ...prev,
       {
         phase: nextPhase,
@@ -190,13 +229,17 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
         numOfLanes: 1,
         isPedestrian: 1,
         crosswalkLength: null,
-      }
+      },
     ]);
   };
 
   // Update a phase field
-  const handlePhaseChange = (index: number, field: keyof PendingPhase, value: any) => {
-    setPendingPhases(prev => {
+  const handlePhaseChange = (
+    index: number,
+    field: keyof PendingPhase,
+    value: string | number | null,
+  ) => {
+    setPendingPhases((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
 
@@ -205,12 +248,12 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
       //  • Through / Through-Right → 1 (assigned approach)
       //  • Permissive Phase → preserve current (don't reset a manually-set mode)
       //  • Anything else → 0 (none)
-      if (field === 'movementType') {
-        if (value === 'Pedestrian') {
+      if (field === "movementType") {
+        if (value === "Pedestrian") {
           updated[index].isPedestrian = 6;
-        } else if (value === 'Through' || value === 'Through-Right') {
+        } else if (value === "Through" || value === "Through-Right") {
           updated[index].isPedestrian = 1;
-        } else if (value === 'Permissive Phase') {
+        } else if (value === "Permissive Phase") {
           // intentionally preserve
         } else {
           updated[index].isPedestrian = 0;
@@ -223,9 +266,9 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
 
   // Delete a phase row
   const handleDeletePhase = (index: number) => {
-    setPendingPhases(prev => prev.filter((_, i) => i !== index));
+    setPendingPhases((prev) => prev.filter((_, i) => i !== index));
   };
-
+  /*
   // Duplicate for opposite (creates left turn)
   const handleDuplicateToOpposite = (index: number) => {
     const currentPhase = pendingPhases[index];
@@ -289,9 +332,9 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
       description: `Created Left Turn phase ${targetPhase} for opposite approach`,
     });
   };
-
+*/
   /**
-   * Auto-assign approach IDs to phases using agency defaults.
+   * Auto-assign approach IDs to phases using configuration.
    * - Phases with no approachId get assigned from the guess mapping.
    * - New phases needed by the mapping (not yet in pendingPhases) are created.
    * - Existing phases not in the mapping are left untouched.
@@ -326,7 +369,8 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
     if (Object.keys(mapping).length === 0) {
       toast({
         title: "No Mapping Available",
-        description: "Could not generate a mapping. Check that approaches have compass bearings set.",
+        description:
+          "Could not generate a mapping. Check that approaches have compass bearings set.",
         variant: "destructive",
       });
       return;
@@ -386,18 +430,21 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
     setPendingPhases(updated);
 
     const parts: string[] = [];
-    if (assignedCount > 0) parts.push(`Assigned ${assignedCount} approach${assignedCount !== 1 ? "es" : ""}`);
-    if (createdCount > 0) parts.push(`Created ${createdCount} phase${createdCount !== 1 ? "s" : ""}`);
+    if (assignedCount > 0)
+      parts.push(`Assigned ${assignedCount} approach${assignedCount !== 1 ? "es" : ""}`);
+    if (createdCount > 0)
+      parts.push(`Created ${createdCount} phase${createdCount !== 1 ? "s" : ""}`);
 
     if (parts.length > 0) {
       toast({
         title: "Auto-Assign Complete",
-        description: parts.join(", ") + " using agency defaults.",
+        description: parts.join(", ") + " using configuration.",
       });
     } else {
       toast({
         title: "Nothing to Assign",
-        description: "All mapped phases already have approaches. Use 'Re-assign All' to reset to the selected phase count.",
+        description:
+          "All mapped phases already have approaches. Use 'Re-assign All' to reset to the selected phase count.",
       });
     }
   };
@@ -431,7 +478,9 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
     for (const p of pendingPhases) {
       const key = `${p.phase}::${p.approachId || ""}`;
       if (seen.has(key)) {
-        trueDuplicates.push(`Phase ${p.phase}${p.approachId ? ` @ ${p.approachId}` : " (no approach)"}`);
+        trueDuplicates.push(
+          `Phase ${p.phase}${p.approachId ? ` @ ${p.approachId}` : " (no approach)"}`,
+        );
       }
       seen.add(key);
     }
@@ -488,7 +537,7 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
       });
 
       onClose();
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to save phases",
@@ -503,12 +552,12 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
   useEffect(() => {
     if (selectedSignalId) {
       // Check if this signal has existing phases
-      const signalPhases = existingPhases.filter(p => p.signalId === selectedSignalId);
+      const signalPhases = existingPhases.filter((p) => p.signalId === selectedSignalId);
 
       if (signalPhases.length > 0) {
         // Load existing phases for editing
         setIsEditMode(true);
-        const loadedPhases: PendingPhase[] = signalPhases.map(p => ({
+        const loadedPhases: PendingPhase[] = signalPhases.map((p) => ({
           id: p.id,
           phase: p.phase,
           approachId: p.approachId || "",
@@ -516,9 +565,7 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
           numOfLanes: p.numOfLanes || 1,
           // Coerce legacy boolean values to the new integer scheme on load.
           isPedestrian:
-            typeof p.isPedestrian === "number"
-              ? p.isPedestrian
-              : (p.isPedestrian ? 1 : 0),
+            typeof p.isPedestrian === "number" ? p.isPedestrian : p.isPedestrian ? 1 : 0,
           crosswalkLength: p.crosswalkLength ?? null,
         }));
         setPendingPhases(loadedPhases);
@@ -535,7 +582,10 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
 
   const titleText = isEditMode ? "Edit Phases" : "Add Multiple Phases";
   const titleBadge = pendingPhases.length > 0 && (
-    <Badge variant="secondary" className={isEditMode ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}>
+    <Badge
+      variant="secondary"
+      className={isEditMode ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}
+    >
       {pendingPhases.length} phase{pendingPhases.length !== 1 ? "s" : ""}
     </Badge>
   );
@@ -564,7 +614,8 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
         ) : signalApproaches.length === 0 ? (
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
             <p className="text-sm text-amber-700">
-              This signal has no approaches configured. Please add approaches first to set phase directions.
+              This signal has no approaches configured. Please add approaches first to set phase
+              directions.
             </p>
           </div>
         ) : (
@@ -572,7 +623,9 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
             {/* Phase count + auto-assign toolbar */}
             <div className="flex flex-wrap items-center gap-3 p-3 bg-grey-50 border border-grey-200 rounded-lg">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-grey-700 whitespace-nowrap">Phase count:</span>
+                <span className="text-xs font-medium text-grey-700 whitespace-nowrap">
+                  Phase count:
+                </span>
                 <div className="flex gap-1">
                   {PHASE_COUNT_OPTIONS.map((count) => (
                     <Button
@@ -581,10 +634,11 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
                       variant={targetPhaseCount === count ? "default" : "outline"}
                       size="sm"
                       onClick={() => setTargetPhaseCount(count)}
-                      className={`h-7 w-9 p-0 text-xs font-semibold ${targetPhaseCount === count
-                        ? "bg-primary-600 hover:bg-primary-700 text-white"
-                        : "border-grey-200 text-grey-700 hover:bg-grey-100"
-                        }`}
+                      className={`h-7 w-9 p-0 text-xs font-semibold ${
+                        targetPhaseCount === count
+                          ? "bg-primary-600 hover:bg-primary-700 text-white"
+                          : "border-grey-200 text-grey-700 hover:bg-grey-100"
+                      }`}
                     >
                       {count}
                     </Button>
@@ -599,10 +653,10 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
                   onClick={() => handleAutoAssign(false)}
                   className="h-7 text-xs border-primary-200 text-primary-700 hover:bg-primary-50 flex items-center gap-1"
                   disabled={signalApproaches.length === 0}
-                  title="Auto-assign approaches to unassigned phases using agency defaults"
+                  title="Auto-assign approaches to unassigned phases using configuration"
                 >
                   <Wand2 className="w-3 h-3" />
-                  Auto-assign using Agency Defaults
+                  Auto-assign using Configuration
                 </Button>
                 <Button
                   type="button"
@@ -671,18 +725,34 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
                   <Table onKeyDown={handleColumnMajorTab}>
                     <TableHeader>
                       <TableRow className="bg-grey-50">
-                        <SortableHeader field="phase" className="w-24">Phase</SortableHeader>
+                        <SortableHeader field="phase" className="w-24">
+                          Phase
+                        </SortableHeader>
                         <SortableHeader field="approachId">Approach</SortableHeader>
                         <SortableHeader field="movementType">Movement</SortableHeader>
-                        <SortableHeader field="numOfLanes" className="w-16">Lanes</SortableHeader>
-                        <SortableHeader field="isPedestrian" className="w-20 text-center">Ped</SortableHeader>
-                        <TableHead className="w-20 text-xs py-2 text-center" title="Measured crosswalk length in feet. Blank = auto-estimate in phases.txt (LE-# from lanes, TE-# from ped clearance time; shorter wins).">CW ft</TableHead>
+                        <SortableHeader field="numOfLanes" className="w-16">
+                          Lanes
+                        </SortableHeader>
+                        <SortableHeader field="isPedestrian" className="w-20 text-center">
+                          Ped
+                        </SortableHeader>
+                        <TableHead
+                          className="w-20 text-xs py-2 text-center"
+                          title="Measured crosswalk length in feet. Blank = auto-estimate in phases.txt (LE-# from lanes, TE-# from ped clearance time; shorter wins)."
+                        >
+                          CW ft
+                        </TableHead>
                         <TableHead className="w-12 text-xs py-2"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {getSortedPhases().map((phase, visualRow) => {
-                        const idx = pendingPhases.findIndex(p => p.id === phase.id && p.phase === phase.phase && p.approachId === phase.approachId);
+                        const idx = pendingPhases.findIndex(
+                          (p) =>
+                            p.id === phase.id &&
+                            p.phase === phase.phase &&
+                            p.approachId === phase.approachId,
+                        );
                         return (
                           <TableRow key={idx}>
                             <TableCell className="py-1.5">
@@ -696,7 +766,9 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
                                   min="1"
                                   max="8"
                                   value={phase.phase}
-                                  onChange={(e) => handlePhaseChange(idx, 'phase', parseInt(e.target.value) || 1)}
+                                  onChange={(e) =>
+                                    handlePhaseChange(idx, "phase", parseInt(e.target.value) || 1)
+                                  }
                                   className="h-7 w-14 text-sm"
                                   data-tab-col={0}
                                   data-tab-row={visualRow}
@@ -706,15 +778,26 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
                             <TableCell className="py-1.5">
                               <Select
                                 value={phase.approachId}
-                                onValueChange={(value) => handlePhaseChange(idx, 'approachId', value)}
+                                onValueChange={(value) =>
+                                  handlePhaseChange(idx, "approachId", value)
+                                }
                               >
-                                <SelectTrigger className="h-7 text-xs" data-tab-col={1} data-tab-row={visualRow}>
+                                <SelectTrigger
+                                  className="h-7 text-xs"
+                                  data-tab-col={1}
+                                  data-tab-row={visualRow}
+                                >
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {signalApproaches.map((approach) => (
-                                    <SelectItem key={approach.approachId} value={approach.approachId}>
-                                      {approach.approachId} - {getDirectionFromBearing(approach.compassBearing)} ({approach.compassBearing}°)
+                                    <SelectItem
+                                      key={approach.approachId}
+                                      value={approach.approachId}
+                                    >
+                                      {approach.approachId} -{" "}
+                                      {getDirectionFromBearing(approach.compassBearing)} (
+                                      {approach.compassBearing}°)
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -723,9 +806,15 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
                             <TableCell className="py-1.5">
                               <Select
                                 value={phase.movementType}
-                                onValueChange={(value) => handlePhaseChange(idx, 'movementType', value)}
+                                onValueChange={(value) =>
+                                  handlePhaseChange(idx, "movementType", value)
+                                }
                               >
-                                <SelectTrigger className="h-7 text-xs" data-tab-col={2} data-tab-row={visualRow}>
+                                <SelectTrigger
+                                  className="h-7 text-xs"
+                                  data-tab-col={2}
+                                  data-tab-row={visualRow}
+                                >
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -743,7 +832,13 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
                                 min="1"
                                 max="8"
                                 value={phase.numOfLanes}
-                                onChange={(e) => handlePhaseChange(idx, 'numOfLanes', parseInt(e.target.value) || 1)}
+                                onChange={(e) =>
+                                  handlePhaseChange(
+                                    idx,
+                                    "numOfLanes",
+                                    parseInt(e.target.value) || 1,
+                                  )
+                                }
                                 className="h-7 w-12 text-sm"
                                 data-tab-col={3}
                                 data-tab-row={visualRow}
@@ -752,7 +847,9 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
                             <TableCell className="py-1.5 text-center">
                               <Select
                                 value={String(phase.isPedestrian ?? 0)}
-                                onValueChange={(v) => handlePhaseChange(idx, 'isPedestrian', parseInt(v, 10))}
+                                onValueChange={(v) =>
+                                  handlePhaseChange(idx, "isPedestrian", parseInt(v, 10))
+                                }
                               >
                                 <SelectTrigger
                                   className="h-7 text-xs w-14 mx-auto"
@@ -781,7 +878,11 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
                                 value={phase.crosswalkLength ?? ""}
                                 onChange={(e) => {
                                   const v = e.target.value;
-                                  handlePhaseChange(idx, 'crosswalkLength', v === "" ? null : parseInt(v, 10) || null);
+                                  handlePhaseChange(
+                                    idx,
+                                    "crosswalkLength",
+                                    v === "" ? null : parseInt(v, 10) || null,
+                                  );
                                 }}
                                 placeholder="auto"
                                 className="h-7 text-xs w-16 mx-auto"
@@ -827,8 +928,7 @@ export default function BulkPhaseModal({ onClose, preSelectedSignalId, inline = 
               ? "Saving..."
               : isEditMode
                 ? `Save ${pendingPhases.length} Phase${pendingPhases.length !== 1 ? "s" : ""}`
-                : `Create ${pendingPhases.length} Phase${pendingPhases.length !== 1 ? "s" : ""}`
-            }
+                : `Create ${pendingPhases.length} Phase${pendingPhases.length !== 1 ? "s" : ""}`}
           </Button>
         </div>
       </div>

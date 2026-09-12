@@ -10,13 +10,16 @@ import { MapContainer, Marker, Polyline, Popup, useMap, useMapEvents } from "rea
 import MapTileLayers from "./map-tile-layers";
 
 // Fix for default markers in react-leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+interface IconDefaultPrototype {
+  _getIconUrl?: () => string | undefined;
+}
+delete (L.Icon.Default.prototype as unknown as IconDefaultPrototype)._getIconUrl;
+
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
   iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
-
 
 
 interface SignalsMapProps {
@@ -52,7 +55,7 @@ function getApproachEndpoint(
   lat: number,
   lng: number,
   bearing: number,
-  distanceMeters: number = 50
+  distanceMeters: number = 50,
 ): [number, number] {
   const R = 6371000; // Earth's radius in meters
   const bearingRad = (bearing * Math.PI) / 180;
@@ -61,12 +64,14 @@ function getApproachEndpoint(
 
   const lat2 = Math.asin(
     Math.sin(lat1) * Math.cos(distanceMeters / R) +
-    Math.cos(lat1) * Math.sin(distanceMeters / R) * Math.cos(bearingRad)
+      Math.cos(lat1) * Math.sin(distanceMeters / R) * Math.cos(bearingRad),
   );
-  const lng2 = lng1 + Math.atan2(
-    Math.sin(bearingRad) * Math.sin(distanceMeters / R) * Math.cos(lat1),
-    Math.cos(distanceMeters / R) - Math.sin(lat1) * Math.sin(lat2)
-  );
+  const lng2 =
+    lng1 +
+    Math.atan2(
+      Math.sin(bearingRad) * Math.sin(distanceMeters / R) * Math.cos(lat1),
+      Math.cos(distanceMeters / R) - Math.sin(lat1) * Math.sin(lat2),
+    );
 
   return [(lat2 * 180) / Math.PI, (lng2 * 180) / Math.PI];
 }
@@ -81,13 +86,11 @@ function MapBounds({ signals }: { signals: Signal[] }) {
 
   useEffect(() => {
     if (signals.length > 0) {
-      const validSignals = signals.filter(signal => signal.latitude && signal.longitude);
+      const validSignals = signals.filter((signal) => signal.latitude && signal.longitude);
       if (validSignals.length === 0) return;
 
       const group = new L.FeatureGroup(
-        validSignals.map(signal =>
-          L.marker([signal.latitude, signal.longitude])
-        )
+        validSignals.map((signal) => L.marker([signal.latitude, signal.longitude])),
       );
 
       if (validSignals.length === 1) {
@@ -110,18 +113,35 @@ function MapResizeObserver() {
 
   useEffect(() => {
     const container = map.getContainer();
-    if (!container || typeof (window as any).ResizeObserver === "undefined") return;
+    if (!container || typeof window.ResizeObserver === "undefined") return;
 
+    let timeoutId: number | null = null;
     const ro = new ResizeObserver(() => {
       // Give the browser a moment to finish layout before invalidating
       // size to avoid a race where tiles are requested for the wrong size.
-      setTimeout(() => map.invalidateSize(), 50);
+      if (timeoutId) window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(() => {
+        // Guard against the map having been removed/unmounted while the
+        // timeout was pending (calling invalidateSize then can throw).
+        try {
+          if (map && map.getContainer()) {
+            map.invalidateSize();
+          }
+        } catch (err) {
+          // Swallow errors — failing to invalidate is non-fatal.
+
+          console.warn("SignalsMap: failed to invalidate map size", err);
+        }
+      }, 50);
     });
 
     ro.observe(container);
     if (container.parentElement) ro.observe(container.parentElement);
 
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
   }, [map]);
 
   return null;
@@ -160,11 +180,16 @@ function SignalPopup({
 
   const pct = getCompletenessPct?.(signal.signalId);
   const barColor =
-    pct === undefined ? ""
-      : pct === 100 ? "bg-green-500"
-        : pct >= 75 ? "bg-blue-500"
-          : pct >= 50 ? "bg-amber-500"
-            : pct >= 25 ? "bg-orange-500"
+    pct === undefined
+      ? ""
+      : pct === 100
+        ? "bg-green-500"
+        : pct >= 75
+          ? "bg-blue-500"
+          : pct >= 50
+            ? "bg-amber-500"
+            : pct >= 25
+              ? "bg-orange-500"
               : "bg-grey-300";
   const textColor = pct === 100 ? "text-green-700" : "text-grey-700";
 
@@ -180,7 +205,9 @@ function SignalPopup({
       </div>
       {pct !== undefined && (
         <div className="flex items-center gap-2 mt-1 mb-1 px-1">
-          <span className="text-[10px] uppercase tracking-wide font-medium text-grey-500 flex-shrink-0">Complete</span>
+          <span className="text-[10px] uppercase tracking-wide font-medium text-grey-500 flex-shrink-0">
+            Complete
+          </span>
           <div className="flex-1 h-1.5 bg-grey-200 rounded-full overflow-hidden">
             <div className={`h-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
           </div>
@@ -199,7 +226,16 @@ function SignalPopup({
   );
 }
 
-export default function SignalsMap({ signals, approaches, phases, onSignalSelect, getCompletenessPct, highlightedSignalId, className, enableClickToAdd = false }: SignalsMapProps) {
+export default function SignalsMap({
+  signals,
+  approaches,
+  phases,
+  onSignalSelect,
+  getCompletenessPct,
+  highlightedSignalId,
+  className,
+  enableClickToAdd = false,
+}: SignalsMapProps) {
   const mapScrollZoom = useMapScrollZoom();
   const agency = useGTSSStore((state) => state.agency);
   const { navigateToSignalDetails, setTempNewSignalLocation } = useGTSSStore();
@@ -231,7 +267,7 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
   }, [agency?.latitude, agency?.longitude, signals]);
 
   return (
-    <div className={className} style={{ position: 'relative', zIndex: 1 }}>
+    <div className={className} style={{ position: "relative", zIndex: 1 }}>
       <MapContainer
         center={center}
         zoom={signals.length === 1 ? 15 : signals.length > 0 ? 13 : 4}
@@ -242,6 +278,7 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
       >
         <CaptureMap onReady={(m) => setMap(m)} />
         <MapTileLayers />
+
         <MapResizeObserver />
         {map && <MapBounds signals={signals} />}
 
@@ -255,67 +292,73 @@ export default function SignalsMap({ signals, approaches, phases, onSignalSelect
           />
         )}
 
-        {signals.filter(signal => signal.latitude && signal.longitude).map((signal) => (
-          <Marker
-            key={signal.id}
-            position={[signal.latitude, signal.longitude]}
-            icon={highlightedSignalId === signal.signalId ? highlightedSignalIcon : new L.Icon.Default()}
-            zIndexOffset={highlightedSignalId === signal.signalId ? 1000 : 0}
-            eventHandlers={{
-              click: (e) => {
-                // Prevent marker clicks from bubbling up to the map (which would trigger click-to-add)
-                (e.originalEvent as any)?.stopPropagation?.();
-              },
-            }}
-          >
-            <Popup minWidth={272}>
-              <SignalPopup
-                signal={signal}
-                approaches={approaches || []}
-                phases={phases || []}
-                getCompletenessPct={getCompletenessPct}
-                onSignalSelect={onSignalSelect}
-              />
-            </Popup>
-          </Marker>
-        ))}
+        {signals
+          .filter((signal) => signal.latitude && signal.longitude)
+          .map((signal) => (
+            <Marker
+              key={signal.id}
+              position={[signal.latitude, signal.longitude]}
+              icon={
+                highlightedSignalId === signal.signalId
+                  ? highlightedSignalIcon
+                  : new L.Icon.Default()
+              }
+              zIndexOffset={highlightedSignalId === signal.signalId ? 1000 : 0}
+              eventHandlers={{
+                click: (e) => {
+                  // Prevent marker clicks from bubbling up to the map (which would trigger click-to-add)
+(e as L.LeafletMouseEvent).originalEvent.stopPropagation();
+                },
+              }}
+            >
+              <Popup minWidth={272}>
+                <SignalPopup
+                  signal={signal}
+                  approaches={approaches || []}
+                  phases={phases || []}
+                  getCompletenessPct={getCompletenessPct}
+                  onSignalSelect={onSignalSelect}
+                />
+              </Popup>
+            </Marker>
+          ))}
 
         {/* Render approach arrows */}
-        {approaches && signals.filter(signal => signal.latitude && signal.longitude).map((signal) => {
-          // Color index counts every approach on the signal, matching the
-          // signal-details map; only the ones with a bearing get a line.
-          const allApproaches = approaches.filter(a => a.signalId === signal.signalId);
-          const signalApproaches = allApproaches.filter(a => a.compassBearing !== null);
-          return signalApproaches.map((approach) => {
-            // Approach bearing indicates where traffic comes FROM, so add 180 to point the line toward the intersection
-            const lineDirection = (approach.compassBearing! + 180) % 360;
-            const endpoint = getApproachEndpoint(
-              signal.latitude,
-              signal.longitude,
-              lineDirection,
-              60 // distance in meters
-            );
-            const color = approachColorFor(allApproaches, approach.approachId);
-            return (
-              <Polyline
-                key={approach.id}
-                positions={[
-                  [signal.latitude, signal.longitude],
-                  endpoint,
-                ]}
-                color={color}
-                weight={4}
-                opacity={0.8}
-                eventHandlers={{
-                  click: (e) => {
-                    // Prevent polyline clicks from bubbling to the map
-                    (e.originalEvent as any)?.stopPropagation?.();
-                  },
-                }}
-              />
-            );
-          });
-        })}
+        {approaches &&
+          signals
+            .filter((signal) => signal.latitude && signal.longitude)
+            .map((signal) => {
+              // Color index counts every approach on the signal, matching the
+              // signal-details map; only the ones with a bearing get a line.
+              const allApproaches = approaches.filter((a) => a.signalId === signal.signalId);
+              const signalApproaches = allApproaches.filter((a) => a.compassBearing !== null);
+              return signalApproaches.map((approach) => {
+                // Approach bearing indicates where traffic comes FROM, so add 180 to point the line toward the intersection
+                const lineDirection = (approach.compassBearing! + 180) % 360;
+                const endpoint = getApproachEndpoint(
+                  signal.latitude,
+                  signal.longitude,
+                  lineDirection,
+                  60, // distance in meters
+                );
+                const color = approachColorFor(allApproaches, approach.approachId);
+                return (
+                  <Polyline
+                    key={approach.id}
+                    positions={[[signal.latitude, signal.longitude], endpoint]}
+                    color={color}
+                    weight={4}
+                    opacity={0.8}
+                    eventHandlers={{
+                      click: (e) => {
+                        // Prevent polyline clicks from bubbling to the map
+                        e.originalEvent?.stopPropagation?.();
+                      },
+                    }}
+                  />
+                );
+              });
+            })}
       </MapContainer>
     </div>
   );

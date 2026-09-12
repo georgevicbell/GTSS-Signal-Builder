@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -168,7 +167,7 @@ export default function AgencyDefaultsSettings() {
     setValidationErrors([]);
 
     toast({
-      title: "Agency Defaults Saved",
+      title: "Configuration Saved",
       description: "Phase direction standards will be used when auto-assigning phases.",
     });
   };
@@ -194,12 +193,7 @@ export default function AgencyDefaultsSettings() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Settings className="w-4 h-4 text-grey-600" />
-              <CardTitle className="text-sm font-semibold text-grey-800">Agency Defaults</CardTitle>
-              {agency?.agencyId && (
-                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
-                  {agency.agencyId}
-                </Badge>
-              )}
+              <CardTitle className="text-sm font-semibold text-grey-800">Configuration</CardTitle>
             </div>
             {savedAt && <span className="text-xs text-grey-400">Last saved: {savedAt}</span>}
           </div>
