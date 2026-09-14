@@ -13,7 +13,7 @@ import {
   useGTSSStore,
   validatePhaseDirectionStandard,
 } from "gtss";
-import { Info, Move, RotateCcw, Save, Search, Settings, X } from "lucide-react";
+import { Eye, Info, Move, RotateCcw, Save, Search, Settings, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const DIRECTIONS = [
@@ -98,6 +98,7 @@ export default function AgencyDefaultsSettings() {
   );
   const [defaultPhaseCount, setDefaultPhaseCount] = useState<number>(current.defaultPhaseCount);
   const [mapScrollWheel, setMapScrollWheel] = useState<MapScrollWheelMode>(current.mapScrollWheel);
+  const [showDemo, setShowDemo] = useState<boolean>(current.showDemo ?? false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isDirty, setIsDirty] = useState(false);
 
@@ -107,6 +108,7 @@ export default function AgencyDefaultsSettings() {
     setFormState(standardToForm(src.phaseDirectionStandard));
     setDefaultPhaseCount(src.defaultPhaseCount);
     setMapScrollWheel(src.mapScrollWheel);
+    setShowDemo(src.showDemo ?? false);
     setIsDirty(false);
     setValidationErrors([]);
   }, [agencyDefaults]);
@@ -124,6 +126,11 @@ export default function AgencyDefaultsSettings() {
 
   const handleMapScrollWheelChange = (mode: MapScrollWheelMode) => {
     setMapScrollWheel(mode);
+    setIsDirty(true);
+  };
+
+  const handleShowDemoChange = (enabled: boolean) => {
+    setShowDemo(enabled);
     setIsDirty(true);
   };
 
@@ -159,6 +166,7 @@ export default function AgencyDefaultsSettings() {
       phaseDirectionStandard: sanitized,
       defaultPhaseCount,
       mapScrollWheel,
+      showDemo,
       updatedAt: new Date().toISOString(),
     };
 
@@ -168,7 +176,7 @@ export default function AgencyDefaultsSettings() {
 
     toast({
       title: "Configuration Saved",
-      description: "Phase direction standards will be used when auto-assigning phases.",
+      description: "Phase direction standards and demo settings updated.",
     });
   };
 
@@ -177,6 +185,7 @@ export default function AgencyDefaultsSettings() {
     setFormState(standardToForm(src.phaseDirectionStandard));
     setDefaultPhaseCount(src.defaultPhaseCount);
     setMapScrollWheel(src.mapScrollWheel);
+    setShowDemo(src.showDemo ?? false);
     setIsDirty(false);
     setValidationErrors([]);
   };
@@ -390,6 +399,67 @@ export default function AgencyDefaultsSettings() {
             Sets the starting behavior for every map. The lock button on the signal map still
             overrides it for the current session.
           </p>
+        </CardContent>
+      </Card>
+
+      {/* Demo Page / Showcase Mode */}
+      <Card>
+        <CardHeader className="bg-grey-50 border-b border-grey-200 p-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-purple-600" />
+            <CardTitle className="text-sm font-semibold text-grey-800">Demo Gallery</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4">
+          <p className="text-xs text-grey-500 mb-3">
+            Enable the interactive Demo Page under <strong>Agency Info</strong>. This showcases
+            procedurally generated and sample intersections (2, 3, 4, and 5 approaches) with
+            interactive phase diagrams, timing charts, detectors, and approach geometries.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {[
+              {
+                enabled: false,
+                icon: Eye,
+                title: "Hidden (Default)",
+                blurb: "Only standard agency management tools are visible under Agency Info.",
+              },
+              {
+                enabled: true,
+                icon: Sparkles,
+                title: "Show Demo",
+                blurb:
+                  "Adds the Demo Gallery tab under Agency Info with interactive intersections.",
+              },
+            ].map(({ enabled, icon: Icon, title, blurb }) => {
+              const selected = showDemo === enabled;
+              return (
+                <button
+                  key={String(enabled)}
+                  type="button"
+                  onClick={() => handleShowDemoChange(enabled)}
+                  aria-pressed={selected}
+                  className={`text-left rounded-md border p-3 transition-colors ${
+                    selected
+                      ? "border-primary-600 bg-primary-50"
+                      : "border-grey-200 hover:bg-grey-50"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Icon
+                      className={`w-4 h-4 ${selected ? "text-primary-600" : "text-grey-400"}`}
+                    />
+                    <span
+                      className={`text-sm font-medium ${selected ? "text-primary-700" : "text-grey-700"}`}
+                    >
+                      {title}
+                    </span>
+                  </span>
+                  <span className="block text-xs text-grey-500 mt-1">{blurb}</span>
+                </button>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
 

@@ -2,6 +2,7 @@ import AgencyDefaultsSettings from "@/components/gtss/agency-defaults-settings";
 import AgencyForm from "@/components/gtss/agency-form";
 import ApproachesTable from "@/components/gtss/approaches-table";
 import BasicTimingsTable from "@/components/gtss/basic-timings-table";
+import DemoPage from "@/components/gtss/demo-page";
 import DetectorsTable from "@/components/gtss/detectors-table";
 import ExportPanel from "@/components/gtss/export-panel";
 import { ImportPanel } from "@/components/gtss/import-panel";
@@ -30,7 +31,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import SignalDetails from "@/pages/signal-details";
-import { clearAllData, useGTSSStore, useLoadFromStorage } from "gtss";
+import { clearAllData, isDemoEnabled, useGTSSStore, useLoadFromStorage } from "gtss";
 import {
   ArrowUpDown,
   Building,
@@ -46,22 +47,24 @@ import {
   Navigation,
   Plus,
   SlidersHorizontal,
+  Sparkles,
   Target,
   TrafficCone,
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-type TabType = "agency" | "signals" | "approaches" | "phases" | "detectors" | "basic-timings";
+type TabType =
+  "agency" | "signals" | "approaches" | "phases" | "detectors" | "basic-timings" | "demo";
 
-const tabs = [
-  { id: "signals", label: "Traffic Signals", icon: MapPin },
-  { id: "approaches", label: "Approaches", icon: Compass },
-  { id: "phases", label: "Phases", icon: ArrowUpDown },
-  { id: "detectors", label: "Detectors", icon: Target },
-  { id: "basic-timings", label: "Basic Timings", icon: Clock },
-  { id: "agency", label: "Agency Info", icon: Building },
+const baseTabs = [
+  { id: "signals" as const, label: "Traffic Signals", icon: MapPin },
+  { id: "approaches" as const, label: "Approaches", icon: Compass },
+  { id: "phases" as const, label: "Phases", icon: ArrowUpDown },
+  { id: "detectors" as const, label: "Detectors", icon: Target },
+  { id: "basic-timings" as const, label: "Basic Timings", icon: Clock },
+  { id: "agency" as const, label: "Agency Info", icon: Building },
 ];
 
 const tabTitles: Record<TabType, { title: string; desc: string }> = {
@@ -77,6 +80,10 @@ const tabTitles: Record<TabType, { title: string; desc: string }> = {
     title: "Detection Systems",
     desc: "Configure vehicle and pedestrian detection equipment",
   },
+  demo: {
+    title: "Demo Gallery & Procedural Topologies",
+    desc: "Interactive showcase of 2, 3, 4, and 5-approach intersection geometries, phases, detectors, and timings",
+  },
 };
 
 export default function GTSSBuilder() {
@@ -87,6 +94,7 @@ export default function GTSSBuilder() {
   const [showAgencyDefaults, setShowAgencyDefaults] = useState(false);
   const {
     agency,
+    agencyDefaults,
     signals,
     approaches,
     phases,
@@ -98,6 +106,22 @@ export default function GTSSBuilder() {
   } = useGTSSStore();
   const { toast } = useToast();
   const { setSelectedSignalIdForTables, setDeepLinkTarget } = useGTSSStore();
+
+  const showDemo = isDemoEnabled(agencyDefaults);
+
+  const navTabs = useMemo(() => {
+    if (showDemo) {
+      return [...baseTabs, { id: "demo" as const, label: "Demo Gallery", icon: Sparkles }];
+    }
+    return baseTabs;
+  }, [showDemo]);
+
+  // If active tab is demo and demo mode is disabled, revert to signals
+  useEffect(() => {
+    if (activeTab === "demo" && !showDemo) {
+      setActiveTab("signals");
+    }
+  }, [activeTab, showDemo, setActiveTab]);
 
   // Load data from localStorage on mount
   useLoadFromStorage();
@@ -141,6 +165,8 @@ export default function GTSSBuilder() {
     switch (activeTab) {
       case "agency":
         return <AgencyForm />;
+      case "demo":
+        return <DemoPage />;
       case "signals":
         return <SignalsTable triggerAdd={triggerAdd} triggerBulk={triggerBulk} />;
       case "approaches":
@@ -408,7 +434,7 @@ export default function GTSSBuilder() {
         {/* Navigation */}
         <nav className="flex-1 p-2 overflow-y-auto min-h-0">
           <div className="space-y-1">
-            {tabs.map((tab) => {
+            {navTabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               const count = counts[tab.id as keyof typeof counts] || 0;

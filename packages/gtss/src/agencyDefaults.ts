@@ -27,6 +27,8 @@ export type AgencyDefaults = {
   defaultPhaseCount: number;
   /** Mouse-wheel behavior over maps. Defaults to 'page'. */
   mapScrollWheel: MapScrollWheelMode;
+  /** Show the procedural demo gallery under Agency Info */
+  showDemo?: boolean;
   updatedAt: string;
 };
 
@@ -56,6 +58,7 @@ export const DEFAULT_AGENCY_DEFAULTS: AgencyDefaults = {
   // Page scrolling by default: a wheel that zooms the map traps the cursor and
   // makes the data below it hard to reach.
   mapScrollWheel: "page",
+  showDemo: false,
   updatedAt: new Date().toISOString(),
 };
 
@@ -66,6 +69,13 @@ export const DEFAULT_AGENCY_DEFAULTS: AgencyDefaults = {
  */
 export function isMapScrollZoomEnabled(defaults: AgencyDefaults | null | undefined): boolean {
   return defaults?.mapScrollWheel === "zoom";
+}
+
+/**
+ * Whether the Demo Gallery should be shown under Agency Info.
+ */
+export function isDemoEnabled(defaults: AgencyDefaults | null | undefined): boolean {
+  return defaults?.showDemo === true;
 }
 
 /**

@@ -6,6 +6,7 @@ export {
   DEFAULT_AGENCY_DEFAULTS,
   guessPhaseDirectionMapping,
   isMapScrollZoomEnabled,
+  isDemoEnabled,
   isTypicallyThroughPhase,
   NEMA_DEFAULTS,
   sanitizePhaseDirectionStandard,
@@ -17,6 +18,12 @@ export type {
   MapScrollWheelMode,
   PhaseDirectionStandard,
 } from "./src/agencyDefaults";
+export {
+  PRESET_DEMO_INTERSECTIONS,
+  generateProceduralIntersection,
+  getAllDemoIntersections,
+} from "./src/demoIntersections";
+export type { DemoIntersection, ProceduralGeneratorOptions } from "./src/demoIntersections";
 export { evaluateGTSSCompleteness } from "./src/gtssValidation";
 export type { ValidationResult, ValidationSummary } from "./src/gtssValidation";
 export { isMetricForSignalId } from "./src/localStorage/agency-units";

@@ -600,6 +600,7 @@ export default function AgencyForm() {
           </Card>
         </ResizablePanel>
       </ResizablePanelGroup>
+
       {/* Modal containing the agency form (Add / Edit) */}
       <Dialog
         open={agencyModalOpen}
