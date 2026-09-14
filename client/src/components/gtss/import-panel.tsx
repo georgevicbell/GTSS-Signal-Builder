@@ -24,13 +24,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
-  importData,
   parseAgenciesTXT,
   parseApproachesTXT,
   parseBasicTimingsTXT,
   parseDetectorsTXT,
   parsePhasesTXT,
   parseSignalsTXT,
+  useImportData,
 } from "gtss";
 import type { Agency, Approach, BasicTiming, Detector, Phase, Signal } from "gtss/schema";
 import JSZip from "jszip";
@@ -59,6 +59,7 @@ type ValidationError = {
 };
 
 export function ImportPanel({ onImportComplete }: { onImportComplete?: () => void }) {
+  const { import: runImport } = useImportData();
   const [uploadedFiles, setUploadedFiles] = useState<FileData[]>([]);
   const [importMode, setImportMode] = useState<"replace" | "merge">("replace");
   const [parsedData, setParsedData] = useState<ParsedData>({});
@@ -289,7 +290,7 @@ export function ImportPanel({ onImportComplete }: { onImportComplete?: () => voi
       if (parsedData.detectors) payload.detectors = filteredDetectors;
       if (parsedData.basicTimings) payload.basicTimings = filteredBasicTimings;
 
-      importData(payload, importMode);
+      runImport(payload, importMode);
       const stats = {
         agency: selectedAgencies.length,
         signals: filteredSignals.length,
@@ -325,11 +326,6 @@ export function ImportPanel({ onImportComplete }: { onImportComplete?: () => voi
       if (onImportComplete) {
         onImportComplete();
       }
-
-      // Reload the page to refresh all data
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
     } catch (error) {
       toast({
         title: "Import Failed",

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import MapTileLayers from "@/components/ui/map-tile-layers";
 import { useToast } from "@/hooks/use-toast";
-import { agencyListStorage, useGTSSStore, useMapScrollZoom, useSignals } from "gtss";
+import { useAgencies, useGTSSStore, useMapScrollZoom, useSignals } from "gtss";
 import { type InsertSignal } from "gtss/schema";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -52,17 +52,12 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
   const { agency, signals } = useGTSSStore();
   const { toast } = useToast();
   const signalHooks = useSignals();
+  const agenciesApi = useAgencies();
   const [pendingSignals, setPendingSignals] = useState<PendingSignal[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedAgencyId, setSelectedAgencyId] = useState<string>(() => {
-    try {
-      const defId = agencyListStorage.getDefaultId();
-      const list = agencyListStorage.getAll();
-      const defAgency = list.find((a) => a.id === defId);
-      return defAgency?.agencyId || agency?.agencyId || "";
-    } catch {
-      return agency?.agencyId || "";
-    }
+    const defAgency = agenciesApi.data.find((a) => a.id === agenciesApi.defaultId);
+    return defAgency?.agencyId || agency?.agencyId || "";
   });
   const getMapCenter = (): [number, number] => {
     // Use agency coordinates if available
@@ -326,7 +321,7 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
                     <SelectValue placeholder="Select agency" />
                   </SelectTrigger>
                   <SelectContent>
-                    {agencyListStorage.getAll().map((a) => (
+                    {agenciesApi.data.map((a) => (
                       <SelectItem key={a.id} value={a.agencyId}>
                         {a.agencyName} ({a.agencyId})
                       </SelectItem>

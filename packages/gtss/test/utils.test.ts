@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { Approach, Signal } from "../schema/schema";
+import type { Approach, Signal } from "../schema/public";
 import {
-  cn,
   getDerivedStreetNames,
   getSignalDisplayName,
   suggestStreetNameForApproach,
@@ -40,7 +39,6 @@ describe("GTSS utilities", () => {
       approach("SIG-1", "First Avenue", 90),
     ];
 
-    expect(cn("px-2", false, "px-4", "text-sm")).toBe("px-4 text-sm");
     expect(getDerivedStreetNames("SIG-1", approaches)).toEqual({
       streetName1: "Main Street",
       streetName2: "First Avenue",

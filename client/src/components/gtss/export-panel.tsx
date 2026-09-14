@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
-  agencyListStorage,
   evaluateGTSSCompleteness,
   generateAgenciesCSV,
   generateApproachesCSV,
@@ -23,6 +22,7 @@ import {
   generateDetectionCSV,
   generatePhasesCSV,
   generateSignalsCSV,
+  useAgencies,
   useExport,
   useGTSSStore,
 } from "gtss";
@@ -41,6 +41,7 @@ import { useEffect, useState } from "react";
 export default function ExportPanel() {
   const { agency, signals, approaches, phases, detectors, basicTimings, navigateToSignalDetails } =
     useGTSSStore();
+  const agenciesApi = useAgencies();
 
   const getDefaultPackageName = () => {
     const today = new Date();
@@ -100,7 +101,7 @@ export default function ExportPanel() {
     // are selected, fall back to all agencies (the UI normally defaults to
     // selecting all). Validation should run against the dataset that will
     // actually be exported.
-    const allAgencies = agencyListStorage.getAll();
+    const allAgencies = agenciesApi.data;
     const selectedAgencies =
       selectedAgencyIds && selectedAgencyIds.length > 0
         ? allAgencies.filter((a) => selectedAgencyIds.includes(a.id))
@@ -194,12 +195,11 @@ export default function ExportPanel() {
 
   useEffect(() => {
     // default select all agencies
-    const _ag = agencyListStorage.getAll();
-    setSelectedAgencyIds(_ag.map((a) => a.id));
-  }, []);
+    setSelectedAgencyIds(agenciesApi.data.map((a) => a.id));
+  }, [agenciesApi.data]);
 
   // Build previews from the same filtered datasets used for export
-  const allAgencies = agencyListStorage.getAll();
+  const allAgencies = agenciesApi.data;
   const selectedAgencies =
     selectedAgencyIds && selectedAgencyIds.length > 0
       ? allAgencies.filter((a) => selectedAgencyIds.includes(a.id))
@@ -251,7 +251,7 @@ export default function ExportPanel() {
       : null,
   ].filter(Boolean) as GTSSFilePreview[];
 
-  const agencies = agencyListStorage.getAll();
+  const agencies = agenciesApi.data;
 
   const handleExportValidated = async () => {
     if (hasErrors) {
@@ -529,7 +529,7 @@ export default function ExportPanel() {
             <div className="border border-grey-200 rounded-lg p-4">
               <h4 className="font-medium text-grey-800 mb-3">Agencies to Export</h4>
               <div className="grid grid-cols-1 gap-2 max-h-48 overflow-auto">
-                {agencyListStorage.getAll().map((a) => (
+                {agenciesApi.data.map((a) => (
                   <div key={a.id} className="flex items-center space-x-3">
                     <Checkbox
                       id={`export-agency-${a.id}`}

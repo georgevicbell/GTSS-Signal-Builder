@@ -28,8 +28,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import SignalDetails from "@/pages/signal-details";
-import { clearAllData, cn, useGTSSStore, useLoadFromStorage } from "gtss";
+import { clearAllData, useGTSSStore, useLoadFromStorage } from "gtss";
 import {
   ArrowUpDown,
   Building,
@@ -92,12 +93,7 @@ export default function GTSSBuilder() {
     detectors,
     basicTimings,
     currentView,
-    setAgency,
-    setSignals,
-    setApproaches,
-    setPhases,
-    setDetectors,
-    setBasicTimings,
+    loadFromStorage,
     navigateToSignalDetails,
   } = useGTSSStore();
   const { toast } = useToast();
@@ -134,7 +130,7 @@ export default function GTSSBuilder() {
 
     // If import panel is shown, render it regardless of active tab
     if (showImportPanel) {
-      return <ImportPanel onImportComplete={() => window.location.reload()} />;
+      return <ImportPanel onImportComplete={() => setShowImportPanel(false)} />;
     }
 
     // Configuration settings panel
@@ -218,13 +214,9 @@ export default function GTSSBuilder() {
 
   const handleClearAllData = () => {
     clearAllData();
-    // Reset store to empty state
-    setAgency(null);
-    setSignals([]);
-    setApproaches([]);
-    setPhases([]);
-    setDetectors([]);
-    setBasicTimings([]);
+    // Reload store from (now-empty) storage so all cached fields, including
+    // the agency list and default agency id, stay in sync
+    loadFromStorage();
 
     toast({
       title: "Data Cleared",
