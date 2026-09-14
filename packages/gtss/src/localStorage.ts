@@ -2041,7 +2041,39 @@ export function importData(
     }
 
     if (parsedData.detectors !== undefined) {
-      saveToStorage(STORAGE_KEYS.DETECTORS, parsedData.detectors);
+      // Convert incoming (display) distance values to internal stored units.
+      // Determine each detector's agency (via its signal) so we encode metric
+      // distances as centimeters and non-metric as raw values.
+      const incomingSignals = parsedData.signals ?? [];
+      const incomingAgencies = parsedData.agency
+        ? Array.isArray(parsedData.agency)
+          ? parsedData.agency
+          : [parsedData.agency]
+        : null;
+
+      const detectorsToStore = (parsedData.detectors || []).map((d: Detector) => {
+        // Find the signal to determine agencyId, preferring incoming signals
+        const sig =
+          incomingSignals.find((s) => s.signalId === d.signalId) || signalStorage.get(d.signalId);
+        const agencyId = sig?.agencyId ?? null;
+
+        // Find the agency object from incoming agencies first, then existing storage
+        const agencyObj =
+          (agencyId && incomingAgencies
+            ? incomingAgencies.find((a) => a.agencyId === agencyId)
+            : null) ||
+          (agencyId ? agencyListStorage.getAll().find((a) => a.agencyId === agencyId) : null) ||
+          agencyStorage.get();
+        const isMetric = agencyObj?.agencyIsMetric ?? false;
+
+        return {
+          ...d,
+          length: displayDistanceToStored(d.length ?? null, isMetric),
+          stopbarSetbackDist: displayDistanceToStored(d.stopbarSetbackDist ?? null, isMetric),
+        } as Detector;
+      });
+
+      saveToStorage(STORAGE_KEYS.DETECTORS, detectorsToStore);
     }
 
     if (parsedData.basicTimings !== undefined) {
@@ -2110,7 +2142,35 @@ export function importData(
       const newDetectors = parsedData.detectors.filter(
         (d) => !existingKeys.has(`${d.signalId}-${d.channel}`),
       );
-      saveToStorage(STORAGE_KEYS.DETECTORS, [...existingDetectors, ...newDetectors]);
+
+      // Convert new detectors to stored units before appending. Use incoming
+      // signals/agencies when available to determine metric encoding per-signal.
+      const incomingSignals = parsedData.signals ?? [];
+      const incomingAgencies = parsedData.agency
+        ? Array.isArray(parsedData.agency)
+          ? parsedData.agency
+          : [parsedData.agency]
+        : null;
+
+      const newDetectorsStored = newDetectors.map((d: Detector) => {
+        const sig =
+          incomingSignals.find((s) => s.signalId === d.signalId) || signalStorage.get(d.signalId);
+        const agencyId = sig?.agencyId ?? null;
+        const agencyObj =
+          (agencyId && incomingAgencies
+            ? incomingAgencies.find((a) => a.agencyId === agencyId)
+            : null) ||
+          (agencyId ? agencyListStorage.getAll().find((a) => a.agencyId === agencyId) : null) ||
+          agencyStorage.get();
+        const isMetric = agencyObj?.agencyIsMetric ?? false;
+        return {
+          ...d,
+          length: displayDistanceToStored(d.length ?? null, isMetric),
+          stopbarSetbackDist: displayDistanceToStored(d.stopbarSetbackDist ?? null, isMetric),
+        } as Detector;
+      });
+
+      saveToStorage(STORAGE_KEYS.DETECTORS, [...existingDetectors, ...newDetectorsStored]);
     }
 
     if (parsedData.basicTimings && parsedData.basicTimings.length > 0) {

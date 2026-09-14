@@ -171,6 +171,8 @@ export default function SignalDetails() {
   const lengthUnit = isMetric ? "m" : "feet";
 
   const speedUnit = isMetric ? "km/h" : "mph";
+  const qaSpeedMax = isMetric ? 200 : 100;
+  const qaSpeedPlaceholder = isMetric ? "120" : "35";
   const signalId = currentSignalId;
   const isNewSignal = signalId === null;
   const signalHooks = useSignals();
@@ -1418,10 +1420,10 @@ export default function SignalDetails() {
                     <Input
                       type="number"
                       min="0"
-                      max="100"
+                      max={qaSpeedMax}
                       value={qaSpeed}
                       onChange={(e) => setQaSpeed(e.target.value)}
-                      placeholder="35"
+                      placeholder={qaSpeedPlaceholder}
                       className="h-8 text-sm"
                     />
                   </div>

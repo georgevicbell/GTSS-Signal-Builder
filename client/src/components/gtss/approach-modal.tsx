@@ -303,8 +303,8 @@ export default function ApproachModal({
                       <Input
                         type="number"
                         min="0"
-                        max="100"
-                        placeholder="35"
+                        max={isMetric ? 200 : 100}
+                        placeholder={isMetric ? "50" : "35"}
                         {...field}
                         onChange={(e) => {
                           const value = e.target.value;

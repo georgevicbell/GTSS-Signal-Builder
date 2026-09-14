@@ -273,6 +273,7 @@ export default function AgencyForm() {
       agencyUrl: a.agencyUrl || "http://",
       agencyTimezone: a.agencyTimezone,
       agencyEmail: a.agencyEmail || "",
+      agencyIsMetric: a.agencyIsMetric ?? false,
       latitude: a.latitude ?? undefined,
       longitude: a.longitude ?? undefined,
     });
