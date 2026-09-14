@@ -261,19 +261,32 @@ export default function BulkDetectorModal({
     }
   };
 
-  // Update static value
-  const updateStaticValue = (field: keyof typeof staticValues, value: string) => {
-    setStaticValues((prev) => ({ ...prev, [field]: value }));
+  // Update static value — preserve numeric types for numeric fields
+  const updateStaticValue = (
+    field: keyof typeof staticValues,
+    value: string | number | undefined,
+  ) => {
+    // Parse value according to field type
+    const parsedValue: (typeof staticValues)[keyof typeof staticValues] =
+      field === "length" || field === "stopbarSetbackDist"
+        ? value === undefined || value === ""
+          ? undefined
+          : typeof value === "number"
+            ? value
+            : parseFloat(String(value))
+        : (String(value ?? "") as string);
+
+    setStaticValues((prev) => ({ ...prev, [field]: parsedValue }));
 
     // If field is static, apply to all detectors
     if (staticFields[field as keyof StaticFields]) {
       setPendingDetectors((prev) =>
         prev.map((det) => {
-          const updated = { ...det, [field]: value };
+          const updated = { ...det, [field]: parsedValue } as PendingDetector;
           // Update description if purpose changed and not manually set
           if (field === "purpose" && !det.isDescriptionManual) {
             const direction = getRowDirection(det);
-            const formattedPurpose = formatPurposeForDescription(value);
+            const formattedPurpose = formatPurposeForDescription(parsedValue as string);
             updated.description = buildDescription(direction, formattedPurpose, det.lane);
           }
           return updated;
@@ -1126,7 +1139,7 @@ export default function BulkDetectorModal({
                     onChange={(e) =>
                       updateStaticValue(
                         "length",
-                        e.target.value ? parseFloat(e.target.value).toString() : "0",
+                        e.target.value ? parseFloat(e.target.value) : undefined,
                       )
                     }
                     disabled={!staticFields.length}
@@ -1153,7 +1166,7 @@ export default function BulkDetectorModal({
                     onChange={(e) =>
                       updateStaticValue(
                         "stopbarSetbackDist",
-                        e.target.value ? parseFloat(e.target.value).toString() : "0",
+                        e.target.value ? parseFloat(e.target.value) : undefined,
                       )
                     }
                     disabled={!staticFields.stopbarSetbackDist}

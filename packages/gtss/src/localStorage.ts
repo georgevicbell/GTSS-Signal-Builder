@@ -936,7 +936,8 @@ const MOVEMENT_TYPE_REVERSE_MAP: { [key: string]: string } = {
 
 // CSV export functions with sanitization to prevent formula injection
 export function generateAgencyCSV(agency: Agency | null): string {
-  if (!agency) return "agency_id,agency_name,agency_url,agency_timezone,agency_email\n";
+  if (!agency)
+    return "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric\n";
 
   return [
     "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric",

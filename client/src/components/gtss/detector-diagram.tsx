@@ -69,7 +69,10 @@ const isAdvancedDetector = (purpose: string, setback?: number | null): boolean =
 // Effective setback, used to ORDER advanced detectors along the road
 // (and as the label when it comes from a real stopbar_setback_dist). Purposes
 // without an explicit distance get a typical ordering value.
-const effectiveSetback = (d: { purpose: string; stopbarSetbackDist?: number | null }): number => {
+const effectiveSetback = (
+  d: { purpose: string; stopbarSetbackDist?: number | null },
+  isMetric: boolean = false,
+): number => {
   // Magnitude only — the sign says which side of the stop bar, not how far.
   if (
     d.stopbarSetbackDist !== undefined &&
@@ -78,8 +81,7 @@ const effectiveSetback = (d: { purpose: string; stopbarSetbackDist?: number | nu
   ) {
     return Math.abs(d.stopbarSetbackDist);
   }
-  const { agency } = useGTSSStore();
-  const isMetric = agency?.agencyIsMetric ?? false;
+
   if (isMetric) {
     switch (d.purpose) {
       case "Extension":
@@ -423,7 +425,7 @@ export default function DetectorDiagram({
               ap?.approachId === a.approachId && isAdvancedDetector(d.purpose, d.stopbarSetbackDist)
             );
           })
-          .map(effectiveSetback),
+          .map((d) => effectiveSetback(d, isMetric)),
       ),
     ).sort((x, y) => x - y);
     if (vals.length === 0) return;
@@ -508,12 +510,15 @@ export default function DetectorDiagram({
       });
     }
   });
-
+  const { agency } = useGTSSStore();
+  const isMetric = agency?.agencyIsMetric ?? false;
+  const lengthUnit = isMetric ? "m" : "ft";
   // One distance label per advanced row that has a real measured setback,
   // placed off the road edge beside the row.
   const distanceLabels: React.ReactElement[] = [];
   rowGroups.forEach((group, key) => {
     const sample = group[0];
+
     if (!isAdvancedDetector(sample.det.purpose, sample.det.stopbarSetbackDist)) return;
     const measured = group
       .map((pd) => pd.det.stopbarSetbackDist)
@@ -534,7 +539,7 @@ export default function DetectorDiagram({
       side * (roadHalf + 20) * Math.sin(sample.perpAngle);
     distanceLabels.push(
       <text key={`dist-${key}`} x={lx} y={ly + 3} textAnchor="middle" fontSize="9" fill="#6b7280">
-        {measured < 0 ? `${Math.abs(measured)} ft past` : `${measured} ft`}
+        {measured < 0 ? `${Math.abs(measured)} ${lengthUnit} past` : `${measured} ${lengthUnit}`}
       </text>,
     );
   });

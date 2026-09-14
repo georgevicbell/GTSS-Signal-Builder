@@ -2722,10 +2722,11 @@ export default function SignalDetails() {
                           </TooltipTrigger>
                           <TooltipContent>
                             <p className="text-xs">
-                              Measured crosswalk distance in ${lengthUnit}. Leave blank to
+                              Measured crosswalk distance in {lengthUnit}. Leave blank to
                               auto-estimate in phases.txt: LE-# from the full street width (approach
-                              + departure lanes, 12 ft/lane) or TE-# from ped clearance time (3.5
-                              ft/s) — the shorter is used. A measured value overrides both.
+                              + departure lanes, {isMetric ? "3.65 m/lane" : "12 ft/lane"}) or TE-#
+                              from ped clearance time ({isMetric ? "1.05 m/s" : "3.5 ft/s"}) — the
+                              shorter is used. A measured value overrides both.
                             </p>
                           </TooltipContent>
                         </Tooltip>
