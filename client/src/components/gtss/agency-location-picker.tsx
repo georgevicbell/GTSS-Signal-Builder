@@ -106,7 +106,7 @@ export default function AgencyLocationPicker({
           fetch("https://ipapi.co/json/")
             .then((response) => response.json())
             .then((data) => {
-              if (data.latitude && data.longitude) {
+              if (data.latitude != null && data.longitude != null) {
                 const lat = data.latitude;
                 const lon = data.longitude;
                 setUserLocation([lat, lon]);
@@ -124,7 +124,7 @@ export default function AgencyLocationPicker({
       fetch("https://ipapi.co/json/")
         .then((response) => response.json())
         .then((data) => {
-          if (data.latitude && data.longitude) {
+          if (data.latitude != null && data.longitude != null) {
             const lat = data.latitude;
             const lon = data.longitude;
             setUserLocation([lat, lon]);

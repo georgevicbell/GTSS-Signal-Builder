@@ -52,6 +52,7 @@ import {
   generatePhasesCSV,
   generateSignalsCSV,
   isMapScrollZoomEnabled,
+  isMetricForSignalId,
   phaseDiagramFileName,
   suggestStreetNameForApproach,
   useApproaches,
@@ -167,6 +168,12 @@ export default function SignalDetails() {
     tempNewSignalLocation,
     setTempNewSignalLocation,
   } = useGTSSStore();
+  const isMetric = isMetricForSignalId(currentSignalId ?? undefined);
+  const lengthUnit = isMetric ? "m" : "feet";
+
+  const speedUnit = isMetric ? "km/h" : "mph";
+  const qaSpeedMax = isMetric ? 200 : 100;
+  const qaSpeedPlaceholder = isMetric ? "120" : "35";
   const signalId = currentSignalId;
   const isNewSignal = signalId === null;
   const signalHooks = useSignals();
@@ -1249,7 +1256,8 @@ export default function SignalDetails() {
                   The phase diagram next to the map already conveys phase info,
                   so the map stays as a clean approach reference. */}
               {signalApproaches.map((a) => {
-                if (a.compassBearing == null || !signal.latitude || !signal.longitude) return null;
+                if (a.compassBearing == null || signal.latitude == null || signal.longitude == null)
+                  return null;
                 const endpoint = approachEndpoint(
                   a.compassBearing,
                   signal.latitude,
@@ -1408,15 +1416,15 @@ export default function SignalDetails() {
                   </div>
                   <div className="flex flex-col w-20">
                     <label className="text-[10px] uppercase tracking-wide font-medium text-grey-500 mb-1">
-                      Speed
+                      Speed ({speedUnit})
                     </label>
                     <Input
                       type="number"
                       min="0"
-                      max="100"
+                      max={qaSpeedMax}
                       value={qaSpeed}
                       onChange={(e) => setQaSpeed(e.target.value)}
-                      placeholder="35"
+                      placeholder={qaSpeedPlaceholder}
                       className="h-8 text-sm"
                     />
                   </div>
@@ -1582,7 +1590,13 @@ export default function SignalDetails() {
                                 : "-"}
                             </TableCell>
                             <TableCell className="py-1 px-1.5" style={{ fontSize: "12px" }}>
-                              {approach.postedSpeed ? `${approach.postedSpeed} mph` : "-"}
+                              {approach.postedSpeed ? (
+                                <>
+                                  {approach.postedSpeed} {speedUnit}
+                                </>
+                              ) : (
+                                "-"
+                              )}
                             </TableCell>
                             <TableCell className="py-1 px-1.5" style={{ fontSize: "12px" }}>
                               {approach.freeRight === 3
@@ -2184,7 +2198,13 @@ export default function SignalDetails() {
                                 <span className="text-grey-400">&mdash;</span>
                               ) : detector.stopbarSetbackDist < 0 ? (
                                 // Negative means past the stop bar, on the departure side.
-                                `${Math.abs(detector.stopbarSetbackDist)} ft past`
+                                isMetric ? (
+                                  `${Math.abs(detector.stopbarSetbackDist).toFixed(2)} m past`
+                                ) : (
+                                  `${Math.abs(detector.stopbarSetbackDist)} ft past`
+                                )
+                              ) : isMetric ? (
+                                `${detector.stopbarSetbackDist.toFixed(2)} m`
                               ) : (
                                 `${detector.stopbarSetbackDist} ft`
                               )}
@@ -2697,7 +2717,7 @@ export default function SignalDetails() {
                     <FormItem className="space-y-0.5">
                       <div className="flex items-center space-x-1">
                         <FormLabel className="font-medium" style={{ fontSize: "12px" }}>
-                          Crosswalk Length (ft)
+                          Crosswalk Length ({lengthUnit})
                         </FormLabel>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -2705,9 +2725,10 @@ export default function SignalDetails() {
                           </TooltipTrigger>
                           <TooltipContent>
                             <p className="text-xs">
-                              Measured crosswalk distance in feet. Leave blank to auto-estimate in
-                              phases.txt: LE-# from the full street width (approach + departure
-                              lanes, 12 ft/lane) or TE-# from ped clearance time (3.5 ft/s) — the
+                              Measured crosswalk distance in {lengthUnit}. Leave blank to
+                              auto-estimate in phases.txt: LE-# from the full street width (approach
+                              + departure lanes, {isMetric ? "3.65 m/lane" : "12 ft/lane"}) or TE-#
+                              from ped clearance time ({isMetric ? "1.05 m/s" : "3.5 ft/s"}) — the
                               shorter is used. A measured value overrides both.
                             </p>
                           </TooltipContent>

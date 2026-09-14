@@ -66,7 +66,7 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
   });
   const getMapCenter = (): [number, number] => {
     // Use agency coordinates if available
-    if (agency?.latitude && agency?.longitude) {
+    if (agency?.latitude != null && agency?.longitude != null) {
       return [agency.latitude, agency.longitude];
     }
     // Default fallback
@@ -215,8 +215,8 @@ export default function BulkSignalModal({ onClose }: BulkSignalModalProps) {
               {/* Existing signals in grey */}
               {signals.map(
                 (signal) =>
-                  signal.latitude &&
-                  signal.longitude && (
+                  signal.latitude != null &&
+                  signal.longitude != null && (
                     <Marker
                       key={`existing-${signal.signalId}`}
                       position={[signal.latitude, signal.longitude]}

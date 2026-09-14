@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   getSignalDisplayName,
   handleColumnMajorTab,
+  isMetricForSignalId,
   suggestStreetNameForApproach,
   useApproaches,
   useGTSSStore,
@@ -105,6 +106,9 @@ export default function BulkApproachModal({
 
   const [selectedSignalId, setSelectedSignalId] = useState<string>(preSelectedSignalId || "");
   const [numApproaches, setNumApproaches] = useState(4);
+  const isMetric = isMetricForSignalId(selectedSignalId);
+  const speedUnit = isMetric ? "km/h" : "mph";
+
   const [baseBearing, setBaseBearing] = useState<number | null>(null);
   const [angleOffset, setAngleOffset] = useState(0);
   const [pendingApproaches, setPendingApproaches] = useState<PendingApproach[]>([]);
@@ -176,7 +180,8 @@ export default function BulkApproachModal({
   // point, then either rotates all approaches (rotateAll) or snaps the single
   // nearest approach line to that angle (oneClick).
   const handleMapClick = (clickLat: number, clickLng: number) => {
-    if (!selectedSignal || !selectedSignal.latitude || !selectedSignal.longitude) return;
+    if (!selectedSignal || selectedSignal.latitude == null || selectedSignal.longitude == null)
+      return;
 
     const signalLat = selectedSignal.latitude;
     const signalLng = selectedSignal.longitude;
@@ -564,7 +569,7 @@ export default function BulkApproachModal({
             </SelectTrigger>
             <SelectContent>
               {signals
-                .filter((s) => s.latitude && s.longitude)
+                .filter((s) => s.latitude != null && s.longitude != null)
                 .map((signal) => (
                   <SelectItem key={signal.signalId} value={signal.signalId}>
                     {getSignalDisplayName(signal, existingApproaches)}
@@ -574,7 +579,7 @@ export default function BulkApproachModal({
           </Select>
         </div>
 
-        {selectedSignal && selectedSignal.latitude && selectedSignal.longitude ? (
+        {selectedSignal && selectedSignal.latitude != null && selectedSignal.longitude != null ? (
           <>
             {/* Controls Row */}
             <div className="flex items-center gap-6 p-3 bg-grey-50 rounded-lg">
@@ -715,7 +720,7 @@ export default function BulkApproachModal({
                       <TableHead className="w-20 text-xs">ID *</TableHead>
                       <TableHead className="w-60 text-xs">Angle</TableHead>
                       <TableHead className="w-48 text-xs">Street Name *</TableHead>
-                      <TableHead className="w-20 text-xs">Speed (mph)</TableHead>
+                      <TableHead className="w-20 text-xs">Speed ({speedUnit})</TableHead>
                       <TableHead
                         className="w-24 text-xs text-center"
                         title="Free Right — right-turn slip lane bypassing the signal. FR-P adds a pedestrian crossing; FR-P-I is an improved traffic-calmed crossing."
@@ -791,10 +796,10 @@ export default function BulkApproachModal({
                           <Input
                             type="number"
                             min="0"
-                            max="100"
+                            max={isMetric ? 200 : 100}
                             value={approach.postedSpeed || ""}
                             onChange={(e) => handleSpeedChange(idx, e.target.value)}
-                            placeholder="35"
+                            placeholder={isMetric ? "50" : "35"}
                             className="h-8 text-sm w-20"
                             data-tab-col={3}
                             data-tab-row={idx}

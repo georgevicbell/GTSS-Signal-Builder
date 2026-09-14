@@ -1,13 +1,25 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { agencyListStorage } from 'gtss';
 import { MapPicker } from "@/components/ui/map";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useGTSSStore, useSignals } from "gtss";
+import { agencyListStorage, useGTSSStore, useSignals } from "gtss";
 import { type InsertSignal, insertSignalSchema, type Signal } from "gtss/schema";
 import { MapPin, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -19,7 +31,7 @@ interface SignalModalProps {
 }
 
 export default function SignalModal({ signal, onClose }: SignalModalProps) {
-  const { agency, addSignal, updateSignal } = useGTSSStore();
+  const { agency } = useGTSSStore();
   const { toast } = useToast();
   const signalHooks = useSignals();
 
@@ -27,16 +39,18 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
     resolver: zodResolver(insertSignalSchema),
     defaultValues: {
       signalId: "",
-      agencyId: agency?.agencyId || (() => {
-        try {
-          const def = agencyListStorage.getDefaultId();
-          const list = agencyListStorage.getAll();
-          const defAgency = list.find(a => a.id === def);
-          return defAgency?.agencyId || "";
-        } catch {
-          return "";
-        }
-      })(),
+      agencyId:
+        agency?.agencyId ||
+        (() => {
+          try {
+            const def = agencyListStorage.getDefaultId();
+            const list = agencyListStorage.getAll();
+            const defAgency = list.find((a) => a.id === def);
+            return defAgency?.agencyId || "";
+          } catch {
+            return "";
+          }
+        })(),
       streetName1: "",
       streetName2: "",
       latitude: 39.8283,
@@ -59,8 +73,10 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
         try {
           const defId = agencyListStorage.getDefaultId();
           const list = agencyListStorage.getAll();
-          return list.find(a => a.id === defId)?.agencyId || agency?.agencyId || "";
-        } catch { return agency?.agencyId || ""; }
+          return list.find((a) => a.id === defId)?.agencyId || agency?.agencyId || "";
+        } catch {
+          return agency?.agencyId || "";
+        }
       })();
       form.reset({
         signalId: "",
@@ -90,7 +106,7 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
         });
       }
       onClose();
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: signal ? "Failed to update signal" : "Failed to create signal",
@@ -106,11 +122,11 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
   // Calculate map center based on signal coordinates, then agency, then default
   const getMapCenter = (): [number, number] => {
     // If editing a signal, center on its coordinates
-    if (signal && signal.latitude && signal.longitude) {
+    if (signal && signal.latitude != null && signal.longitude != null) {
       return [signal.latitude, signal.longitude];
     }
     // Otherwise use agency coordinates if available
-    if (agency?.latitude && agency?.longitude) {
+    if (agency?.latitude != null && agency?.longitude != null) {
       return [agency.latitude, agency.longitude];
     }
     return [39.8283, -98.5795]; // Default center of US
@@ -120,9 +136,7 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-screen overflow-auto">
         <DialogHeader>
-          <DialogTitle>
-            {signal ? "Edit Signal Location" : "Add Signal Location"}
-          </DialogTitle>
+          <DialogTitle>{signal ? "Edit Signal Location" : "Add Signal Location"}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -154,8 +168,10 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
                           <SelectValue placeholder="Select agency" />
                         </SelectTrigger>
                         <SelectContent>
-                          {agencyListStorage.getAll().map(a => (
-                            <SelectItem key={a.id} value={a.agencyId}>{a.agencyName} ({a.agencyId})</SelectItem>
+                          {agencyListStorage.getAll().map((a) => (
+                            <SelectItem key={a.id} value={a.agencyId}>
+                              {a.agencyName} ({a.agencyId})
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -196,7 +212,9 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
 
             {/* Location Selection Section */}
             <div className="col-span-2 space-y-4">
-              <h3 className="text-lg font-medium text-grey-800 border-b border-grey-200 pb-2">Intersection Location</h3>
+              <h3 className="text-lg font-medium text-grey-800 border-b border-grey-200 pb-2">
+                Intersection Location
+              </h3>
 
               <div className="w-full">
                 <div className="flex items-center gap-2 mb-3">
@@ -210,14 +228,17 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
                   </div>
                   <MapPicker
                     center={getMapCenter()}
-                    selectedPosition={form.watch("latitude") !== undefined && form.watch("longitude") !== undefined ? [form.watch("latitude"), form.watch("longitude")] : undefined}
+                    selectedPosition={
+                      form.watch("latitude") !== undefined && form.watch("longitude") !== undefined
+                        ? [form.watch("latitude"), form.watch("longitude")]
+                        : undefined
+                    }
                     onLocationSelect={(lat, lng) => {
                       form.setValue("latitude", lat);
                       form.setValue("longitude", lng);
                     }}
                     className="w-full"
                   />
-
 
                   {/* Editable coordinate fields */}
                   <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg border mt-3">
@@ -226,7 +247,9 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
                       name="latitude"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-medium text-gray-600">Latitude *</FormLabel>
+                          <FormLabel className="text-xs font-medium text-gray-600">
+                            Latitude *
+                          </FormLabel>
                           <FormControl>
                             <Input
                               type="number"
@@ -247,7 +270,9 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
                       name="longitude"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-medium text-gray-600">Longitude *</FormLabel>
+                          <FormLabel className="text-xs font-medium text-gray-600">
+                            Longitude *
+                          </FormLabel>
                           <FormControl>
                             <Input
                               type="number"
@@ -274,7 +299,11 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
                     type="button"
                     variant="destructive"
                     onClick={() => {
-                      if (confirm("Are you sure you want to delete this signal? This action cannot be undone.")) {
+                      if (
+                        confirm(
+                          "Are you sure you want to delete this signal? This action cannot be undone.",
+                        )
+                      ) {
                         signalHooks.delete(signal.signalId);
                         toast({
                           title: "Success",

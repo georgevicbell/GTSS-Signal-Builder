@@ -122,6 +122,53 @@ function getFromStorage<T>(key: string, defaultValue: T): T {
   }
 }
 
+// Distance unit helpers: when an agency uses metric units we store certain
+// distances in centimeters (cm) internally. Consumers expect to see meters
+// (m) rounded to 2 decimals. These helpers centralize conversion logic.
+function storedDistanceToDisplay(value: number | null | undefined, isMetric: boolean) {
+  if (value == null) return null;
+  if (!isMetric) return value; // non-metric values are stored/displayed as-is
+  // stored as cm -> display as meters rounded to 2 decimals
+  const m = Number(value) / 100;
+  return Math.round(m * 100) / 100;
+}
+
+function displayDistanceToStored(value: number | null | undefined, isMetric: boolean) {
+  if (value == null) return null;
+  if (!isMetric) return value; // non-metric values stored as-is
+  // display in meters -> store as integer cm
+  return Math.round(Number(value) * 100);
+}
+
+// Ensure agency object always has a boolean `agencyIsMetric` field.
+function normalizeAgency(
+  a: (Partial<{ agencyIsMetric?: unknown }> & Record<string, unknown>) | null | undefined,
+) {
+  if (a == null) return null;
+  try {
+    return { ...(a as Record<string, unknown>), agencyIsMetric: !!a.agencyIsMetric };
+  } catch {
+    return a;
+  }
+}
+
+// Resolve whether a given signal's agency uses metric units. Falls back to
+// the currently selected/default agency when the signal or agency cannot be
+// resolved. Accepts a signalId string and returns a boolean.
+export function isMetricForSignalId(signalId?: string | null): boolean {
+  try {
+    if (!signalId) return agencyStorage.get()?.agencyIsMetric ?? false;
+    const sig = signalStorage.get(signalId);
+    if (!sig) return agencyStorage.get()?.agencyIsMetric ?? false;
+    const agencies = agencyListStorage.getAll();
+    const matching = agencies.find((a) => a.agencyId === sig.agencyId);
+    if (matching) return !!matching.agencyIsMetric;
+    return agencyStorage.get()?.agencyIsMetric ?? false;
+  } catch {
+    return agencyStorage.get()?.agencyIsMetric ?? false;
+  }
+}
+
 // Helper function to save to localStorage with size limit check
 function saveToStorage<T>(key: string, data: T): void {
   try {
@@ -156,11 +203,13 @@ export const agencyStorage = {
       if (Array.isArray(raw)) {
         const defId = agencyListStorage.getDefaultId();
         if (defId) {
-          return raw.find((a: Agency) => a.id === defId) ?? raw[0] ?? null;
+          return normalizeAgency(
+            raw.find((a: Agency) => a.id === defId) ?? raw[0] ?? null,
+          ) as Agency | null;
         }
-        return raw[0] ?? null;
+        return normalizeAgency(raw[0] ?? null) as Agency | null;
       }
-      return raw as Agency;
+      return normalizeAgency(raw as Agency) as Agency;
     } catch {
       return null;
     }
@@ -179,6 +228,7 @@ export const agencyStorage = {
       agencyUrl: agency.agencyUrl ?? null,
       agencyTimezone: agency.agencyTimezone,
       agencyLanguage: agency.agencyLanguage ?? null,
+      agencyIsMetric: agency.agencyIsMetric ?? false,
       agencyEmail: agency.agencyEmail ?? null,
       latitude: agency.latitude ?? null,
       longitude: agency.longitude ?? null,
@@ -216,7 +266,8 @@ export const agencyListStorage = {
   getAll: (): Agency[] => {
     const raw = getFromStorage<Agency[] | null>(STORAGE_KEYS.AGENCY, null);
     if (!raw) return [];
-    return Array.isArray(raw) ? raw : [raw as Agency];
+    const list = Array.isArray(raw) ? raw : [raw as Agency];
+    return list.map((a) => normalizeAgency(a) as Agency);
   },
 
   get: (id: string): Agency | undefined => {
@@ -234,6 +285,7 @@ export const agencyListStorage = {
       agencyUrl: agency.agencyUrl ?? null,
       agencyTimezone: agency.agencyTimezone,
       agencyLanguage: agency.agencyLanguage ?? null,
+      agencyIsMetric: agency.agencyIsMetric ?? false,
       agencyEmail: agency.agencyEmail ?? null,
       latitude: agency.latitude ?? null,
       longitude: agency.longitude ?? null,
@@ -465,23 +517,23 @@ export const approachStorage = {
   },
 
   delete: (id: string): void => {
-    const approaches = approachStorage.getAll();
-    const updatedApproaches = approaches.filter((a) => a.id !== id);
-    saveToStorage(STORAGE_KEYS.APPROACHES, updatedApproaches);
+    const raw = getFromStorage<Approach[]>(STORAGE_KEYS.APPROACHES, []);
+    const updated = raw.filter((a) => a.id !== id);
+    saveToStorage(STORAGE_KEYS.APPROACHES, updated);
   },
 
   deleteBySignal: (signalId: string): void => {
-    const approaches = approachStorage.getAll();
-    const updatedApproaches = approaches.filter((a) => a.signalId !== signalId);
-    saveToStorage(STORAGE_KEYS.APPROACHES, updatedApproaches);
+    const raw = getFromStorage<Approach[]>(STORAGE_KEYS.APPROACHES, []);
+    const updated = raw.filter((a) => a.signalId !== signalId);
+    saveToStorage(STORAGE_KEYS.APPROACHES, updated);
   },
 
   updateSignalId: (oldSignalId: string, newSignalId: string): void => {
-    const approaches = approachStorage.getAll();
-    const updatedApproaches = approaches.map((approach) =>
+    const raw = getFromStorage<Approach[]>(STORAGE_KEYS.APPROACHES, []);
+    const updated = raw.map((approach) =>
       approach.signalId === oldSignalId ? { ...approach, signalId: newSignalId } : approach,
     );
-    saveToStorage(STORAGE_KEYS.APPROACHES, updatedApproaches);
+    saveToStorage(STORAGE_KEYS.APPROACHES, updated);
   },
 
   clear: (): void => {
@@ -592,23 +644,23 @@ export const phaseStorage = {
   },
 
   delete: (id: string): void => {
-    const phases = phaseStorage.getAll();
-    const updatedPhases = phases.filter((p) => p.id !== id);
-    saveToStorage(STORAGE_KEYS.PHASES, updatedPhases);
+    const raw = getFromStorage<Phase[]>(STORAGE_KEYS.PHASES, []);
+    const updated = raw.filter((p) => p.id !== id);
+    saveToStorage(STORAGE_KEYS.PHASES, updated);
   },
 
   deleteBySignal: (signalId: string): void => {
-    const phases = phaseStorage.getAll();
-    const updatedPhases = phases.filter((p) => p.signalId !== signalId);
-    saveToStorage(STORAGE_KEYS.PHASES, updatedPhases);
+    const raw = getFromStorage<Phase[]>(STORAGE_KEYS.PHASES, []);
+    const updated = raw.filter((p) => p.signalId !== signalId);
+    saveToStorage(STORAGE_KEYS.PHASES, updated);
   },
 
   updateSignalId: (oldSignalId: string, newSignalId: string): void => {
-    const phases = phaseStorage.getAll();
-    const updatedPhases = phases.map((phase) =>
+    const raw = getFromStorage<Phase[]>(STORAGE_KEYS.PHASES, []);
+    const updated = raw.map((phase) =>
       phase.signalId === oldSignalId ? { ...phase, signalId: newSignalId } : phase,
     );
-    saveToStorage(STORAGE_KEYS.PHASES, updatedPhases);
+    saveToStorage(STORAGE_KEYS.PHASES, updated);
   },
 
   clear: (): void => {
@@ -621,12 +673,19 @@ export const detectorStorage = {
   getAll: (): Detector[] => {
     const raw = getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
     // Rows stored before detectors could carry an approach (or stand without a
-    // phase) are missing these keys entirely.
-    return raw.map((d) => ({
-      ...d,
-      phase: d.phase ?? null,
-      approachId: (d as { approachId?: string | null }).approachId ?? null,
-    }));
+    // phase) are missing these keys entirely. Convert metric-stored distances
+    // from cm -> m for consumers. Resolve the unit per-detector using its
+    // signal -> agency mapping (not the current default agency).
+    return raw.map((d) => {
+      const isMetric = isMetricForSignalId(d.signalId);
+      return {
+        ...d,
+        phase: d.phase ?? null,
+        approachId: (d as { approachId?: string | null }).approachId ?? null,
+        length: storedDistanceToDisplay(d.length ?? null, isMetric),
+        stopbarSetbackDist: storedDistanceToDisplay(d.stopbarSetbackDist ?? null, isMetric),
+      };
+    });
   },
 
   getBySignal: (signalId: string): Detector[] => {
@@ -635,8 +694,11 @@ export const detectorStorage = {
   },
 
   save: (detector: InsertDetector): Detector => {
-    const detectors = detectorStorage.getAll();
-    const newDetector: Detector = {
+    const raw = getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
+    // Resolve units based on the detector's signal -> agency.
+    const isMetric = isMetricForSignalId(detector.signalId);
+
+    const storedDetector = {
       id: nanoid(),
       signalId: detector.signalId,
       phase: detector.phase ?? null,
@@ -646,14 +708,24 @@ export const detectorStorage = {
       vehicleType: detector.vehicleType ?? null,
       lane: detector.lane ?? null,
       technologyType: detector.technologyType,
-      length: detector.length ?? null,
-      stopbarSetbackDist: detector.stopbarSetbackDist ?? null,
+      length: displayDistanceToStored(detector.length ?? null, isMetric),
+      stopbarSetbackDist: displayDistanceToStored(detector.stopbarSetbackDist ?? null, isMetric),
       approachId: detector.approachId ?? null,
     };
 
-    const updatedDetectors = [...detectors, newDetector];
-    saveToStorage(STORAGE_KEYS.DETECTORS, updatedDetectors);
-    return newDetector;
+    const updatedRaw = [...raw, storedDetector];
+    saveToStorage(STORAGE_KEYS.DETECTORS, updatedRaw);
+
+    // Return the consumer-facing (display) representation
+    const displayDetector = {
+      ...storedDetector,
+      length: storedDistanceToDisplay(storedDetector.length ?? null, isMetric),
+      stopbarSetbackDist: storedDistanceToDisplay(
+        storedDetector.stopbarSetbackDist ?? null,
+        isMetric,
+      ),
+    };
+    return displayDetector as Detector;
   },
 
   update: (id: string, updates: Partial<InsertDetector>): Detector | null => {
@@ -663,35 +735,65 @@ export const detectorStorage = {
       return null;
     }
 
-    const detectors = detectorStorage.getAll();
-    const index = detectors.findIndex((d) => d.id === id);
+    const raw = getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
+    const index = raw.findIndex((d) => d.id === id);
 
     if (index === -1) return null;
 
-    const updatedDetector = { ...detectors[index], ...updates };
-    detectors[index] = updatedDetector;
-    saveToStorage(STORAGE_KEYS.DETECTORS, detectors);
-    return updatedDetector;
+    // If the update changes the signalId use the new signal's agency when
+    // converting distances; otherwise use the detector's existing signal.
+    const targetSignalId =
+      "signalId" in updates && typeof updates.signalId === "string"
+        ? (updates.signalId as string)
+        : raw[index].signalId;
+    const isMetric = isMetricForSignalId(targetSignalId);
+
+    // Convert any incoming distance updates from display -> stored units
+    const updatesForStorage: Partial<Record<string, unknown>> = { ...updates };
+    if ("length" in updatesForStorage) {
+      updatesForStorage.length = displayDistanceToStored(updates.length ?? null, isMetric);
+    }
+    if ("stopbarSetbackDist" in updatesForStorage) {
+      updatesForStorage.stopbarSetbackDist = displayDistanceToStored(
+        updates.stopbarSetbackDist ?? null,
+        isMetric,
+      );
+    }
+
+    const mergedStored = { ...raw[index], ...updatesForStorage };
+    raw[index] = mergedStored as Detector;
+    saveToStorage(STORAGE_KEYS.DETECTORS, raw);
+
+    // Return display-facing object (resolve units using target signal)
+    const displayObj = {
+      ...mergedStored,
+      length: storedDistanceToDisplay(mergedStored.length ?? null, isMetric),
+      stopbarSetbackDist: storedDistanceToDisplay(
+        mergedStored.stopbarSetbackDist ?? null,
+        isMetric,
+      ),
+    };
+    return displayObj as Detector;
   },
 
   delete: (id: string): void => {
-    const detectors = detectorStorage.getAll();
-    const updatedDetectors = detectors.filter((d) => d.id !== id);
-    saveToStorage(STORAGE_KEYS.DETECTORS, updatedDetectors);
+    const raw = getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
+    const updated = raw.filter((d) => d.id !== id);
+    saveToStorage(STORAGE_KEYS.DETECTORS, updated);
   },
 
   deleteBySignal: (signalId: string): void => {
-    const detectors = detectorStorage.getAll();
-    const updatedDetectors = detectors.filter((d) => d.signalId !== signalId);
-    saveToStorage(STORAGE_KEYS.DETECTORS, updatedDetectors);
+    const raw = getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
+    const updated = raw.filter((d) => d.signalId !== signalId);
+    saveToStorage(STORAGE_KEYS.DETECTORS, updated);
   },
 
   updateSignalId: (oldSignalId: string, newSignalId: string): void => {
-    const detectors = detectorStorage.getAll();
-    const updatedDetectors = detectors.map((detector) =>
+    const raw = getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
+    const updated = raw.map((detector) =>
       detector.signalId === oldSignalId ? { ...detector, signalId: newSignalId } : detector,
     );
-    saveToStorage(STORAGE_KEYS.DETECTORS, updatedDetectors);
+    saveToStorage(STORAGE_KEYS.DETECTORS, updated);
   },
 
   clear: (): void => {
@@ -750,23 +852,23 @@ export const basicTimingStorage = {
   },
 
   delete: (id: string): void => {
-    const timings = basicTimingStorage.getAll();
-    const updatedTimings = timings.filter((t) => t.id !== id);
-    saveToStorage(STORAGE_KEYS.BASIC_TIMINGS, updatedTimings);
+    const raw = getFromStorage<BasicTiming[]>(STORAGE_KEYS.BASIC_TIMINGS, []);
+    const updated = raw.filter((t) => t.id !== id);
+    saveToStorage(STORAGE_KEYS.BASIC_TIMINGS, updated);
   },
 
   deleteBySignal: (signalId: string): void => {
-    const timings = basicTimingStorage.getAll();
-    const updatedTimings = timings.filter((t) => t.signalId !== signalId);
-    saveToStorage(STORAGE_KEYS.BASIC_TIMINGS, updatedTimings);
+    const raw = getFromStorage<BasicTiming[]>(STORAGE_KEYS.BASIC_TIMINGS, []);
+    const updated = raw.filter((t) => t.signalId !== signalId);
+    saveToStorage(STORAGE_KEYS.BASIC_TIMINGS, updated);
   },
 
   updateSignalId: (oldSignalId: string, newSignalId: string): void => {
-    const timings = basicTimingStorage.getAll();
-    const updatedTimings = timings.map((timing) =>
+    const raw = getFromStorage<BasicTiming[]>(STORAGE_KEYS.BASIC_TIMINGS, []);
+    const updated = raw.map((timing) =>
       timing.signalId === oldSignalId ? { ...timing, signalId: newSignalId } : timing,
     );
-    saveToStorage(STORAGE_KEYS.BASIC_TIMINGS, updatedTimings);
+    saveToStorage(STORAGE_KEYS.BASIC_TIMINGS, updated);
   },
 
   clear: (): void => {
@@ -855,21 +957,22 @@ const MOVEMENT_TYPE_REVERSE_MAP: { [key: string]: string } = {
 
 // CSV export functions with sanitization to prevent formula injection
 export function generateAgencyCSV(agency: Agency | null): string {
-  if (!agency) return "agency_id,agency_name,agency_url,agency_timezone,agency_email\n";
+  if (!agency)
+    return "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric\n";
 
   return [
-    "agency_id,agency_name,agency_url,agency_timezone,agency_email",
-    `${sanitizeCSVField(agency.agencyId)},${sanitizeCSVField(agency.agencyName)},${sanitizeCSVField(agency.agencyUrl)},${sanitizeCSVField(agency.agencyTimezone)},${sanitizeCSVField(agency.agencyEmail)}`,
+    "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric",
+    `${sanitizeCSVField(agency.agencyId)},${sanitizeCSVField(agency.agencyName)},${sanitizeCSVField(agency.agencyUrl)},${sanitizeCSVField(agency.agencyTimezone)},${sanitizeCSVField(agency.agencyEmail)},${sanitizeCSVField(agency.agencyIsMetric)}`,
   ].join("\n");
 }
 
 // Generate a single agencies CSV containing multiple agency rows
 export function generateAgenciesCSV(agencies: Agency[]): string {
-  const header = "agency_id,agency_name,agency_url,agency_timezone,agency_email";
+  const header = "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric";
   if (!agencies || agencies.length === 0) return header + "\n";
   const rows = agencies.map(
     (a) =>
-      `${sanitizeCSVField(a.agencyId)},${sanitizeCSVField(a.agencyName)},${sanitizeCSVField(a.agencyUrl)},${sanitizeCSVField(a.agencyTimezone)},${sanitizeCSVField(a.agencyEmail)}`,
+      `${sanitizeCSVField(a.agencyId)},${sanitizeCSVField(a.agencyName)},${sanitizeCSVField(a.agencyUrl)},${sanitizeCSVField(a.agencyTimezone)},${sanitizeCSVField(a.agencyEmail)},${sanitizeCSVField(a.agencyIsMetric)}`,
   );
   return [header, ...rows].join("\n");
 }
@@ -918,21 +1021,30 @@ export function generateApproachesCSV(approaches: Approach[]): string {
 // Crosswalk length code for phases.txt. Knowing the crosswalk distance is an
 // important aspect of intersection safety (finding the longest crossings,
 // cross-checking timing values against standards). Codes:
-//   LE-#  lane-estimated distance: 12 ft × total lanes crossed. The crosswalk
-//         spans the WHOLE street, so this counts the approach (inbound) lanes
-//         plus the leg's departure lanes — sized by the widest phase that
-//         discharges onto the leg (opposite through, turns into the street).
-//   TE-#  time-estimated distance: ped clearance × 3.5 ft/s walking speed
+//   LE-#  lane-estimated distance: lane_width × total lanes crossed. The
+//         crosswalk spans the WHOLE street, so this counts the approach
+//         (inbound) lanes plus the leg's departure lanes — sized by the
+//         widest phase that discharges onto the leg (opposite through, turns
+//         into the street).
+//   TE-#  time-estimated distance: ped clearance × walking speed
 //         (when both exist, the SHORTER of LE and TE is exported)
-//   #     measured distance in feet — overrides both estimates
+//   #     measured distance in the agency's units — overrides both estimates
+// Constants for imperial units (feet)
 const FT_PER_LANE = 12;
 const WALKING_SPEED_FPS = 3.5;
+// Constants for metric units (meters)
+const M_PER_LANE = 3.65;
+const WALKING_SPEED_MPS = 1.05;
 
 export function crosswalkLengthCode(
   phase: Phase,
   allPhases: Phase[],
   basicTimings: BasicTiming[] = [],
   approaches: Approach[] = [],
+  // When true produce estimates in meters; otherwise in feet. Measured
+  // `phase.crosswalkLength` is treated as already being in the agency's
+  // units and is returned unchanged.
+  isMetric: boolean = false,
 ): string {
   // A measured value always wins, whether or not a crossing is configured.
   if (typeof phase.crosswalkLength === "number" && phase.crosswalkLength > 0) {
@@ -1029,14 +1141,16 @@ export function crosswalkLengthCode(
     }
 
     const totalLanes = inboundLanes + departureLanes;
-    if (totalLanes > 0) laneEstimate = totalLanes * FT_PER_LANE;
+    if (totalLanes > 0) laneEstimate = totalLanes * (isMetric ? M_PER_LANE : FT_PER_LANE);
   }
 
   // TE — from the phase's ped clearance interval at standard walking speed.
   let timeEstimate: number | null = null;
   const timing = basicTimings.find((t) => t.signalId === phase.signalId && t.phase === phase.phase);
   if (timing?.pedClearance && timing.pedClearance > 0) {
-    timeEstimate = Math.round(timing.pedClearance * WALKING_SPEED_FPS);
+    timeEstimate = Math.round(
+      timing.pedClearance * (isMetric ? WALKING_SPEED_MPS : WALKING_SPEED_FPS),
+    );
   }
 
   if (laneEstimate !== null && timeEstimate !== null) {
@@ -1078,7 +1192,11 @@ export function generatePhasesCSV(
         : phase.movementType === "Through"
           ? 1
           : 0;
-    const crosswalk = crosswalkLengthCode(phase, phases, basicTimings, approaches);
+    // Determine unit context for this phase's signal and generate LE/TE in
+    // the correct units. Measured `crosswalkLength` values are assumed to be
+    // recorded in the agency's units and are returned verbatim.
+    const isMetric = isMetricForSignalId(phase.signalId);
+    const crosswalk = crosswalkLengthCode(phase, phases, basicTimings, approaches, isMetric);
     return `${sanitizeCSVField(phase.phase)},${sanitizeCSVField(phase.signalId)},${sanitizeCSVField(encodedMovementType)},${sanitizeCSVField(phase.numOfLanes || 1)},${sanitizeCSVField(phase.approachId)},${sanitizeCSVField(pedMode)},${crosswalk}`;
   });
 
@@ -1335,6 +1453,7 @@ export function parseAgenciesTXT(content: string): Agency[] {
       agencyEmail: values[4] || null,
       latitude: null,
       longitude: null,
+      agencyIsMetric: values[5] ? values[5].toLowerCase() === "true" : false,
     });
   }
 
@@ -1958,7 +2077,39 @@ export function importData(
     }
 
     if (parsedData.detectors !== undefined) {
-      saveToStorage(STORAGE_KEYS.DETECTORS, parsedData.detectors);
+      // Convert incoming (display) distance values to internal stored units.
+      // Determine each detector's agency (via its signal) so we encode metric
+      // distances as centimeters and non-metric as raw values.
+      const incomingSignals = parsedData.signals ?? [];
+      const incomingAgencies = parsedData.agency
+        ? Array.isArray(parsedData.agency)
+          ? parsedData.agency
+          : [parsedData.agency]
+        : null;
+
+      const detectorsToStore = (parsedData.detectors || []).map((d: Detector) => {
+        // Find the signal to determine agencyId, preferring incoming signals
+        const sig =
+          incomingSignals.find((s) => s.signalId === d.signalId) || signalStorage.get(d.signalId);
+        const agencyId = sig?.agencyId ?? null;
+
+        // Find the agency object from incoming agencies first, then existing storage
+        const agencyObj =
+          (agencyId && incomingAgencies
+            ? incomingAgencies.find((a) => a.agencyId === agencyId)
+            : null) ||
+          (agencyId ? agencyListStorage.getAll().find((a) => a.agencyId === agencyId) : null) ||
+          agencyStorage.get();
+        const isMetric = agencyObj?.agencyIsMetric ?? false;
+
+        return {
+          ...d,
+          length: displayDistanceToStored(d.length ?? null, isMetric),
+          stopbarSetbackDist: displayDistanceToStored(d.stopbarSetbackDist ?? null, isMetric),
+        } as Detector;
+      });
+
+      saveToStorage(STORAGE_KEYS.DETECTORS, detectorsToStore);
     }
 
     if (parsedData.basicTimings !== undefined) {
@@ -2027,7 +2178,35 @@ export function importData(
       const newDetectors = parsedData.detectors.filter(
         (d) => !existingKeys.has(`${d.signalId}-${d.channel}`),
       );
-      saveToStorage(STORAGE_KEYS.DETECTORS, [...existingDetectors, ...newDetectors]);
+
+      // Convert new detectors to stored units before appending. Use incoming
+      // signals/agencies when available to determine metric encoding per-signal.
+      const incomingSignals = parsedData.signals ?? [];
+      const incomingAgencies = parsedData.agency
+        ? Array.isArray(parsedData.agency)
+          ? parsedData.agency
+          : [parsedData.agency]
+        : null;
+
+      const newDetectorsStored = newDetectors.map((d: Detector) => {
+        const sig =
+          incomingSignals.find((s) => s.signalId === d.signalId) || signalStorage.get(d.signalId);
+        const agencyId = sig?.agencyId ?? null;
+        const agencyObj =
+          (agencyId && incomingAgencies
+            ? incomingAgencies.find((a) => a.agencyId === agencyId)
+            : null) ||
+          (agencyId ? agencyListStorage.getAll().find((a) => a.agencyId === agencyId) : null) ||
+          agencyStorage.get();
+        const isMetric = agencyObj?.agencyIsMetric ?? false;
+        return {
+          ...d,
+          length: displayDistanceToStored(d.length ?? null, isMetric),
+          stopbarSetbackDist: displayDistanceToStored(d.stopbarSetbackDist ?? null, isMetric),
+        } as Detector;
+      });
+
+      saveToStorage(STORAGE_KEYS.DETECTORS, [...existingDetectors, ...newDetectorsStored]);
     }
 
     if (parsedData.basicTimings && parsedData.basicTimings.length > 0) {
