@@ -54,7 +54,6 @@ export {
 } from "./src/localStorageHooks";
 export { downloadSvgAsJpg, phaseDiagramFileName } from "./src/svg-export";
 export {
-  cn,
   getDerivedStreetNames,
   getSignalDisplayName,
   handleColumnMajorTab,

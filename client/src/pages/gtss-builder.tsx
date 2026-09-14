@@ -28,8 +28,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import SignalDetails from "@/pages/signal-details";
-import { clearAllData, cn, useGTSSStore, useLoadFromStorage } from "gtss";
+import { clearAllData, useGTSSStore, useLoadFromStorage } from "gtss";
 import {
   ArrowUpDown,
   Building,
