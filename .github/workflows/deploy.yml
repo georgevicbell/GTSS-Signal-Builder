@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  base: &base_job
+  test:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -28,9 +28,6 @@ jobs:
       - name: Build application
         run: npm run build
 
-  test: *base_job
-    runs-on: ubuntu-latest
-    steps:
       - name: Run tests
         run: npm test
 
@@ -39,14 +36,32 @@ jobs:
         uses: davelosert/vitest-coverage-report-action@v2.13.0
         with:
            working-directory: ./packages/gtss
-      
-  deploy: *base_job
-    runs-on: ubuntu-latest
 
-    steps:  
+     
+  deploy:
+    runs-on: ubuntu-latest
+    
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+     
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         if: github.ref == 'refs/heads/main'
         with:
-            github_token: ${{ secrets.GITHUB_TOKEN }}
-            publish_dir: ./dist
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
