@@ -21,7 +21,16 @@ import {
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { getSignalDisplayName, useDetectors, useGTSSStore, isMetricForSignalId } from "gtss";
+import {
+  DEFAULT_DETECTOR_LENGTH,
+  DEFAULT_STOPBAR_SETBACK_DISTANCE,
+  getSignalDisplayName,
+  isMetricForSignalId,
+  MIN_DETECTOR_LENGTH,
+  MIN_STOPBAR_SETBACK_DISTANCE,
+  useDetectors,
+  useGTSSStore,
+} from "gtss";
 import { AlertTriangle, Copy, Download, HelpCircle, Lock, Plus, Save, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { approachColorFor } from "./approach-colors";
@@ -153,8 +162,9 @@ export default function BulkDetectorModal({
     purpose: "Stop Bar",
     technologyType: "Inductance Loop",
     vehicleType: "Vehicle",
-    length: (isMetric ? 1.8 : 6.0) as number | undefined,
-    stopbarSetbackDist: 0 as number | undefined,
+    length: (isMetric ? DEFAULT_DETECTOR_LENGTH.metric : DEFAULT_DETECTOR_LENGTH.imperial) as
+      number | undefined,
+    stopbarSetbackDist: DEFAULT_STOPBAR_SETBACK_DISTANCE as number | undefined,
   });
 
   // Which fields are static (locked)
@@ -322,8 +332,14 @@ export default function BulkDetectorModal({
       purpose: staticFields.purpose ? staticValues.purpose : "Stop Bar",
       technologyType: staticFields.technologyType ? staticValues.technologyType : "Inductance Loop",
       vehicleType: staticFields.vehicleType ? staticValues.vehicleType : "Vehicle",
-      length: staticFields.length ? staticValues.length : isMetric ? 1.8 : 6.0,
-      stopbarSetbackDist: staticFields.stopbarSetbackDist ? staticValues.stopbarSetbackDist : 0,
+      length: staticFields.length
+        ? staticValues.length
+        : isMetric
+          ? DEFAULT_DETECTOR_LENGTH.metric
+          : DEFAULT_DETECTOR_LENGTH.imperial,
+      stopbarSetbackDist: staticFields.stopbarSetbackDist
+        ? staticValues.stopbarSetbackDist
+        : DEFAULT_STOPBAR_SETBACK_DISTANCE,
       description: buildDescription(direction, formattedPurpose, nextLane),
       isDescriptionManual: false,
     };
@@ -365,8 +381,14 @@ export default function BulkDetectorModal({
           ? staticValues.technologyType
           : "Inductance Loop",
         vehicleType: staticFields.vehicleType ? staticValues.vehicleType : "Vehicle",
-        length: staticFields.length ? staticValues.length : isMetric ? 1.8 : 6.0,
-        stopbarSetbackDist: staticFields.stopbarSetbackDist ? staticValues.stopbarSetbackDist : 0,
+        length: staticFields.length
+          ? staticValues.length
+          : isMetric
+            ? DEFAULT_DETECTOR_LENGTH.metric
+            : DEFAULT_DETECTOR_LENGTH.imperial,
+        stopbarSetbackDist: staticFields.stopbarSetbackDist
+          ? staticValues.stopbarSetbackDist
+          : DEFAULT_STOPBAR_SETBACK_DISTANCE,
         description: buildDescription(direction, formattedPurpose, currentLane),
         isDescriptionManual: false,
       });
@@ -1128,7 +1150,7 @@ export default function BulkDetectorModal({
                   <Input
                     type="number"
                     step="0.1"
-                    min="0"
+                    min={MIN_DETECTOR_LENGTH}
                     value={staticValues.length ?? ""}
                     onChange={(e) =>
                       updateStaticValue(
@@ -1138,7 +1160,9 @@ export default function BulkDetectorModal({
                     }
                     disabled={!staticFields.length}
                     className="h-8 text-xs"
-                    placeholder={isMetric ? "1.8" : "6.0"}
+                    placeholder={String(
+                      isMetric ? DEFAULT_DETECTOR_LENGTH.metric : DEFAULT_DETECTOR_LENGTH.imperial,
+                    )}
                   />
                 </div>
 
@@ -1155,7 +1179,7 @@ export default function BulkDetectorModal({
                   <Input
                     type="number"
                     step="0.1"
-                    min="0"
+                    min={MIN_STOPBAR_SETBACK_DISTANCE}
                     value={staticValues.stopbarSetbackDist ?? ""}
                     onChange={(e) =>
                       updateStaticValue(
@@ -1165,7 +1189,7 @@ export default function BulkDetectorModal({
                     }
                     disabled={!staticFields.stopbarSetbackDist}
                     className="h-8 text-xs"
-                    placeholder="0"
+                    placeholder={String(DEFAULT_STOPBAR_SETBACK_DISTANCE)}
                   />
                 </div>
               </div>
@@ -1454,7 +1478,7 @@ export default function BulkDetectorModal({
                               <Input
                                 type="number"
                                 step="0.1"
-                                min="0"
+                                min={MIN_DETECTOR_LENGTH}
                                 value={
                                   detector.length !== null && detector.length !== undefined
                                     ? Number(detector.length).toFixed(2)
@@ -1472,7 +1496,7 @@ export default function BulkDetectorModal({
                               <Input
                                 type="number"
                                 step="0.1"
-                                min="0"
+                                min={MIN_STOPBAR_SETBACK_DISTANCE}
                                 value={
                                   detector.stopbarSetbackDist !== null &&
                                   detector.stopbarSetbackDist !== undefined
@@ -1735,7 +1759,7 @@ export default function BulkDetectorModal({
                             <Input
                               type="number"
                               step="0.1"
-                              min="0"
+                              min={MIN_STOPBAR_SETBACK_DISTANCE}
                               value={detector.stopbarSetbackDist ?? ""}
                               onChange={(e) =>
                                 handleExistingDetectorChange(

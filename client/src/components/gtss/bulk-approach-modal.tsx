@@ -25,6 +25,7 @@ import {
   getSignalDisplayName,
   handleColumnMajorTab,
   isMetricForSignalId,
+  POSTED_SPEED_LIMITS,
   suggestStreetNameForApproach,
   useApproaches,
   useGTSSStore,
@@ -108,6 +109,7 @@ export default function BulkApproachModal({
   const [numApproaches, setNumApproaches] = useState(4);
   const isMetric = isMetricForSignalId(selectedSignalId);
   const speedUnit = isMetric ? "km/h" : "mph";
+  const speedLimits = isMetric ? POSTED_SPEED_LIMITS.metric : POSTED_SPEED_LIMITS.imperial;
 
   const [baseBearing, setBaseBearing] = useState<number | null>(null);
   const [angleOffset, setAngleOffset] = useState(0);
@@ -795,11 +797,11 @@ export default function BulkApproachModal({
                         <TableCell className="py-2">
                           <Input
                             type="number"
-                            min="0"
-                            max={isMetric ? 200 : 100}
+                            min={speedLimits.min}
+                            max={speedLimits.max}
                             value={approach.postedSpeed || ""}
                             onChange={(e) => handleSpeedChange(idx, e.target.value)}
-                            placeholder={isMetric ? "50" : "35"}
+                            placeholder={String(speedLimits.defaultValue)}
                             className="h-8 text-sm w-20"
                             data-tab-col={3}
                             data-tab-row={idx}

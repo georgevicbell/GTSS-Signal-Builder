@@ -21,6 +21,11 @@ export type PhaseDirectionStandard = {
  */
 export type MapScrollWheelMode = "page" | "zoom";
 
+export const MIN_PHASE_NUMBER = 1;
+export const MAX_PHASE_NUMBER = 8;
+export const DEFAULT_PHASE_COUNT = MAX_PHASE_NUMBER;
+export const PHASE_COUNT_OPTIONS = [2, 4, 6, 8] as const;
+
 export type AgencyDefaults = {
   agencyId: string;
   phaseDirectionStandard: PhaseDirectionStandard;
@@ -54,7 +59,7 @@ export const NEMA_DEFAULTS: PhaseDirectionStandard = {
 export const DEFAULT_AGENCY_DEFAULTS: AgencyDefaults = {
   agencyId: "",
   phaseDirectionStandard: { ...NEMA_DEFAULTS },
-  defaultPhaseCount: 8,
+  defaultPhaseCount: DEFAULT_PHASE_COUNT,
   // Page scrolling by default: a wheel that zooms the map traps the cursor and
   // makes the data below it hard to reach.
   mapScrollWheel: "page",
@@ -119,7 +124,7 @@ export function sanitizePhaseDirectionStandard(
     if (val && Array.isArray(val) && val.length > 0) {
       const cleaned = val
         .map((n) => Number(n))
-        .filter((n) => Number.isInteger(n) && n >= 1 && n <= 8);
+        .filter((n) => Number.isInteger(n) && n >= MIN_PHASE_NUMBER && n <= MAX_PHASE_NUMBER);
       if (cleaned.length > 0) {
         result[key] = Array.from(new Set(cleaned));
       }
@@ -153,8 +158,10 @@ export function validatePhaseDirectionStandard(standard: PhaseDirectionStandard)
     if (!val || val.length === 0) continue;
 
     for (const num of val) {
-      if (!Number.isInteger(num) || num < 1 || num > 8) {
-        errors.push(`${key}: phase number ${num} is out of range (must be 1–8)`);
+      if (!Number.isInteger(num) || num < MIN_PHASE_NUMBER || num > MAX_PHASE_NUMBER) {
+        errors.push(
+          `${key}: phase number ${num} is out of range (must be ${MIN_PHASE_NUMBER}–${MAX_PHASE_NUMBER})`,
+        );
       } else {
         allPhaseNumbers.push(num);
       }

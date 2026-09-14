@@ -4,11 +4,15 @@ export * as dbSchema from "./schema/schema";
 export {
   bearingToCardinal,
   DEFAULT_AGENCY_DEFAULTS,
+  DEFAULT_PHASE_COUNT,
   guessPhaseDirectionMapping,
-  isMapScrollZoomEnabled,
   isDemoEnabled,
+  isMapScrollZoomEnabled,
   isTypicallyThroughPhase,
+  MAX_PHASE_NUMBER,
+  MIN_PHASE_NUMBER,
   NEMA_DEFAULTS,
+  PHASE_COUNT_OPTIONS,
   sanitizePhaseDirectionStandard,
   validatePhaseDirectionStandard,
 } from "./src/agencyDefaults";
@@ -19,11 +23,18 @@ export type {
   PhaseDirectionStandard,
 } from "./src/agencyDefaults";
 export {
-  PRESET_DEMO_INTERSECTIONS,
   generateProceduralIntersection,
   getAllDemoIntersections,
+  PRESET_DEMO_INTERSECTIONS,
 } from "./src/demoIntersections";
 export type { DemoIntersection, ProceduralGeneratorOptions } from "./src/demoIntersections";
+export {
+  DEFAULT_DETECTOR_LENGTH,
+  DEFAULT_STOPBAR_SETBACK_DISTANCE,
+  MIN_DETECTOR_LENGTH,
+  MIN_STOPBAR_SETBACK_DISTANCE,
+  POSTED_SPEED_LIMITS,
+} from "./src/fieldDefaults";
 export { evaluateGTSSCompleteness } from "./src/gtssValidation";
 export type { ValidationResult, ValidationSummary } from "./src/gtssValidation";
 export { isMetricForSignalId } from "./src/localStorage/agency-units";

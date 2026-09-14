@@ -20,11 +20,14 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  DEFAULT_DETECTOR_LENGTH,
+  DEFAULT_STOPBAR_SETBACK_DISTANCE,
   getSignalDisplayName,
+  isMetricForSignalId,
+  MIN_DETECTOR_LENGTH,
   useDetectors,
   useGTSSStore,
   useMapScrollZoom,
-  isMetricForSignalId,
 } from "gtss";
 import { type Detector, type InsertDetector, insertDetectorSchema } from "gtss/schema";
 import { MapPin, Trash2 } from "lucide-react";
@@ -127,7 +130,7 @@ export default function DetectorModal({
       lane: "1",
       technologyType: "Inductance Loop",
       length: undefined,
-      stopbarSetbackDist: 0,
+      stopbarSetbackDist: DEFAULT_STOPBAR_SETBACK_DISTANCE,
       approachId: null,
     },
   });
@@ -605,8 +608,12 @@ export default function DetectorModal({
                       <Input
                         type="number"
                         step="0.1"
-                        min="0"
-                        placeholder="6.0"
+                        min={MIN_DETECTOR_LENGTH}
+                        placeholder={String(
+                          isMetric
+                            ? DEFAULT_DETECTOR_LENGTH.metric
+                            : DEFAULT_DETECTOR_LENGTH.imperial,
+                        )}
                         {...field}
                         disabled={!isSignalSelected}
                         onChange={(e) => {
