@@ -22,11 +22,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   DEFAULT_STOPBAR_SETBACK_DISTANCE,
   getSignalDisplayName,
+  isMetricForSignalId,
   MIN_DETECTOR_LENGTH,
   useDetectors,
   useGTSSStore,
   useMapScrollZoom,
-  isMetricForSignalId,
 } from "gtss";
 import { type Detector, type InsertDetector, insertDetectorSchema } from "gtss/schema";
 import { MapPin, Trash2 } from "lucide-react";
