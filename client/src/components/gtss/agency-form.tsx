@@ -31,7 +31,7 @@ import {
   useGTSSStore,
   useMapScrollZoom,
 } from "gtss";
-import { Agency, type InsertAgency, type Detector, insertAgencySchema } from "gtss/schema";
+import { Agency, type Detector, type InsertAgency, insertAgencySchema } from "gtss/schema";
 import { Crosshair, Edit3, MapPin, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";

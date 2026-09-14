@@ -35,7 +35,7 @@ import {
 import type { Agency, Approach, BasicTiming, Detector, Phase, Signal } from "gtss/schema";
 import JSZip from "jszip";
 import { AlertTriangle, CheckCircle, ClipboardPaste, FileText, Upload } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Checkbox } from "../ui/checkbox";
 
 type FileData = {
