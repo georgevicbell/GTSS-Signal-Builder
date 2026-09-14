@@ -3,12 +3,16 @@ export * as schema from "./schema/public";
 export * as dbSchema from "./schema/schema";
 export {
   bearingToCardinal,
+  DEFAULT_PHASE_COUNT,
   DEFAULT_AGENCY_DEFAULTS,
   guessPhaseDirectionMapping,
   isMapScrollZoomEnabled,
   isDemoEnabled,
   isTypicallyThroughPhase,
+  MAX_PHASE_NUMBER,
+  MIN_PHASE_NUMBER,
   NEMA_DEFAULTS,
+  PHASE_COUNT_OPTIONS,
   sanitizePhaseDirectionStandard,
   validatePhaseDirectionStandard,
 } from "./src/agencyDefaults";
@@ -18,6 +22,13 @@ export type {
   MapScrollWheelMode,
   PhaseDirectionStandard,
 } from "./src/agencyDefaults";
+export {
+  DEFAULT_DETECTOR_LENGTH,
+  DEFAULT_STOPBAR_SETBACK_DISTANCE,
+  MIN_DETECTOR_LENGTH,
+  MIN_STOPBAR_SETBACK_DISTANCE,
+  POSTED_SPEED_LIMITS,
+} from "./src/fieldDefaults";
 export {
   PRESET_DEMO_INTERSECTIONS,
   generateProceduralIntersection,

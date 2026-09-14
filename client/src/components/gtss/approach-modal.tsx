@@ -22,6 +22,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   getSignalDisplayName,
   isMetricForSignalId,
+  POSTED_SPEED_LIMITS,
   suggestStreetNameForApproach,
   useApproaches,
   useGTSSStore,
@@ -74,6 +75,7 @@ export default function ApproachModal({
   });
   const isMetric = isMetricForSignalId(form.watch("signalId"));
   const speedUnit = isMetric ? "km/h" : "mph";
+  const speedLimits = isMetric ? POSTED_SPEED_LIMITS.metric : POSTED_SPEED_LIMITS.imperial;
 
   useEffect(() => {
     if (approach) {
@@ -303,9 +305,9 @@ export default function ApproachModal({
                     <FormControl>
                       <Input
                         type="number"
-                        min="0"
-                        max={isMetric ? 200 : 100}
-                        placeholder={isMetric ? "50" : "35"}
+                        min={speedLimits.min}
+                        max={speedLimits.max}
+                        placeholder={String(speedLimits.defaultValue)}
                         {...field}
                         onChange={(e) => {
                           const value = e.target.value;

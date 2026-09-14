@@ -5,8 +5,12 @@ import { useToast } from "@/hooks/use-toast";
 import {
   AgencyDefaults,
   DEFAULT_AGENCY_DEFAULTS,
+  DEFAULT_PHASE_COUNT,
+  MAX_PHASE_NUMBER,
   MapScrollWheelMode,
+  MIN_PHASE_NUMBER,
   NEMA_DEFAULTS,
+  PHASE_COUNT_OPTIONS,
   PhaseDirectionStandard,
   sanitizePhaseDirectionStandard,
   useAgencyDefaults,
@@ -23,8 +27,6 @@ const DIRECTIONS = [
   { key: "W" as const, label: "Westbound", abbr: "WB" },
 ];
 
-const PHASE_COUNT_OPTIONS = [2, 4, 6, 8];
-
 /** Parse a comma-separated string of integers into a number array. Returns null if invalid. */
 function parsePhaseNumbers(input: string): number[] | null {
   const trimmed = input.trim();
@@ -34,7 +36,7 @@ function parsePhaseNumbers(input: string): number[] | null {
   for (const part of parts) {
     if (!part) continue;
     const n = Number(part);
-    if (!Number.isInteger(n) || n < 1 || n > 8) return null;
+    if (!Number.isInteger(n) || n < MIN_PHASE_NUMBER || n > MAX_PHASE_NUMBER) return null;
     nums.push(n);
   }
   return nums;
@@ -136,7 +138,7 @@ export default function AgencyDefaultsSettings() {
 
   const handleResetToNema = () => {
     setFormState(standardToForm(NEMA_DEFAULTS));
-    setDefaultPhaseCount(8);
+    setDefaultPhaseCount(DEFAULT_PHASE_COUNT);
     setIsDirty(true);
     setValidationErrors([]);
     toast({
@@ -149,7 +151,7 @@ export default function AgencyDefaultsSettings() {
     const standard = formToStandard(formState);
     if (standard === null) {
       setValidationErrors([
-        "One or more phase number fields contain invalid values. Use integers 1–8, comma-separated.",
+        `One or more phase number fields contain invalid values. Use integers ${MIN_PHASE_NUMBER}–${MAX_PHASE_NUMBER}, comma-separated.`,
       ]);
       return;
     }
@@ -243,8 +245,9 @@ export default function AgencyDefaultsSettings() {
         </CardHeader>
         <CardContent className="p-4">
           <p className="text-xs text-grey-500 mb-4">
-            Enter phase numbers (1–8) for each direction. Use commas for multiple phases (e.g.,{" "}
-            <code className="bg-grey-100 px-1 rounded">2, 6</code>). Leave blank if not applicable.
+            Enter phase numbers ({MIN_PHASE_NUMBER}–{MAX_PHASE_NUMBER}) for each direction. Use
+            commas for multiple phases (e.g., <code className="bg-grey-100 px-1 rounded">2, 6</code>
+            ). Leave blank if not applicable.
           </p>
 
           {/* Grid header */}
@@ -332,7 +335,7 @@ export default function AgencyDefaultsSettings() {
             ))}
           </div>
           <p className="text-xs text-grey-400 mt-2">
-            {defaultPhaseCount === 8 &&
+            {defaultPhaseCount === DEFAULT_PHASE_COUNT &&
               "8 phases: full 4-approach intersection with protected lefts"}
             {defaultPhaseCount === 6 && "6 phases: 4-approach with 2 protected lefts"}
             {defaultPhaseCount === 4 && "4 phases: 4-approach through movements only"}

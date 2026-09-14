@@ -20,7 +20,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  DEFAULT_STOPBAR_SETBACK_DISTANCE,
   getSignalDisplayName,
+  MIN_DETECTOR_LENGTH,
   useDetectors,
   useGTSSStore,
   useMapScrollZoom,
@@ -127,7 +129,7 @@ export default function DetectorModal({
       lane: "1",
       technologyType: "Inductance Loop",
       length: undefined,
-      stopbarSetbackDist: 0,
+      stopbarSetbackDist: DEFAULT_STOPBAR_SETBACK_DISTANCE,
       approachId: null,
     },
   });
@@ -605,7 +607,7 @@ export default function DetectorModal({
                       <Input
                         type="number"
                         step="0.1"
-                        min="0"
+                        min={MIN_DETECTOR_LENGTH}
                         placeholder="6.0"
                         {...field}
                         disabled={!isSignalSelected}
