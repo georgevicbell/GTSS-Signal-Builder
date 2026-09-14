@@ -1,17 +1,15 @@
 name: Deploy OpenSignal to GitHub Pages
-
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
-
 jobs:
   test:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
-
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,16 +19,16 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
-
+      
       - name: Install dependencies
         run: npm ci
-
+      
       - name: Build application
         run: npm run build
-
+      
       - name: Run tests
         run: npm test
-
+      
       - name: Vitest Coverage Report
         if: always()        
         uses: davelosert/vitest-coverage-report-action@v2.13.0
@@ -40,8 +38,6 @@ jobs:
      
   deploy:
     runs-on: ubuntu-latest
-    
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
