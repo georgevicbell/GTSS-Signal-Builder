@@ -5,7 +5,8 @@ export default defineConfig({
     environment: "node",
     coverage: {
       provider: "v8",
-      reporter: ["text", "html"],
+      reportOnFailure: true,
+      reporter: ["text", "html", "json-summary", "json"],
       include: [
         "src/localStorage.ts",
         "src/localStorage/**/*.ts",
