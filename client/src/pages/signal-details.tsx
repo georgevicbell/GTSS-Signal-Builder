@@ -52,6 +52,7 @@ import {
   generatePhasesCSV,
   generateSignalsCSV,
   isMapScrollZoomEnabled,
+  isMetricForSignalId,
   phaseDiagramFileName,
   suggestStreetNameForApproach,
   useApproaches,
@@ -167,7 +168,7 @@ export default function SignalDetails() {
     tempNewSignalLocation,
     setTempNewSignalLocation,
   } = useGTSSStore();
-  const isMetric = agency?.agencyIsMetric ?? false;
+  const isMetric = isMetricForSignalId(currentSignalId ?? undefined);
   const lengthUnit = isMetric ? "m" : "feet";
 
   const speedUnit = isMetric ? "km/h" : "mph";

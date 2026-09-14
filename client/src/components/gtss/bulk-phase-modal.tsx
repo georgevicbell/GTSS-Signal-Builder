@@ -27,6 +27,7 @@ import {
   phaseDiagramFileName,
   useGTSSStore,
   usePhases,
+  isMetricForSignalId,
 } from "gtss";
 import { ChevronDown, ChevronUp, Download, Plus, Save, Trash2, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -95,7 +96,6 @@ export default function BulkPhaseModal({
     approaches: allApproaches,
     phases: existingPhases,
     agencyDefaults,
-    agency,
   } = useGTSSStore();
   const { toast } = useToast();
   const phaseHooks = usePhases();
@@ -108,7 +108,7 @@ export default function BulkPhaseModal({
   const [targetPhaseCount, setTargetPhaseCount] = useState<number>(
     agencyDefaults?.defaultPhaseCount ?? 8,
   );
-  const isMetric = agency?.agencyIsMetric ?? false;
+  const isMetric = isMetricForSignalId(selectedSignalId);
   const lengthUnit = isMetric ? "m" : "ft";
 
   // Sorting state. Default is `null` so the table preserves insertion order

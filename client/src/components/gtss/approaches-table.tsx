@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getSignalDisplayName, useGTSSStore } from "gtss";
+import { getSignalDisplayName, useGTSSStore, isMetricForSignalId } from "gtss";
 import { Approach } from "gtss/schema";
 import { ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -39,9 +39,9 @@ export default function ApproachesTable({ triggerAdd, triggerBulk }: ApproachesT
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [sortField, setSortField] = useState<SortField>("approachId");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const { approaches, signals, selectedSignalIdForTables, setSelectedSignalIdForTables, agency } =
+  const { approaches, signals, selectedSignalIdForTables, setSelectedSignalIdForTables } =
     useGTSSStore();
-  const isMetric = agency?.agencyIsMetric ?? false;
+  const isMetric = isMetricForSignalId(selectedSignalIdForTables);
   const speedUnit = isMetric ? "km/h" : "mph";
   const { deepLinkTarget, setDeepLinkTarget } = useGTSSStore();
 

@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   getSignalDisplayName,
+  isMetricForSignalId,
   suggestStreetNameForApproach,
   useApproaches,
   useGTSSStore,
@@ -55,7 +56,7 @@ export default function ApproachModal({
   preSelectedSignalId,
 }: ApproachModalProps) {
   const mapScrollZoom = useMapScrollZoom();
-  const { signals, approaches, agency } = useGTSSStore();
+  const { signals, approaches } = useGTSSStore();
   const { toast } = useToast();
   const approachHooks = useApproaches();
   const [isLoading, setIsLoading] = useState(false);
@@ -71,7 +72,7 @@ export default function ApproachModal({
       freeRight: 0,
     },
   });
-  const isMetric = agency?.agencyIsMetric ?? false;
+  const isMetric = isMetricForSignalId(form.watch("signalId"));
   const speedUnit = isMetric ? "km/h" : "mph";
 
   useEffect(() => {

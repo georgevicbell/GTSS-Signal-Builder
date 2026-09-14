@@ -19,7 +19,13 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getSignalDisplayName, useDetectors, useGTSSStore, useMapScrollZoom } from "gtss";
+import {
+  getSignalDisplayName,
+  useDetectors,
+  useGTSSStore,
+  useMapScrollZoom,
+  isMetricForSignalId,
+} from "gtss";
 import { type Detector, type InsertDetector, insertDetectorSchema } from "gtss/schema";
 import { MapPin, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -98,7 +104,7 @@ export default function DetectorModal({
   preSelectedSignalId,
 }: DetectorModalProps) {
   const mapScrollZoom = useMapScrollZoom();
-  const { signals, phases, approaches, agency } = useGTSSStore();
+  const { signals, phases, approaches } = useGTSSStore();
   const { toast } = useToast();
   const detectorHooks = useDetectors();
   // const [, setSelectedZone] = useState<'stopbar' | 'advance' | 'count' | null>(null);
@@ -126,8 +132,7 @@ export default function DetectorModal({
     },
   });
 
-  const isMetric = agency?.agencyIsMetric ?? false;
-  //  const speedUnit = isMetric ? "km/h" : "mph";
+  const isMetric = isMetricForSignalId(selectedSignalId);
   const lengthUnit = isMetric ? "m" : "feet";
 
   useEffect(() => {

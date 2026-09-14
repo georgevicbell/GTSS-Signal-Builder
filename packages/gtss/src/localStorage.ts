@@ -155,7 +155,7 @@ function normalizeAgency(
 // Resolve whether a given signal's agency uses metric units. Falls back to
 // the currently selected/default agency when the signal or agency cannot be
 // resolved. Accepts a signalId string and returns a boolean.
-function isMetricForSignalId(signalId?: string | null): boolean {
+export function isMetricForSignalId(signalId?: string | null): boolean {
   try {
     if (!signalId) return agencyStorage.get()?.agencyIsMetric ?? false;
     const sig = signalStorage.get(signalId);

@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { getSignalDisplayName, useDetectors, useGTSSStore } from "gtss";
+import { getSignalDisplayName, useDetectors, useGTSSStore, isMetricForSignalId } from "gtss";
 import { AlertTriangle, Copy, Download, HelpCircle, Lock, Plus, Save, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { approachColorFor } from "./approach-colors";
@@ -136,19 +136,13 @@ export default function BulkDetectorModal({
   preSelectedSignalId,
   inline = false,
 }: BulkDetectorModalProps) {
-  const {
-    signals,
-    approaches,
-    phases,
-    detectors: existingDetectorsFromStore,
-    agency,
-  } = useGTSSStore();
-  const isMetric = agency?.agencyIsMetric ?? false;
+  const { signals, approaches, phases, detectors: existingDetectorsFromStore } = useGTSSStore();
+  const [selectedSignalId, setSelectedSignalId] = useState<string>(preSelectedSignalId || "");
+  const isMetric = isMetricForSignalId(selectedSignalId);
   const lengthUnit = isMetric ? "m" : "ft";
   const { toast } = useToast();
   const detectorHooks = useDetectors();
 
-  const [selectedSignalId, setSelectedSignalId] = useState<string>(preSelectedSignalId || "");
   const [pendingDetectors, setPendingDetectors] = useState<PendingDetector[]>([]);
   const [existingDetectors, setExistingDetectors] = useState<PendingDetector[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);

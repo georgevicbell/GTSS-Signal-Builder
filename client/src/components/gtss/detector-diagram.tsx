@@ -1,4 +1,4 @@
-import { useGTSSStore } from "gtss";
+import { isMetricForSignalId } from "gtss";
 import React from "react";
 import { freeRightPedMarkings } from "./free-right-markings";
 
@@ -510,8 +510,7 @@ export default function DetectorDiagram({
       });
     }
   });
-  const { agency } = useGTSSStore();
-  const isMetric = agency?.agencyIsMetric ?? false;
+  const isMetric = isMetricForSignalId(signal?.signalId);
   const lengthUnit = isMetric ? "m" : "ft";
   // One distance label per advanced row that has a real measured setback,
   // placed off the road edge beside the row.

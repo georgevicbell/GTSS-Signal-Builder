@@ -20,7 +20,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getSignalDisplayName, useGTSSStore, usePhases } from "gtss";
+import { getSignalDisplayName, useGTSSStore, usePhases, isMetricForSignalId } from "gtss";
 import { type InsertPhase, insertPhaseSchema, type Phase } from "gtss/schema";
 import { Copy, Navigation, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -33,9 +33,7 @@ interface PhaseModalProps {
 }
 
 export default function PhaseModal({ phase, onClose, preSelectedSignalId }: PhaseModalProps) {
-  const { signals, approaches, agency } = useGTSSStore();
-  const isMetric = agency?.agencyIsMetric ?? false;
-  const speedUnit = isMetric ? "km/h" : "mph";
+  const { signals, approaches } = useGTSSStore();
   const { toast } = useToast();
   const phaseHooks = usePhases();
   const [isLoading, setIsLoading] = useState(false);
@@ -51,6 +49,9 @@ export default function PhaseModal({ phase, onClose, preSelectedSignalId }: Phas
       approachId: undefined,
     },
   });
+
+  const isMetric = isMetricForSignalId(form.watch("signalId"));
+  const speedUnit = isMetric ? "km/h" : "mph";
 
   const movementType = form.watch("movementType");
   const pedestrianDirty = form.formState.dirtyFields.isPedestrian;

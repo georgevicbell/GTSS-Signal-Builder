@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   getSignalDisplayName,
   handleColumnMajorTab,
+  isMetricForSignalId,
   suggestStreetNameForApproach,
   useApproaches,
   useGTSSStore,
@@ -99,14 +100,15 @@ export default function BulkApproachModal({
   inline = false,
 }: BulkApproachModalProps) {
   const mapScrollZoom = useMapScrollZoom();
-  const { signals, approaches: existingApproaches, agency } = useGTSSStore();
-  const isMetric = agency?.agencyIsMetric ?? false;
-  const speedUnit = isMetric ? "km/h" : "mph";
+  const { signals, approaches: existingApproaches } = useGTSSStore();
   const { toast } = useToast();
   const approachHooks = useApproaches();
 
   const [selectedSignalId, setSelectedSignalId] = useState<string>(preSelectedSignalId || "");
   const [numApproaches, setNumApproaches] = useState(4);
+  const isMetric = isMetricForSignalId(selectedSignalId);
+  const speedUnit = isMetric ? "km/h" : "mph";
+
   const [baseBearing, setBaseBearing] = useState<number | null>(null);
   const [angleOffset, setAngleOffset] = useState(0);
   const [pendingApproaches, setPendingApproaches] = useState<PendingApproach[]>([]);
