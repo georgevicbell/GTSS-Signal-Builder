@@ -322,6 +322,10 @@ export default function DemoPage() {
     );
   }, [allIntersections, filteredIntersections, selectedId]);
 
+  if (!currentIntersection) {
+    return <div className="p-4 text-sm text-grey-500">No demo intersections available.</div>;
+  }
+
   const handleGenerateCustom = () => {
     const seed = Math.floor(Math.random() * 90000) + 10000;
     const generated = generateProceduralIntersection({
@@ -425,6 +429,7 @@ export default function DemoPage() {
                     <button
                       key={btn.value}
                       type="button"
+                      aria-pressed={approachFilter === btn.value}
                       onClick={() => setApproachFilter(btn.value)}
                       className={`text-xs py-1 px-1.5 rounded text-center transition-colors font-medium ${
                         approachFilter === btn.value

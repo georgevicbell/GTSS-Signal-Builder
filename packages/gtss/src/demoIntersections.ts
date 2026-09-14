@@ -925,21 +925,23 @@ export function generateProceduralIntersection(
     );
 
     // Through Timing
-    basicTimings.push(
-      makeTiming(
-        `bt-${sigId}-${idx}-${thruPhaseNum}`,
-        sigId,
-        thruPhaseNum,
-        12 + idx * 2,
-        40 + idx * 5,
-        4.0,
-        2.0,
-        7,
-        15,
-        null,
-        idx === 0 ? "Min" : "None",
-      ),
-    );
+    if (!basicTimings.some((timing) => timing.phase === thruPhaseNum)) {
+      basicTimings.push(
+        makeTiming(
+          `bt-${sigId}-${idx}-${thruPhaseNum}`,
+          sigId,
+          thruPhaseNum,
+          12 + idx * 2,
+          40 + idx * 5,
+          4.0,
+          2.0,
+          7,
+          15,
+          null,
+          idx === 0 ? "Min" : "None",
+        ),
+      );
+    }
 
     // Detectors for Through Movement
     detectors.push(
@@ -1038,7 +1040,7 @@ export function generateProceduralIntersection(
 }
 
 /**
- * Returns all preset demo intersections plus a selection of procedural intersections.
+ * Returns all curated preset demo intersections.
  */
 export function getAllDemoIntersections(): DemoIntersection[] {
   return [...PRESET_DEMO_INTERSECTIONS];
