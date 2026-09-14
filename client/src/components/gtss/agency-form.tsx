@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -10,7 +11,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import MapTileLayers from "@/components/ui/map-tile-layers";
 import {
   Select,
@@ -21,7 +21,16 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { agencyListStorage, agencyStorage, useGTSSStore, useMapScrollZoom } from "gtss";
+import {
+  agencyListStorage,
+  agencyStorage,
+  approachStorage,
+  detectorStorage,
+  phaseStorage,
+  signalStorage,
+  useGTSSStore,
+  useMapScrollZoom,
+} from "gtss";
 import { Agency, type InsertAgency, insertAgencySchema } from "gtss/schema";
 import { Crosshair, Edit3, MapPin, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -108,9 +117,11 @@ export default function AgencyForm() {
     displayName?: string;
   } | null>(null);
   const [isGeocodingUserLocation, setIsGeocodingUserLocation] = useState(false);
+  const [unitChangeDialogOpen, setUnitChangeDialogOpen] = useState(false);
+  const [pendingMetricValue, setPendingMetricValue] = useState<boolean | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>(() => {
     // Initialize map center with saved agency coordinates if available
-    if (agency?.latitude && agency?.longitude) {
+    if (agency?.latitude != null && agency?.longitude != null) {
       return [agency.latitude, agency.longitude];
     }
     return [39.8283, -98.5795]; // Default center of US
@@ -178,11 +189,11 @@ export default function AgencyForm() {
             agencyTimezone: editAgency.agencyTimezone,
             agencyEmail: editAgency.agencyEmail || "",
             agencyIsMetric: editAgency.agencyIsMetric ?? false,
-            latitude: editAgency.latitude || undefined,
-            longitude: editAgency.longitude || undefined,
+            latitude: editAgency.latitude ?? undefined,
+            longitude: editAgency.longitude ?? undefined,
           });
           setSelectedLocation(
-            editAgency.latitude && editAgency.longitude
+            editAgency.latitude != null && editAgency.longitude != null
               ? {
                   lat: editAgency.latitude,
                   lon: editAgency.longitude,
@@ -190,7 +201,7 @@ export default function AgencyForm() {
                 }
               : null,
           );
-          setMapCenter([editAgency.latitude || 39.8283, editAgency.longitude || -98.5795]);
+          setMapCenter([editAgency.latitude ?? 39.8283, editAgency.longitude ?? -98.5795]);
         }
       } else {
         // New agency: clear form to defaults
@@ -227,8 +238,8 @@ export default function AgencyForm() {
       ...data,
       agencyUrl: normalizeAgencyUrl(data.agencyUrl || ""),
       agencyIsMetric: data.agencyIsMetric ?? false,
-      latitude: selectedLocation?.lat || data.latitude,
-      longitude: selectedLocation?.lon || data.longitude,
+      latitude: selectedLocation?.lat ?? data.latitude,
+      longitude: selectedLocation?.lon ?? data.longitude,
     };
     saveAgency(saveData);
   };
@@ -262,15 +273,15 @@ export default function AgencyForm() {
       agencyUrl: a.agencyUrl || "http://",
       agencyTimezone: a.agencyTimezone,
       agencyEmail: a.agencyEmail || "",
-      latitude: a.latitude || undefined,
-      longitude: a.longitude || undefined,
+      latitude: a.latitude ?? undefined,
+      longitude: a.longitude ?? undefined,
     });
     setSelectedLocation(
-      a.latitude && a.longitude
+      a.latitude != null && a.longitude != null
         ? { lat: a.latitude, lon: a.longitude, displayName: a.agencyName }
         : null,
     );
-    setMapCenter([a.latitude || 39.8283, a.longitude || -98.5795]);
+    setMapCenter([a.latitude ?? 39.8283, a.longitude ?? -98.5795]);
     setAgency(a);
   };
 
@@ -447,11 +458,11 @@ export default function AgencyForm() {
             <MapContainer
               key={agency?.id ?? "default"}
               center={
-                agency?.latitude && agency?.longitude
+                agency?.latitude != null && agency?.longitude != null
                   ? [agency.latitude, agency.longitude]
                   : [39.8283, -98.5795]
               }
-              zoom={agency?.latitude && agency?.longitude ? 12 : 4}
+              zoom={agency?.latitude != null && agency?.longitude != null ? 12 : 4}
               scrollWheelZoom={false}
               style={{ height: "100%", width: "100%" }}
               className="rounded-lg border"
@@ -459,7 +470,7 @@ export default function AgencyForm() {
               <MapTileLayers />
 
               <MapResizeObserverLocal />
-              {agency && agency.latitude && agency.longitude && (
+              {agency && agency.latitude != null && agency.longitude != null && (
                 <Marker position={[agency.latitude, agency.longitude]} />
               )}
             </MapContainer>
@@ -837,7 +848,40 @@ export default function AgencyForm() {
                           <FormControl>
                             <Checkbox
                               checked={!!field.value}
-                              onCheckedChange={(v) => field.onChange(Boolean(v))}
+                              onCheckedChange={(v) => {
+                                const newVal = Boolean(v);
+                                // If editing an existing agency with data, warn before switching
+                                const editingAgency = agencyModalEditingId
+                                  ? agencyListStorage.get(agencyModalEditingId)
+                                  : null;
+                                if (editingAgency) {
+                                  // Find any dependent records for this agency
+                                  const allSignals = signalStorage.getAll();
+                                  const agencySignals = allSignals.filter(
+                                    (s) => s.agencyId === editingAgency.agencyId,
+                                  );
+                                  const sigIds = agencySignals.map((s) => s.signalId);
+                                  const apCount = approachStorage
+                                    .getAll()
+                                    .filter((a) => sigIds.includes(a.signalId)).length;
+                                  const phCount = phaseStorage
+                                    .getAll()
+                                    .filter((p) => sigIds.includes(p.signalId)).length;
+                                  const detCount = detectorStorage
+                                    .getAll()
+                                    .filter((d) => sigIds.includes(d.signalId)).length;
+
+                                  if (apCount + phCount + detCount > 0) {
+                                    // show confirmation dialog before converting
+                                    setPendingMetricValue(newVal);
+                                    setUnitChangeDialogOpen(true);
+                                    return;
+                                  }
+                                }
+
+                                // No existing data or new agency — just update the field
+                                field.onChange(newVal);
+                              }}
                             />
                           </FormControl>
                           <div>
@@ -850,6 +894,176 @@ export default function AgencyForm() {
                         </FormItem>
                       )}
                     />
+
+                    {/* Confirmation dialog for unit conversion */}
+                    <Dialog open={unitChangeDialogOpen} onOpenChange={setUnitChangeDialogOpen}>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Convert existing values?</DialogTitle>
+                        </DialogHeader>
+                        <div className="py-2">
+                          <p className="text-sm text-grey-700">
+                            Changing units will convert existing posted speeds, detector distances,
+                            and measured crosswalk lengths for this agency. This operation updates
+                            stored numeric values so labels remain correct. Do you want to proceed?
+                          </p>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-4">
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setUnitChangeDialogOpen(false);
+                              setPendingMetricValue(null);
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={async () => {
+                              setUnitChangeDialogOpen(false);
+                              try {
+                                // perform conversion
+                                const targetIsMetric = !!pendingMetricValue;
+                                const editingAgency = agencyModalEditingId
+                                  ? agencyListStorage.get(agencyModalEditingId)
+                                  : null;
+                                if (!editingAgency) return;
+
+                                const agencyId = editingAgency.agencyId;
+
+                                // Gather affected signal ids
+                                const allSignals = signalStorage.getAll();
+                                const agencySignals = allSignals.filter(
+                                  (s) => s.agencyId === agencyId,
+                                );
+                                const sigIds = agencySignals.map((s) => s.signalId);
+
+                                // Convert approaches: postedSpeed (integer)
+                                const approaches = approachStorage.getAll();
+                                approaches
+                                  .filter(
+                                    (a) =>
+                                      sigIds.includes(a.signalId) &&
+                                      typeof a.postedSpeed === "number",
+                                  )
+                                  .forEach((a) => {
+                                    const old = a.postedSpeed as number;
+                                    const converted = targetIsMetric
+                                      ? Math.round(old * 1.609344)
+                                      : Math.round(old / 1.609344);
+                                    try {
+                                      approachStorage.update(a.id, { postedSpeed: converted });
+                                    } catch {
+                                      // ignore per-item errors
+                                    }
+                                  });
+
+                                // Convert phases: crosswalkLength (integer)
+                                const phases = phaseStorage.getAll();
+                                phases
+                                  .filter(
+                                    (p) =>
+                                      sigIds.includes(p.signalId) &&
+                                      typeof p.crosswalkLength === "number",
+                                  )
+                                  .forEach((p) => {
+                                    const old = p.crosswalkLength as number;
+                                    // store integer meters when metric, integer feet when imperial
+                                    const converted = targetIsMetric
+                                      ? Math.max(0, Math.round(old * 0.3048))
+                                      : Math.max(0, Math.round(old / 0.3048));
+                                    try {
+                                      phaseStorage.update(p.id, { crosswalkLength: converted });
+                                    } catch {
+                                      // ignore
+                                    }
+                                  });
+
+                                // Convert detectors: length and stopbarSetbackDist (display values)
+                                const detectors = detectorStorage.getAll();
+                                // Read display values under OLD units
+                                const detectorsForAgency = detectors.filter((d) =>
+                                  sigIds.includes(d.signalId),
+                                );
+
+                                // First, persist agency metric flag so detectorStorage.update
+                                // interprets incoming display values correctly for storage.
+                                agencyListStorage.save({
+                                  agencyId: editingAgency.agencyId,
+                                  agencyName: editingAgency.agencyName,
+                                  agencyUrl: editingAgency.agencyUrl || "",
+                                  agencyTimezone: editingAgency.agencyTimezone,
+                                  agencyEmail: editingAgency.agencyEmail || "",
+                                  agencyIsMetric: targetIsMetric,
+                                  latitude: editingAgency.latitude ?? undefined,
+                                  longitude: editingAgency.longitude ?? undefined,
+                                });
+                                agencyStorage.save({
+                                  agencyId: editingAgency.agencyId,
+                                  agencyName: editingAgency.agencyName,
+                                  agencyUrl: editingAgency.agencyUrl || "",
+                                  agencyTimezone: editingAgency.agencyTimezone,
+                                  agencyEmail: editingAgency.agencyEmail || "",
+                                  agencyIsMetric: targetIsMetric,
+                                  latitude: editingAgency.latitude ?? undefined,
+                                  longitude: editingAgency.longitude ?? undefined,
+                                });
+
+                                detectorsForAgency.forEach((d) => {
+                                  // detectors returned by detectorStorage.getAll() are display-facing
+                                  const oldLength = d.length as number | null;
+                                  const oldStop = d.stopbarSetbackDist as number | null;
+                                  const newLength =
+                                    oldLength == null
+                                      ? null
+                                      : targetIsMetric
+                                        ? Math.round(oldLength * 0.3048 * 100) / 100
+                                        : Math.round((oldLength / 0.3048) * 100) / 100;
+                                  const newStop =
+                                    oldStop == null
+                                      ? null
+                                      : targetIsMetric
+                                        ? Math.round(oldStop * 0.3048 * 100) / 100
+                                        : Math.round((oldStop / 0.3048) * 100) / 100;
+                                  try {
+                                    detectorStorage.update(d.id, {
+                                      length: newLength,
+                                      stopbarSetbackDist: newStop,
+                                    });
+                                  } catch {
+                                    // ignore
+                                  }
+                                });
+
+                                // Refresh store from storage so UI reflects new values
+                                store.loadFromStorage();
+
+                                // Update form field and local agency state
+                                form.setValue("agencyIsMetric", targetIsMetric);
+                                const updatedAgency = agencyListStorage.get(agencyModalEditingId!);
+                                if (updatedAgency) setAgency(updatedAgency);
+
+                                toast({
+                                  title: "Converted",
+                                  description: "Values converted to selected units",
+                                });
+                              } catch (err) {
+                                console.error(err);
+                                toast({
+                                  title: "Error",
+                                  description: "Failed to convert units",
+                                  variant: "destructive",
+                                });
+                              } finally {
+                                setPendingMetricValue(null);
+                              }
+                            }}
+                          >
+                            Convert Values
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
 
                   <div className="flex justify-end">

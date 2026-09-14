@@ -109,7 +109,7 @@ export default function BulkPhaseModal({
     agencyDefaults?.defaultPhaseCount ?? 8,
   );
   const isMetric = agency?.agencyIsMetric ?? false;
-  const lengthUnit = isMetric ? "m" : "feet";
+  const lengthUnit = isMetric ? "m" : "ft";
 
   // Sorting state. Default is `null` so the table preserves insertion order
   // — editing a row's phase number won't make it jump positions. The user
@@ -743,7 +743,7 @@ export default function BulkPhaseModal({
                           className="w-20 text-xs py-2 text-center"
                           title={`Measured crosswalk length in ${lengthUnit}. Blank = auto-estimate in phases.txt (LE-# from lanes, TE-# from ped clearance time; shorter wins).`}
                         >
-                          CW ft
+                          {`CW ${lengthUnit}`}
                         </TableHead>
                         <TableHead className="w-12 text-xs py-2"></TableHead>
                       </TableRow>

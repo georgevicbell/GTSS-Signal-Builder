@@ -610,7 +610,11 @@ export default function DetectorModal({
                           // Lock the value when manually changed
                           setLockedValues((prev) => ({ ...prev, length: true }));
                         }}
-                        value={field.value || ""}
+                        value={
+                          field.value !== null && field.value !== undefined
+                            ? Number(field.value).toFixed(2)
+                            : ""
+                        }
                       />
                     </FormControl>
                     <FormMessage />
@@ -637,7 +641,11 @@ export default function DetectorModal({
                           // Lock the value when manually changed
                           setLockedValues((prev) => ({ ...prev, stopbarSetbackDist: true }));
                         }}
-                        value={field.value !== null && field.value !== undefined ? field.value : ""}
+                        value={
+                          field.value !== null && field.value !== undefined
+                            ? Number(field.value).toFixed(2)
+                            : ""
+                        }
                       />
                     </FormControl>
                     <p className="text-xs text-grey-500">
@@ -685,14 +693,14 @@ export default function DetectorModal({
                     return selectedSignal ? (
                       <MapContainer
                         key={selectedSignalId} // Force remount when signal changes
-                        center={[selectedSignal.latitude || 0, selectedSignal.longitude || 0]}
+                        center={[selectedSignal.latitude ?? 0, selectedSignal.longitude ?? 0]}
                         zoom={18}
                         scrollWheelZoom={mapScrollZoom}
                         style={{ height: "100%", width: "100%" }}
                       >
                         <MapTileLayers />
                         <Marker
-                          position={[selectedSignal.latitude || 0, selectedSignal.longitude || 0]}
+                          position={[selectedSignal.latitude ?? 0, selectedSignal.longitude ?? 0]}
                         >
                           <Popup>
                             <div className="text-center">

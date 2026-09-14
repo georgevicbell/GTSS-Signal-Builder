@@ -107,7 +107,7 @@ export default function ApproachModal({
   // If this approach has no street name yet, suggest one from a nearby signal's
   // approach that points along a similar angle. Never overwrites a typed name.
   const maybeSuggestStreetName = (bearing: number) => {
-    if (!selectedSignal?.latitude || !selectedSignal?.longitude) return;
+    if (selectedSignal?.latitude == null || selectedSignal?.longitude == null) return;
     const current = form.getValues("streetName");
     if (current && current.trim()) return;
     const suggestion = suggestStreetNameForApproach({
@@ -124,7 +124,8 @@ export default function ApproachModal({
   // Calculate bearing for approach direction (direction vehicles travel TOWARD the intersection)
   // User clicks where traffic is coming FROM, we calculate the approach direction (opposite)
   const handleMapClick = (clickLat: number, clickLng: number) => {
-    if (!selectedSignal || !selectedSignal.latitude || !selectedSignal.longitude) return;
+    if (!selectedSignal || selectedSignal.latitude == null || selectedSignal.longitude == null)
+      return;
 
     const signalLat = selectedSignal.latitude;
     const signalLng = selectedSignal.longitude;
@@ -149,9 +150,9 @@ export default function ApproachModal({
   const getBearingEndPoint = () => {
     if (
       !selectedSignal ||
-      !selectedSignal.latitude ||
-      !selectedSignal.longitude ||
-      !compassBearing
+      selectedSignal.latitude == null ||
+      selectedSignal.longitude == null ||
+      compassBearing == null
     ) {
       return null;
     }
@@ -239,7 +240,7 @@ export default function ApproachModal({
                         </SelectTrigger>
                         <SelectContent>
                           {signals
-                            .filter((s) => s.latitude && s.longitude)
+                            .filter((s) => s.latitude != null && s.longitude != null)
                             .map((signal) => (
                               <SelectItem key={signal.signalId} value={signal.signalId}>
                                 {getSignalDisplayName(signal, approaches)}
@@ -297,7 +298,7 @@ export default function ApproachModal({
                 name="postedSpeed"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Posted Speed (${speedUnit})</FormLabel>
+                    <FormLabel>Posted Speed ({speedUnit})</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -435,7 +436,9 @@ export default function ApproachModal({
                   approach. The bearing angle will be calculated automatically.
                 </p>
                 <div className="h-72 rounded-lg overflow-hidden border">
-                  {selectedSignal && selectedSignal.latitude && selectedSignal.longitude ? (
+                  {selectedSignal &&
+                  selectedSignal.latitude != null &&
+                  selectedSignal.longitude != null ? (
                     <MapContainer
                       center={[selectedSignal.latitude, selectedSignal.longitude]}
                       zoom={17}

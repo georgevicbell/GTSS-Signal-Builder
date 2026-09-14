@@ -122,6 +122,24 @@ function getFromStorage<T>(key: string, defaultValue: T): T {
   }
 }
 
+// Distance unit helpers: when an agency uses metric units we store certain
+// distances in centimeters (cm) internally. Consumers expect to see meters
+// (m) rounded to 2 decimals. These helpers centralize conversion logic.
+function storedDistanceToDisplay(value: number | null | undefined, isMetric: boolean) {
+  if (value == null) return null;
+  if (!isMetric) return value; // non-metric values are stored/displayed as-is
+  // stored as cm -> display as meters rounded to 2 decimals
+  const m = Number(value) / 100;
+  return Math.round(m * 100) / 100;
+}
+
+function displayDistanceToStored(value: number | null | undefined, isMetric: boolean) {
+  if (value == null) return null;
+  if (!isMetric) return value; // non-metric values stored as-is
+  // display in meters -> store as integer cm
+  return Math.round(Number(value) * 100);
+}
+
 // Ensure agency object always has a boolean `agencyIsMetric` field.
 function normalizeAgency(
   a: (Partial<{ agencyIsMetric?: unknown }> & Record<string, unknown>) | null | undefined,
@@ -637,12 +655,20 @@ export const phaseStorage = {
 export const detectorStorage = {
   getAll: (): Detector[] => {
     const raw = getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
+    // Determine whether the current agency uses metric units so we can
+    // convert stored cm values back to meters for display.
+    const agency = agencyStorage.get();
+    const isMetric = agency?.agencyIsMetric ?? false;
+
     // Rows stored before detectors could carry an approach (or stand without a
-    // phase) are missing these keys entirely.
+    // phase) are missing these keys entirely. Convert metric-stored distances
+    // from cm -> m for consumers.
     return raw.map((d) => ({
       ...d,
       phase: d.phase ?? null,
       approachId: (d as { approachId?: string | null }).approachId ?? null,
+      length: storedDistanceToDisplay(d.length ?? null, isMetric),
+      stopbarSetbackDist: storedDistanceToDisplay(d.stopbarSetbackDist ?? null, isMetric),
     }));
   },
 
@@ -652,8 +678,11 @@ export const detectorStorage = {
   },
 
   save: (detector: InsertDetector): Detector => {
-    const detectors = detectorStorage.getAll();
-    const newDetector: Detector = {
+    const raw = getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
+    const agency = agencyStorage.get();
+    const isMetric = agency?.agencyIsMetric ?? false;
+
+    const storedDetector = {
       id: nanoid(),
       signalId: detector.signalId,
       phase: detector.phase ?? null,
@@ -663,14 +692,24 @@ export const detectorStorage = {
       vehicleType: detector.vehicleType ?? null,
       lane: detector.lane ?? null,
       technologyType: detector.technologyType,
-      length: detector.length ?? null,
-      stopbarSetbackDist: detector.stopbarSetbackDist ?? null,
+      length: displayDistanceToStored(detector.length ?? null, isMetric),
+      stopbarSetbackDist: displayDistanceToStored(detector.stopbarSetbackDist ?? null, isMetric),
       approachId: detector.approachId ?? null,
     };
 
-    const updatedDetectors = [...detectors, newDetector];
-    saveToStorage(STORAGE_KEYS.DETECTORS, updatedDetectors);
-    return newDetector;
+    const updatedRaw = [...raw, storedDetector];
+    saveToStorage(STORAGE_KEYS.DETECTORS, updatedRaw);
+
+    // Return the consumer-facing (display) representation
+    const displayDetector = {
+      ...storedDetector,
+      length: storedDistanceToDisplay(storedDetector.length ?? null, isMetric),
+      stopbarSetbackDist: storedDistanceToDisplay(
+        storedDetector.stopbarSetbackDist ?? null,
+        isMetric,
+      ),
+    };
+    return displayDetector as Detector;
   },
 
   update: (id: string, updates: Partial<InsertDetector>): Detector | null => {
@@ -680,15 +719,40 @@ export const detectorStorage = {
       return null;
     }
 
-    const detectors = detectorStorage.getAll();
-    const index = detectors.findIndex((d) => d.id === id);
+    const raw = getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
+    const index = raw.findIndex((d) => d.id === id);
 
     if (index === -1) return null;
 
-    const updatedDetector = { ...detectors[index], ...updates };
-    detectors[index] = updatedDetector;
-    saveToStorage(STORAGE_KEYS.DETECTORS, detectors);
-    return updatedDetector;
+    const agency = agencyStorage.get();
+    const isMetric = agency?.agencyIsMetric ?? false;
+
+    // Convert any incoming distance updates from display -> stored units
+    const updatesForStorage: Partial<Record<string, unknown>> = { ...updates };
+    if ("length" in updatesForStorage) {
+      updatesForStorage.length = displayDistanceToStored(updates.length ?? null, isMetric);
+    }
+    if ("stopbarSetbackDist" in updatesForStorage) {
+      updatesForStorage.stopbarSetbackDist = displayDistanceToStored(
+        updates.stopbarSetbackDist ?? null,
+        isMetric,
+      );
+    }
+
+    const mergedStored = { ...raw[index], ...updatesForStorage };
+    raw[index] = mergedStored as Detector;
+    saveToStorage(STORAGE_KEYS.DETECTORS, raw);
+
+    // Return display-facing object
+    const displayObj = {
+      ...mergedStored,
+      length: storedDistanceToDisplay(mergedStored.length ?? null, isMetric),
+      stopbarSetbackDist: storedDistanceToDisplay(
+        mergedStored.stopbarSetbackDist ?? null,
+        isMetric,
+      ),
+    };
+    return displayObj as Detector;
   },
 
   delete: (id: string): void => {

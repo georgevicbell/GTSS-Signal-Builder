@@ -136,7 +136,7 @@ export default function ExportPanel() {
     }
 
     filteredSignals.forEach((signal) => {
-      if (!signal.latitude || !signal.longitude) {
+      if (signal.latitude == null || signal.longitude == null) {
         issues.push({ type: "error", message: `Missing coordinates for ${signal.signalId}` });
       }
       if (!signal.signalId) {

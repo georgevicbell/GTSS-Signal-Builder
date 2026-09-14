@@ -159,7 +159,7 @@ export default function BulkDetectorModal({
     purpose: "Stop Bar",
     technologyType: "Inductance Loop",
     vehicleType: "Vehicle",
-    length: 6.0 as number | undefined,
+    length: (isMetric ? 1.8 : 6.0) as number | undefined,
     stopbarSetbackDist: 0 as number | undefined,
   });
 
@@ -315,7 +315,7 @@ export default function BulkDetectorModal({
       purpose: staticFields.purpose ? staticValues.purpose : "Stop Bar",
       technologyType: staticFields.technologyType ? staticValues.technologyType : "Inductance Loop",
       vehicleType: staticFields.vehicleType ? staticValues.vehicleType : "Vehicle",
-      length: staticFields.length ? staticValues.length : 6.0,
+      length: staticFields.length ? staticValues.length : isMetric ? 1.8 : 6.0,
       stopbarSetbackDist: staticFields.stopbarSetbackDist ? staticValues.stopbarSetbackDist : 0,
       description: buildDescription(direction, formattedPurpose, nextLane),
       isDescriptionManual: false,
@@ -358,7 +358,7 @@ export default function BulkDetectorModal({
           ? staticValues.technologyType
           : "Inductance Loop",
         vehicleType: staticFields.vehicleType ? staticValues.vehicleType : "Vehicle",
-        length: staticFields.length ? staticValues.length : 6.0,
+        length: staticFields.length ? staticValues.length : isMetric ? 1.8 : 6.0,
         stopbarSetbackDist: staticFields.stopbarSetbackDist ? staticValues.stopbarSetbackDist : 0,
         description: buildDescription(direction, formattedPurpose, currentLane),
         isDescriptionManual: false,
@@ -380,11 +380,75 @@ export default function BulkDetectorModal({
     });
   };
 
-  // Update detector field
-  const handleDetectorChange = (index: number, field: keyof PendingDetector, value: string) => {
+  // Update detector field. Accepts typed `value` and preserves numeric/null types.
+  const handleDetectorChange = (
+    index: number,
+    field: keyof PendingDetector,
+    value: string | null,
+  ) => {
     setPendingDetectors((prev) => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
+      // Coerce value based on field type
+      let parsedValue;
+      if (field === "phase") {
+        // Sentinels like NO_PHASE or string "0" should become null
+        if (value === NO_PHASE || value === "0" || value === null) parsedValue = null;
+        else parsedValue = typeof value === "number" ? value : parseInt(String(value), 10);
+        if (Number.isNaN(parsedValue)) parsedValue = null;
+      } else if (field === "approachId") {
+        if (value === NO_APPROACH || value === "0" || value === null) parsedValue = null;
+        else parsedValue = value === undefined ? null : String(value);
+      } else if (field === "length" || field === "stopbarSetbackDist") {
+        // Empty string or null -> undefined, otherwise numeric
+        if (value === "" || value === null || value === undefined) parsedValue = undefined;
+        else {
+          const n = Number(value);
+          parsedValue = Number.isNaN(n) ? undefined : n;
+        }
+      } else if (field === "isDescriptionManual") {
+        parsedValue = Boolean(value);
+      } else {
+        parsedValue = value === undefined || value === null ? "" : String(value);
+      }
+
+      {
+        const det = updated[index] as PendingDetector;
+        switch (field) {
+          case "phase":
+            det.phase = parsedValue as number | null;
+            break;
+          case "approachId":
+            det.approachId = parsedValue as string | null;
+            break;
+          case "length":
+            det.length = parsedValue as number | undefined;
+            break;
+          case "stopbarSetbackDist":
+            det.stopbarSetbackDist = parsedValue as number | undefined;
+            break;
+          case "isDescriptionManual":
+            det.isDescriptionManual = Boolean(parsedValue);
+            break;
+          case "channel":
+            det.channel = parsedValue as string;
+            break;
+          case "lane":
+            det.lane = parsedValue as string;
+            break;
+          case "purpose":
+            det.purpose = parsedValue as string;
+            break;
+          case "technologyType":
+            det.technologyType = parsedValue as string;
+            break;
+          case "vehicleType":
+            det.vehicleType = parsedValue as string;
+            break;
+          case "description":
+            det.description = parsedValue as string;
+            break;
+        }
+      }
 
       // Auto-update description if not manually set
       if (!updated[index].isDescriptionManual && (field === "phase" || field === "lane")) {
@@ -401,7 +465,7 @@ export default function BulkDetectorModal({
       // If purpose is not static and changed, update description
       if (field === "purpose" && !staticFields.purpose && !updated[index].isDescriptionManual) {
         const direction = getRowDirection(updated[index]);
-        const formattedPurpose = formatPurposeForDescription(value);
+        const formattedPurpose = formatPurposeForDescription(String(value));
         updated[index].description = buildDescription(
           direction,
           formattedPurpose,
@@ -412,7 +476,110 @@ export default function BulkDetectorModal({
       // Mark description as manual if user edited it
       if (field === "description") {
         updated[index].isDescriptionManual = true;
-        updated[index].description = sanitizeDescription(value);
+        updated[index].description = sanitizeDescription(String(value));
+      }
+
+      return updated;
+    });
+  };
+
+  // Update detector field. Accepts typed `value` and preserves numeric/null types.
+  const handleDetectorChangeNumber = (
+    index: number,
+    field: keyof PendingDetector,
+    value: number | null,
+  ) => {
+    setPendingDetectors((prev) => {
+      const updated = [...prev];
+      // Coerce value based on field type
+      let parsedValue;
+      if (field === "phase") {
+        // Sentinels like NO_PHASE or string "0" should become null
+        if (value === 0 || value === null) parsedValue = null;
+        else parsedValue = typeof value === "number" ? value : parseInt(String(value), 10);
+        if (Number.isNaN(parsedValue)) parsedValue = null;
+      } else if (field === "approachId") {
+        if (value === null) parsedValue = null;
+        else parsedValue = value === undefined ? null : String(value);
+      } else if (field === "length" || field === "stopbarSetbackDist") {
+        // Empty string or null -> undefined, otherwise numeric
+        if (value === null || value === undefined) parsedValue = undefined;
+        else {
+          const n = Number(value);
+          parsedValue = Number.isNaN(n) ? undefined : n;
+        }
+      } else if (field === "isDescriptionManual") {
+        parsedValue = Boolean(value);
+      } else {
+        parsedValue = value === undefined || value === null ? "" : String(value);
+      }
+
+      {
+        const det = updated[index] as PendingDetector;
+        switch (field) {
+          case "phase":
+            det.phase = parsedValue as number | null;
+            break;
+          case "approachId":
+            det.approachId = parsedValue as string | null;
+            break;
+          case "length":
+            det.length = parsedValue as number | undefined;
+            break;
+          case "stopbarSetbackDist":
+            det.stopbarSetbackDist = parsedValue as number | undefined;
+            break;
+          case "isDescriptionManual":
+            det.isDescriptionManual = Boolean(parsedValue);
+            break;
+          case "channel":
+            det.channel = parsedValue as string;
+            break;
+          case "lane":
+            det.lane = parsedValue as string;
+            break;
+          case "purpose":
+            det.purpose = parsedValue as string;
+            break;
+          case "technologyType":
+            det.technologyType = parsedValue as string;
+            break;
+          case "vehicleType":
+            det.vehicleType = parsedValue as string;
+            break;
+          case "description":
+            det.description = parsedValue as string;
+            break;
+        }
+      }
+
+      // Auto-update description if not manually set
+      if (!updated[index].isDescriptionManual && (field === "phase" || field === "lane")) {
+        const direction = getRowDirection(updated[index]);
+        const purpose = staticFields.purpose ? staticValues.purpose : updated[index].purpose;
+        const formattedPurpose = formatPurposeForDescription(purpose);
+        updated[index].description = buildDescription(
+          direction,
+          formattedPurpose,
+          updated[index].lane,
+        );
+      }
+
+      // If purpose is not static and changed, update description
+      if (field === "purpose" && !staticFields.purpose && !updated[index].isDescriptionManual) {
+        const direction = getRowDirection(updated[index]);
+        const formattedPurpose = formatPurposeForDescription(String(value));
+        updated[index].description = buildDescription(
+          direction,
+          formattedPurpose,
+          updated[index].lane,
+        );
+      }
+
+      // Mark description as manual if user edited it
+      if (field === "description") {
+        updated[index].isDescriptionManual = true;
+        updated[index].description = sanitizeDescription(String(value));
       }
 
       return updated;
@@ -450,16 +617,76 @@ export default function BulkDetectorModal({
   const handleExistingDetectorChange = (
     index: number,
     field: keyof PendingDetector,
-    value: string,
+    value: string | number | null,
   ) => {
     setExistingDetectors((prev) => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
+
+      // Parse same way as pending handler
+      let parsedValue;
+      if (field === "phase") {
+        if (value === NO_PHASE || value === "0" || value === 0 || value === null)
+          parsedValue = null;
+        else parsedValue = typeof value === "number" ? value : parseInt(String(value), 10);
+        if (Number.isNaN(parsedValue)) parsedValue = null;
+      } else if (field === "approachId") {
+        if (value === NO_APPROACH || value === "0" || value === null) parsedValue = null;
+        else parsedValue = value === undefined ? null : String(value);
+      } else if (field === "length" || field === "stopbarSetbackDist") {
+        if (value === "" || value === null || value === undefined) parsedValue = undefined;
+        else {
+          const n = Number(value);
+          parsedValue = Number.isNaN(n) ? undefined : n;
+        }
+      } else if (field === "isDescriptionManual") {
+        parsedValue = Boolean(value);
+      } else {
+        parsedValue = value === undefined || value === null ? "" : String(value);
+      }
+
+      {
+        const det = updated[index] as PendingDetector;
+        switch (field) {
+          case "phase":
+            det.phase = parsedValue as number | null;
+            break;
+          case "approachId":
+            det.approachId = parsedValue as string | null;
+            break;
+          case "length":
+            det.length = parsedValue as number | undefined;
+            break;
+          case "stopbarSetbackDist":
+            det.stopbarSetbackDist = parsedValue as number | undefined;
+            break;
+          case "isDescriptionManual":
+            det.isDescriptionManual = Boolean(parsedValue);
+            break;
+          case "channel":
+            det.channel = parsedValue as string;
+            break;
+          case "lane":
+            det.lane = parsedValue as string;
+            break;
+          case "purpose":
+            det.purpose = parsedValue as string;
+            break;
+          case "technologyType":
+            det.technologyType = parsedValue as string;
+            break;
+          case "vehicleType":
+            det.vehicleType = parsedValue as string;
+            break;
+          case "description":
+            det.description = parsedValue as string;
+            break;
+        }
+      }
 
       // Mark description as manual if user edited it
       if (field === "description") {
         updated[index].isDescriptionManual = true;
-        updated[index].description = sanitizeDescription(value);
+        updated[index].description = sanitizeDescription(String(parsedValue));
       }
 
       return updated;
@@ -1102,10 +1329,10 @@ export default function BulkDetectorModal({
                             <Select
                               value={detector.phase === null ? NO_PHASE : detector.phase.toString()}
                               onValueChange={(v) =>
-                                handleDetectorChange(
+                                handleDetectorChangeNumber(
                                   idx,
                                   "phase",
-                                  v === NO_PHASE ? "0" : parseInt(v).toString(),
+                                  v === NO_PHASE ? null : parseInt(v, 10),
                                 )
                               }
                             >
@@ -1132,7 +1359,7 @@ export default function BulkDetectorModal({
                                 handleDetectorChange(
                                   idx,
                                   "approachId",
-                                  v === NO_APPROACH ? "0" : v.toString(),
+                                  v === NO_APPROACH ? null : v,
                                 )
                               }
                             >
@@ -1221,13 +1448,13 @@ export default function BulkDetectorModal({
                                 type="number"
                                 step="0.1"
                                 min="0"
-                                value={detector.length ?? ""}
+                                value={
+                                  detector.length !== null && detector.length !== undefined
+                                    ? Number(detector.length).toFixed(2)
+                                    : ""
+                                }
                                 onChange={(e) =>
-                                  handleDetectorChange(
-                                    idx,
-                                    "length",
-                                    e.target.value ? parseFloat(e.target.value).toString() : "0",
-                                  )
+                                  handleDetectorChange(idx, "length", e.target.value)
                                 }
                                 className="h-7 w-16 text-xs"
                               />
@@ -1239,13 +1466,14 @@ export default function BulkDetectorModal({
                                 type="number"
                                 step="0.1"
                                 min="0"
-                                value={detector.stopbarSetbackDist ?? ""}
+                                value={
+                                  detector.stopbarSetbackDist !== null &&
+                                  detector.stopbarSetbackDist !== undefined
+                                    ? Number(detector.stopbarSetbackDist).toFixed(2)
+                                    : ""
+                                }
                                 onChange={(e) =>
-                                  handleDetectorChange(
-                                    idx,
-                                    "stopbarSetbackDist",
-                                    e.target.value ? parseFloat(e.target.value).toString() : "0",
-                                  )
+                                  handleDetectorChange(idx, "stopbarSetbackDist", e.target.value)
                                 }
                                 className="h-7 w-16 text-xs"
                               />
@@ -1407,7 +1635,7 @@ export default function BulkDetectorModal({
                                 handleExistingDetectorChange(
                                   idx,
                                   "phase",
-                                  v === NO_PHASE ? "0" : parseInt(v).toString(),
+                                  v === NO_PHASE ? null : parseInt(v, 10),
                                 )
                               }
                             >
@@ -1434,7 +1662,7 @@ export default function BulkDetectorModal({
                                 handleExistingDetectorChange(
                                   idx,
                                   "approachId",
-                                  v === NO_APPROACH ? "0" : v.toString(),
+                                  v === NO_APPROACH ? null : v,
                                 )
                               }
                             >
@@ -1506,7 +1734,7 @@ export default function BulkDetectorModal({
                                 handleExistingDetectorChange(
                                   idx,
                                   "stopbarSetbackDist",
-                                  e.target.value ? parseFloat(e.target.value).toString() : "0",
+                                  e.target.value,
                                 )
                               }
                               className="h-7 w-16 text-xs"

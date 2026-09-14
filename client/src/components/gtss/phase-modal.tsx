@@ -411,7 +411,7 @@ export default function PhaseModal({ phase, onClose, preSelectedSignalId }: Phas
                                   variant="secondary"
                                   className="bg-green-100 text-green-800 text-xs"
                                 >
-                                  {selectedApproach.postedSpeed} ${speedUnit}
+                                  {selectedApproach.postedSpeed} {speedUnit}
                                 </Badge>
                               )}
                             </div>

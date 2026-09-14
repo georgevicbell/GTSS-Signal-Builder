@@ -279,7 +279,7 @@ export default function ApproachesTable({ triggerAdd, triggerBulk }: ApproachesT
                       <SortableHeader field="approachId">Approach ID</SortableHeader>
                       <SortableHeader field="streetName">Street Name</SortableHeader>
                       <SortableHeader field="compassBearing">Bearing</SortableHeader>
-                      <SortableHeader field="postedSpeed">{`Speed (${speedUnit})`}</SortableHeader>
+                      <SortableHeader field="postedSpeed">Speed ({speedUnit})</SortableHeader>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -334,7 +334,7 @@ export default function ApproachesTable({ triggerAdd, triggerBulk }: ApproachesT
                                     variant="secondary"
                                     className="bg-green-100 text-green-800 text-xs py-0 px-1.5 h-4"
                                   >
-                                    {approach.postedSpeed} ${speedUnit}
+                                    {approach.postedSpeed} {speedUnit}
                                   </Badge>
                                 ) : (
                                   <span className="text-grey-400 text-xs">-</span>
