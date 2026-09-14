@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import {
+  Agency,
   InsertAgency,
   InsertApproach,
   InsertBasicTiming,
@@ -11,12 +12,14 @@ import { useGTSSStore } from "../store/gtss-store";
 import { AgencyDefaults, isMapScrollZoomEnabled } from "./agencyDefaults";
 import {
   agencyDefaultsStorage,
+  agencyListStorage,
   agencyStorage,
   approachStorage,
   basicTimingStorage,
   detectorStorage,
   exportAsIndividualFiles,
   exportAsZip,
+  importData,
   phaseStorage,
   signalStorage,
 } from "./localStorage";
@@ -67,6 +70,112 @@ export const useAgency = () => {
     save: saveAgency,
   };
 };
+
+// Manages the full agency list (add/edit/default/cascade-delete), keeping
+// the store's `agency`/`agencies`/`defaultAgencyId` fields in sync.
+export const useAgencies = () => {
+  const { agencies, defaultAgencyId, setAgency, setAgencies, loadFromStorage } = useGTSSStore();
+
+  const getAgencyById = (id: string) => agencies.find((a) => a.id === id);
+
+  const saveAgency = (data: InsertAgency) => {
+    const saved = agencyListStorage.save(data);
+    agencyStorage.save(data); // keep legacy single-agency mirror in sync
+    setAgencies(agencyListStorage.getAll());
+    setAgency(saved);
+    return saved;
+  };
+
+  const setDefaultAgency = (id: string) => {
+    agencyListStorage.setDefaultId(id);
+    useGTSSStore.setState({ defaultAgencyId: id });
+    setAgency(getAgencyById(id) ?? null);
+  };
+
+  const deleteAgencyWithCascade = (id: string) => {
+    agencyListStorage.deleteWithCascade(id);
+    // Cascade delete can affect signals/approaches/phases/detectors/timings
+    // for other agencies too, so refresh everything from storage.
+    loadFromStorage();
+  };
+
+  return {
+    data: agencies,
+    defaultId: defaultAgencyId,
+    get: getAgencyById,
+    save: saveAgency,
+    setDefault: setDefaultAgency,
+    deleteWithCascade: deleteAgencyWithCascade,
+  };
+};
+
+// Converts an agency's dependent approach/phase/detector values between
+// imperial and metric units, then refreshes the store from storage.
+export function convertAgencyUnits(agency: Agency, targetIsMetric: boolean): Agency {
+  const sigIds = signalStorage
+    .getAll()
+    .filter((s) => s.agencyId === agency.agencyId)
+    .map((s) => s.signalId);
+
+  approachStorage
+    .getAll()
+    .filter((a) => sigIds.includes(a.signalId) && typeof a.postedSpeed === "number")
+    .forEach((a) => {
+      const old = a.postedSpeed as number;
+      const converted = targetIsMetric ? Math.round(old * 1.609344) : Math.round(old / 1.609344);
+      approachStorage.update(a.id, { postedSpeed: converted });
+    });
+
+  phaseStorage
+    .getAll()
+    .filter((p) => sigIds.includes(p.signalId) && typeof p.crosswalkLength === "number")
+    .forEach((p) => {
+      const old = p.crosswalkLength as number;
+      const converted = targetIsMetric
+        ? Math.max(0, Math.round(old * 0.3048))
+        : Math.max(0, Math.round(old / 0.3048));
+      phaseStorage.update(p.id, { crosswalkLength: converted });
+    });
+
+  // Persist the metric flag first so the detector updates below interpret
+  // incoming display values under the new unit system.
+  const updatedAgencyData: InsertAgency = {
+    agencyId: agency.agencyId,
+    agencyName: agency.agencyName,
+    agencyUrl: agency.agencyUrl || "",
+    agencyTimezone: agency.agencyTimezone,
+    agencyEmail: agency.agencyEmail || "",
+    agencyIsMetric: targetIsMetric,
+    latitude: agency.latitude ?? undefined,
+    longitude: agency.longitude ?? undefined,
+  };
+  const updatedAgency = agencyListStorage.save(updatedAgencyData);
+  agencyStorage.save(updatedAgencyData);
+
+  detectorStorage
+    .getAll()
+    .filter((d) => sigIds.includes(d.signalId))
+    .forEach((d) => {
+      const oldLength = d.length as number | null;
+      const oldStop = d.stopbarSetbackDist as number | null;
+      const newLength =
+        oldLength == null
+          ? null
+          : targetIsMetric
+            ? Math.round(oldLength * 0.3048 * 100) / 100
+            : Math.round((oldLength / 0.3048) * 100) / 100;
+      const newStop =
+        oldStop == null
+          ? null
+          : targetIsMetric
+            ? Math.round(oldStop * 0.3048 * 100) / 100
+            : Math.round((oldStop / 0.3048) * 100) / 100;
+      detectorStorage.update(d.id, { length: newLength, stopbarSetbackDist: newStop });
+    });
+
+  useGTSSStore.getState().loadFromStorage();
+  return updatedAgency;
+}
 
 export const useSignals = () => {
   const { signals, addSignal, updateSignal, deleteSignal } = useGTSSStore();
@@ -252,6 +361,18 @@ export const useExport = () => {
     exportAsZip,
     exportAsIndividualFiles,
   };
+};
+
+// Import hook - runs importData then refreshes the store from storage
+export const useImportData = () => {
+  const loadFromStorage = useGTSSStore((state) => state.loadFromStorage);
+
+  const runImport: typeof importData = (parsedData, mode) => {
+    importData(parsedData, mode);
+    loadFromStorage();
+  };
+
+  return { import: runImport };
 };
 
 // Hook to load all data from localStorage on app start

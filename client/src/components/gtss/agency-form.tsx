@@ -21,16 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  agencyListStorage,
-  agencyStorage,
-  approachStorage,
-  detectorStorage,
-  phaseStorage,
-  signalStorage,
-  useGTSSStore,
-  useMapScrollZoom,
-} from "gtss";
+import { convertAgencyUnits, useAgencies, useGTSSStore, useMapScrollZoom } from "gtss";
 import { Agency, type InsertAgency, insertAgencySchema } from "gtss/schema";
 import { Crosshair, Edit3, MapPin, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -102,8 +93,9 @@ function MapResizeObserverLocal() {
 
 export default function AgencyForm() {
   const mapScrollZoom = useMapScrollZoom();
-  const store = useGTSSStore();
-  const { agency, setAgency, signals, approaches, phases, detectors, basicTimings } = store;
+  const { agency, setAgency, signals, approaches, phases, detectors, basicTimings } =
+    useGTSSStore();
+  const agenciesApi = useAgencies();
 
   // Local modal state (Add/Edit) — modal state is intentionally local to this component
   const [agencyModalOpen, setAgencyModalOpen] = useState(false);
@@ -129,13 +121,7 @@ export default function AgencyForm() {
 
   const saveAgency = (data: InsertAgency) => {
     try {
-      // Save to agency list and mark as current
-      const savedListAgency = agencyListStorage.save(data);
-      // Also persist the currently selected agency for legacy APIs
-      agencyStorage.save(data);
-      setAgency(savedListAgency);
-      // refresh local list UI
-      refreshAgencies();
+      agenciesApi.save(data);
       toast({
         title: "Success",
         description: "Agency information saved successfully",
@@ -180,7 +166,7 @@ export default function AgencyForm() {
     // When opening the modal: if editingId is set, preload that agency; if not, reset to empty defaults for adding
     if (agencyModalOpen) {
       if (agencyModalEditingId) {
-        const editAgency = agencyListStorage.get(agencyModalEditingId);
+        const editAgency = agenciesApi.get(agencyModalEditingId);
         if (editAgency) {
           form.reset({
             agencyId: editAgency.agencyId,
@@ -243,27 +229,8 @@ export default function AgencyForm() {
     };
     saveAgency(saveData);
   };
-  const [agencies, setAgencies] = useState<Agency[]>([]);
-  const [defaultAgencyId, setDefaultAgencyId] = useState<string | null>(null);
-
-  useEffect(() => {
-    // load agencies list and default id
-    try {
-      const list = agencyListStorage.getAll();
-      setAgencies(list);
-      const def = agencyListStorage.getDefaultId();
-      setDefaultAgencyId(def);
-    } catch {
-      setAgencies([]);
-      setDefaultAgencyId(null);
-    }
-  }, []);
-
-  const refreshAgencies = () => {
-    const list = agencyListStorage.getAll();
-    setAgencies(list);
-    setDefaultAgencyId(agencyListStorage.getDefaultId());
-  };
+  const agencies = agenciesApi.data;
+  const defaultAgencyId = agenciesApi.defaultId;
 
   const handleLoadAgency = (a: Agency) => {
     // load into form and store
@@ -287,15 +254,13 @@ export default function AgencyForm() {
   };
 
   const handleSetDefault = (id: string) => {
-    agencyListStorage.setDefaultId(id);
-    setAgency(agencyListStorage.get(id) || null);
-    setDefaultAgencyId(id);
+    agenciesApi.setDefault(id);
     toast({ title: "Default Set", description: "Default agency updated" });
   };
   // Note: deletion is only allowed via cascade to avoid orphaned records.
 
   const handleDeleteCascade = (id: string) => {
-    const targetAgency = agencyListStorage.get(id);
+    const targetAgency = agenciesApi.get(id);
     if (!targetAgency) {
       toast({
         title: "Not Found",
@@ -305,17 +270,7 @@ export default function AgencyForm() {
       return;
     }
 
-    // Perform cascade delete via storage helper
-    agencyListStorage.deleteWithCascade(id);
-    store.loadFromStorage();
-
-    // if deleted current, clear or set to default
-    if (agency && agency.id === id) {
-      const defId = agencyListStorage.getDefaultId();
-      const newAgency = defId ? agencyListStorage.get(defId) || null : null;
-      setAgency(newAgency);
-    }
-    refreshAgencies();
+    agenciesApi.deleteWithCascade(id);
     toast({ title: "Deleted", description: "Agency and related data removed" });
   };
 
@@ -853,24 +808,22 @@ export default function AgencyForm() {
                                 const newVal = Boolean(v);
                                 // If editing an existing agency with data, warn before switching
                                 const editingAgency = agencyModalEditingId
-                                  ? agencyListStorage.get(agencyModalEditingId)
+                                  ? agenciesApi.get(agencyModalEditingId)
                                   : null;
                                 if (editingAgency) {
                                   // Find any dependent records for this agency
-                                  const allSignals = signalStorage.getAll();
-                                  const agencySignals = allSignals.filter(
-                                    (s) => s.agencyId === editingAgency.agencyId,
-                                  );
-                                  const sigIds = agencySignals.map((s) => s.signalId);
-                                  const apCount = approachStorage
-                                    .getAll()
-                                    .filter((a) => sigIds.includes(a.signalId)).length;
-                                  const phCount = phaseStorage
-                                    .getAll()
-                                    .filter((p) => sigIds.includes(p.signalId)).length;
-                                  const detCount = detectorStorage
-                                    .getAll()
-                                    .filter((d) => sigIds.includes(d.signalId)).length;
+                                  const sigIds = signals
+                                    .filter((s) => s.agencyId === editingAgency.agencyId)
+                                    .map((s) => s.signalId);
+                                  const apCount = approaches.filter((a) =>
+                                    sigIds.includes(a.signalId),
+                                  ).length;
+                                  const phCount = phases.filter((p) =>
+                                    sigIds.includes(p.signalId),
+                                  ).length;
+                                  const detCount = detectors.filter((d) =>
+                                    sigIds.includes(d.signalId),
+                                  ).length;
 
                                   if (apCount + phCount + detCount > 0) {
                                     // show confirmation dialog before converting
@@ -923,126 +876,19 @@ export default function AgencyForm() {
                             onClick={async () => {
                               setUnitChangeDialogOpen(false);
                               try {
-                                // perform conversion
                                 const targetIsMetric = !!pendingMetricValue;
                                 const editingAgency = agencyModalEditingId
-                                  ? agencyListStorage.get(agencyModalEditingId)
+                                  ? agenciesApi.get(agencyModalEditingId)
                                   : null;
                                 if (!editingAgency) return;
 
-                                const agencyId = editingAgency.agencyId;
-
-                                // Gather affected signal ids
-                                const allSignals = signalStorage.getAll();
-                                const agencySignals = allSignals.filter(
-                                  (s) => s.agencyId === agencyId,
-                                );
-                                const sigIds = agencySignals.map((s) => s.signalId);
-
-                                // Convert approaches: postedSpeed (integer)
-                                const approaches = approachStorage.getAll();
-                                approaches
-                                  .filter(
-                                    (a) =>
-                                      sigIds.includes(a.signalId) &&
-                                      typeof a.postedSpeed === "number",
-                                  )
-                                  .forEach((a) => {
-                                    const old = a.postedSpeed as number;
-                                    const converted = targetIsMetric
-                                      ? Math.round(old * 1.609344)
-                                      : Math.round(old / 1.609344);
-                                    try {
-                                      approachStorage.update(a.id, { postedSpeed: converted });
-                                    } catch {
-                                      // ignore per-item errors
-                                    }
-                                  });
-
-                                // Convert phases: crosswalkLength (integer)
-                                const phases = phaseStorage.getAll();
-                                phases
-                                  .filter(
-                                    (p) =>
-                                      sigIds.includes(p.signalId) &&
-                                      typeof p.crosswalkLength === "number",
-                                  )
-                                  .forEach((p) => {
-                                    const old = p.crosswalkLength as number;
-                                    // store integer meters when metric, integer feet when imperial
-                                    const converted = targetIsMetric
-                                      ? Math.max(0, Math.round(old * 0.3048))
-                                      : Math.max(0, Math.round(old / 0.3048));
-                                    try {
-                                      phaseStorage.update(p.id, { crosswalkLength: converted });
-                                    } catch {
-                                      // ignore
-                                    }
-                                  });
-
-                                // Convert detectors: length and stopbarSetbackDist (display values)
-                                const detectors = detectorStorage.getAll();
-                                // Read display values under OLD units
-                                const detectorsForAgency = detectors.filter((d) =>
-                                  sigIds.includes(d.signalId),
+                                const updatedAgency = convertAgencyUnits(
+                                  editingAgency,
+                                  targetIsMetric,
                                 );
 
-                                // First, persist agency metric flag so detectorStorage.update
-                                // interprets incoming display values correctly for storage.
-                                agencyListStorage.save({
-                                  agencyId: editingAgency.agencyId,
-                                  agencyName: editingAgency.agencyName,
-                                  agencyUrl: editingAgency.agencyUrl || "",
-                                  agencyTimezone: editingAgency.agencyTimezone,
-                                  agencyEmail: editingAgency.agencyEmail || "",
-                                  agencyIsMetric: targetIsMetric,
-                                  latitude: editingAgency.latitude ?? undefined,
-                                  longitude: editingAgency.longitude ?? undefined,
-                                });
-                                agencyStorage.save({
-                                  agencyId: editingAgency.agencyId,
-                                  agencyName: editingAgency.agencyName,
-                                  agencyUrl: editingAgency.agencyUrl || "",
-                                  agencyTimezone: editingAgency.agencyTimezone,
-                                  agencyEmail: editingAgency.agencyEmail || "",
-                                  agencyIsMetric: targetIsMetric,
-                                  latitude: editingAgency.latitude ?? undefined,
-                                  longitude: editingAgency.longitude ?? undefined,
-                                });
-
-                                detectorsForAgency.forEach((d) => {
-                                  // detectors returned by detectorStorage.getAll() are display-facing
-                                  const oldLength = d.length as number | null;
-                                  const oldStop = d.stopbarSetbackDist as number | null;
-                                  const newLength =
-                                    oldLength == null
-                                      ? null
-                                      : targetIsMetric
-                                        ? Math.round(oldLength * 0.3048 * 100) / 100
-                                        : Math.round((oldLength / 0.3048) * 100) / 100;
-                                  const newStop =
-                                    oldStop == null
-                                      ? null
-                                      : targetIsMetric
-                                        ? Math.round(oldStop * 0.3048 * 100) / 100
-                                        : Math.round((oldStop / 0.3048) * 100) / 100;
-                                  try {
-                                    detectorStorage.update(d.id, {
-                                      length: newLength,
-                                      stopbarSetbackDist: newStop,
-                                    });
-                                  } catch {
-                                    // ignore
-                                  }
-                                });
-
-                                // Refresh store from storage so UI reflects new values
-                                store.loadFromStorage();
-
-                                // Update form field and local agency state
                                 form.setValue("agencyIsMetric", targetIsMetric);
-                                const updatedAgency = agencyListStorage.get(agencyModalEditingId!);
-                                if (updatedAgency) setAgency(updatedAgency);
+                                setAgency(updatedAgency);
 
                                 toast({
                                   title: "Converted",

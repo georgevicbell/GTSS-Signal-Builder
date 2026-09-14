@@ -134,7 +134,7 @@ export default function GTSSBuilder() {
 
     // If import panel is shown, render it regardless of active tab
     if (showImportPanel) {
-      return <ImportPanel onImportComplete={() => window.location.reload()} />;
+      return <ImportPanel onImportComplete={() => setShowImportPanel(false)} />;
     }
 
     // Configuration settings panel

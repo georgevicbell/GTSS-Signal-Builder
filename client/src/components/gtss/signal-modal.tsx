@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { agencyListStorage, useGTSSStore, useSignals } from "gtss";
+import { useAgencies, useGTSSStore, useSignals } from "gtss";
 import { type InsertSignal, insertSignalSchema, type Signal } from "gtss/schema";
 import { MapPin, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -34,6 +34,7 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
   const { agency } = useGTSSStore();
   const { toast } = useToast();
   const signalHooks = useSignals();
+  const agenciesApi = useAgencies();
 
   const form = useForm<InsertSignal>({
     resolver: zodResolver(insertSignalSchema),
@@ -42,14 +43,8 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
       agencyId:
         agency?.agencyId ||
         (() => {
-          try {
-            const def = agencyListStorage.getDefaultId();
-            const list = agencyListStorage.getAll();
-            const defAgency = list.find((a) => a.id === def);
-            return defAgency?.agencyId || "";
-          } catch {
-            return "";
-          }
+          const defAgency = agenciesApi.data.find((a) => a.id === agenciesApi.defaultId);
+          return defAgency?.agencyId || "";
         })(),
       streetName1: "",
       streetName2: "",
@@ -69,15 +64,10 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
         longitude: signal.longitude,
       });
     } else {
-      const def = (() => {
-        try {
-          const defId = agencyListStorage.getDefaultId();
-          const list = agencyListStorage.getAll();
-          return list.find((a) => a.id === defId)?.agencyId || agency?.agencyId || "";
-        } catch {
-          return agency?.agencyId || "";
-        }
-      })();
+      const def =
+        agenciesApi.data.find((a) => a.id === agenciesApi.defaultId)?.agencyId ||
+        agency?.agencyId ||
+        "";
       form.reset({
         signalId: "",
         agencyId: def,
@@ -168,7 +158,7 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
                           <SelectValue placeholder="Select agency" />
                         </SelectTrigger>
                         <SelectContent>
-                          {agencyListStorage.getAll().map((a) => (
+                          {agenciesApi.data.map((a) => (
                             <SelectItem key={a.id} value={a.agencyId}>
                               {a.agencyName} ({a.agencyId})
                             </SelectItem>

@@ -3,6 +3,7 @@ import type { Agency, Approach, BasicTiming, Detector, Phase, Signal } from "../
 import { AgencyDefaults } from "../src/agencyDefaults";
 import {
   agencyDefaultsStorage,
+  agencyListStorage,
   agencyStorage,
   approachStorage,
   basicTimingStorage,
@@ -13,6 +14,9 @@ import {
 
 interface GTSSStore {
   agency: Agency | null;
+  // Full agency list + currently selected default, kept in sync by the useAgencies() hook
+  agencies: Agency[];
+  defaultAgencyId: string | null;
   agencyDefaults: AgencyDefaults | null;
   signals: Signal[];
   approaches: Approach[];
@@ -33,6 +37,8 @@ interface GTSSStore {
   setSelectedSignalIdForTables: (signalId: string) => void;
 
   setAgency: (agency: Agency | null) => void;
+  setAgencies: (agencies: Agency[]) => void;
+  setDefaultAgencyId: (id: string | null) => void;
   setAgencyDefaults: (defaults: AgencyDefaults | null) => void;
   setSignals: (signals: Signal[]) => void;
   addSignal: (signal: Signal) => void;
@@ -75,6 +81,8 @@ interface GTSSStore {
 
 export const useGTSSStore = create<GTSSStore>((set) => ({
   agency: agencyStorage.get(),
+  agencies: agencyListStorage.getAll(),
+  defaultAgencyId: agencyListStorage.getDefaultId(),
   agencyDefaults: agencyDefaultsStorage.get(),
   signals: signalStorage.getAll(),
   approaches: approachStorage.getAll(),
@@ -95,6 +103,8 @@ export const useGTSSStore = create<GTSSStore>((set) => ({
   setSelectedSignalIdForTables: (signalId) => set({ selectedSignalIdForTables: signalId }),
 
   setAgency: (agency) => set({ agency }),
+  setAgencies: (agencies) => set({ agencies }),
+  setDefaultAgencyId: (defaultAgencyId) => set({ defaultAgencyId }),
   setAgencyDefaults: (agencyDefaults) => set({ agencyDefaults }),
 
   setSignals: (signals) => set({ signals }),
@@ -191,6 +201,8 @@ export const useGTSSStore = create<GTSSStore>((set) => ({
   loadFromStorage: () =>
     set({
       agency: agencyStorage.get(),
+      agencies: agencyListStorage.getAll(),
+      defaultAgencyId: agencyListStorage.getDefaultId(),
       agencyDefaults: agencyDefaultsStorage.get(),
       signals: signalStorage.getAll(),
       approaches: approachStorage.getAll(),

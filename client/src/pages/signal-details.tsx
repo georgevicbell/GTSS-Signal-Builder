@@ -43,7 +43,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  agencyListStorage,
   downloadSvgAsJpg,
   generateAgencyCSV,
   generateApproachesCSV,
@@ -55,6 +54,7 @@ import {
   isMetricForSignalId,
   phaseDiagramFileName,
   suggestStreetNameForApproach,
+  useAgencies,
   useApproaches,
   useDetectors,
   useGTSSStore,
@@ -180,6 +180,7 @@ export default function SignalDetails() {
   const phaseHooks = usePhases();
   const detectorHooks = useDetectors();
   const approachHooks = useApproaches();
+  const agenciesApi = useAgencies();
   // const timingHooks = useBasicTimings();
 
   // Phase diagram SVG, for the "Download Image" button in its card header.
@@ -1044,15 +1045,9 @@ export default function SignalDetails() {
                           <Select
                             value={
                               field.value ||
-                              (() => {
-                                try {
-                                  const defId = agencyListStorage.getDefaultId();
-                                  const list = agencyListStorage.getAll();
-                                  return list.find((a) => a.id === defId)?.agencyId || "";
-                                } catch {
-                                  return "";
-                                }
-                              })()
+                              agenciesApi.data.find((a) => a.id === agenciesApi.defaultId)
+                                ?.agencyId ||
+                              ""
                             }
                             onValueChange={field.onChange}
                           >
@@ -1060,7 +1055,7 @@ export default function SignalDetails() {
                               <SelectValue placeholder="Select agency" />
                             </SelectTrigger>
                             <SelectContent>
-                              {agencyListStorage.getAll().map((a) => (
+                              {agenciesApi.data.map((a) => (
                                 <SelectItem key={a.id} value={a.agencyId}>
                                   {a.agencyName} ({a.agencyId})
                                 </SelectItem>
@@ -2838,15 +2833,9 @@ export default function SignalDetails() {
                         <Select
                           value={
                             field.value ||
-                            (() => {
-                              try {
-                                const defId = agencyListStorage.getDefaultId();
-                                const list = agencyListStorage.getAll();
-                                return list.find((a) => a.id === defId)?.agencyId || "";
-                              } catch {
-                                return "";
-                              }
-                            })()
+                            agenciesApi.data.find((a) => a.id === agenciesApi.defaultId)
+                              ?.agencyId ||
+                            ""
                           }
                           onValueChange={field.onChange}
                         >
@@ -2854,7 +2843,7 @@ export default function SignalDetails() {
                             <SelectValue placeholder="Select agency" />
                           </SelectTrigger>
                           <SelectContent>
-                            {agencyListStorage.getAll().map((a) => (
+                            {agenciesApi.data.map((a) => (
                               <SelectItem key={a.id} value={a.agencyId}>
                                 {a.agencyName} ({a.agencyId})
                               </SelectItem>
