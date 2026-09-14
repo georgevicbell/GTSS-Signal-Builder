@@ -2120,16 +2120,56 @@ export function importData(
     if (parsedData.agency) {
       const existing = agencyListStorage.getAll();
       const incoming = Array.isArray(parsedData.agency) ? parsedData.agency : [parsedData.agency];
+
+      // Collect warnings about unit (metric/imperial) differences so the
+      // UI can surface them to the user. Changing `agencyIsMetric` on an
+      // existing agency without converting stored detector/phase values will
+      // silently corrupt numeric distances.
+      const unitMismatchMessages: string[] = [];
+
       for (const a of incoming) {
         const idx = existing.findIndex((e) => e.agencyId === a.agencyId);
         if (idx !== -1) {
+          // If the import changes the agencyIsMetric flag for an existing
+          // agency, record a warning so the UI can notify the user.
+          try {
+            const oldIsMetric = !!existing[idx].agencyIsMetric;
+            const newIsMetric = !!a.agencyIsMetric;
+            if (oldIsMetric !== newIsMetric) {
+              const name =
+                existing[idx].agencyName || existing[idx].agencyId || a.agencyId || "(unnamed)";
+              unitMismatchMessages.push(
+                `Imported agency "${name}" changes units from ${oldIsMetric ? "metric" : "imperial"} to ${newIsMetric ? "metric" : "imperial"}. Existing numeric distances (detectors, phases) may be misinterpreted.`,
+              );
+            }
+          } catch {
+            // ignore any runtime issues while checking the flag
+          }
+
           // Preserve existing id but update fields
           existing[idx] = { ...existing[idx], ...a, id: existing[idx].id } as Agency;
         } else {
           existing.push({ ...(a as Agency), id: nanoid() });
         }
       }
+
       saveToStorage(STORAGE_KEYS.AGENCY, existing);
+
+      // If we collected any unit mismatch warnings, emit a window event so
+      // the UI layer can display a visible warning to the user.
+      if (unitMismatchMessages.length > 0) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (window as any).dispatchEvent(
+            new CustomEvent("gtss:import-unit-mismatch", {
+              detail: { messages: unitMismatchMessages },
+            }),
+          );
+        } catch {
+          // best-effort only — not critical if dispatch fails
+          console.warn("GTSS import unit mismatch:", unitMismatchMessages.join("; "));
+        }
+      }
 
       // After merging agencies, ensure the stored default is valid.
       // If missing or invalid, set it to the first merged agency (or remove it when none).

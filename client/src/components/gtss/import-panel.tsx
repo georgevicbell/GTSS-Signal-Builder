@@ -35,7 +35,7 @@ import {
 import type { Agency, Approach, BasicTiming, Detector, Phase, Signal } from "gtss/schema";
 import JSZip from "jszip";
 import { AlertTriangle, CheckCircle, ClipboardPaste, FileText, Upload } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Checkbox } from "../ui/checkbox";
 
 type FileData = {
@@ -71,6 +71,22 @@ export function ImportPanel({ onImportComplete }: { onImportComplete?: () => voi
     "agency" | "signals" | "approaches" | "phases" | "detectors" | "basic_timings"
   >("signals");
   const { toast } = useToast();
+
+  // Listen for unit-mismatch warnings emitted by the import code. The
+  // packages/gtss import logic dispatches a `gtss:import-unit-mismatch`
+  // CustomEvent when an imported agency changes its `agencyIsMetric` flag
+  // relative to an existing agency. Surface those as destructive toasts.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent;
+      const messages: string[] = (ce && ce.detail && ce.detail.messages) || [];
+      for (const m of messages) {
+        toast({ title: "Import Warning", description: m, variant: "destructive" });
+      }
+    };
+    window.addEventListener("gtss:import-unit-mismatch", handler as EventListener);
+    return () => window.removeEventListener("gtss:import-unit-mismatch", handler as EventListener);
+  }, [toast]);
 
   const detectFileType = (
     filename: string,

@@ -31,7 +31,7 @@ import {
   useGTSSStore,
   useMapScrollZoom,
 } from "gtss";
-import { Agency, type InsertAgency, insertAgencySchema } from "gtss/schema";
+import { Agency, type InsertAgency, type Detector, insertAgencySchema } from "gtss/schema";
 import { Crosshair, Edit3, MapPin, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -981,10 +981,25 @@ export default function AgencyForm() {
                                   });
 
                                 // Convert detectors: length and stopbarSetbackDist (display values)
-                                const detectors = detectorStorage.getAll();
-                                // Read display values under OLD units
-                                const detectorsForAgency = detectors.filter((d) =>
-                                  sigIds.includes(d.signalId),
+                                // Read raw stored detector rows from localStorage so we can
+                                // resolve the OLD unit context per-detector (by its signal's
+                                // agency) before we flip the agency flag.
+                                const rawDetectorsJson = localStorage.getItem("gtss_detectors");
+                                type RawDetectorRow = Partial<Detector> & {
+                                  id?: string;
+                                  signalId?: string;
+                                };
+                                let rawDetectors: RawDetectorRow[] = [];
+                                if (rawDetectorsJson) {
+                                  try {
+                                    rawDetectors = JSON.parse(rawDetectorsJson) as RawDetectorRow[];
+                                  } catch {
+                                    rawDetectors = [];
+                                  }
+                                }
+                                const detectorsForAgencyRaw = rawDetectors.filter(
+                                  (d) =>
+                                    typeof d.signalId === "string" && sigIds.includes(d.signalId),
                                 );
 
                                 // First, persist agency metric flag so detectorStorage.update
@@ -1010,29 +1025,98 @@ export default function AgencyForm() {
                                   longitude: editingAgency.longitude ?? undefined,
                                 });
 
-                                detectorsForAgency.forEach((d) => {
-                                  // detectors returned by detectorStorage.getAll() are display-facing
-                                  const oldLength = d.length as number | null;
-                                  const oldStop = d.stopbarSetbackDist as number | null;
-                                  const newLength =
-                                    oldLength == null
-                                      ? null
-                                      : targetIsMetric
-                                        ? Math.round(oldLength * 0.3048 * 100) / 100
-                                        : Math.round((oldLength / 0.3048) * 100) / 100;
-                                  const newStop =
-                                    oldStop == null
-                                      ? null
-                                      : targetIsMetric
-                                        ? Math.round(oldStop * 0.3048 * 100) / 100
-                                        : Math.round((oldStop / 0.3048) * 100) / 100;
+                                // For each raw detector, determine the OLD unit context by
+                                // resolving the detector's signal -> agency and reading that
+                                // agency's `agencyIsMetric` before we saved the new flag.
+                                detectorsForAgencyRaw.forEach((raw) => {
                                   try {
-                                    detectorStorage.update(d.id, {
-                                      length: newLength,
-                                      stopbarSetbackDist: newStop,
-                                    });
+                                    const signalId = raw.signalId!;
+                                    const sig = signalStorage.get(signalId);
+                                    // Determine the agency's metric flag for this detector
+                                    const agencies = agencyListStorage.getAll();
+                                    let oldIsMetric: boolean | undefined = undefined;
+                                    if (sig) {
+                                      const matching = agencies.find(
+                                        (a) => a.agencyId === sig.agencyId,
+                                      );
+                                      if (matching) oldIsMetric = !!matching.agencyIsMetric;
+                                    }
+                                    // if not found in the list, fall back to the current agency
+                                    if (oldIsMetric === undefined) {
+                                      oldIsMetric = agencyStorage.get()?.agencyIsMetric ?? false;
+                                    }
+
+                                    // If the editingAgency corresponds to the detector's agency
+                                    // and wasn't represented in the list lookup above, prefer
+                                    // the editingAgency's current flag (pre-change).
+                                    if (
+                                      sig &&
+                                      editingAgency &&
+                                      sig.agencyId === editingAgency.agencyId
+                                    ) {
+                                      oldIsMetric = !!editingAgency.agencyIsMetric;
+                                    }
+
+                                    const storedLength =
+                                      raw.length === undefined || raw.length === null
+                                        ? null
+                                        : typeof raw.length === "number"
+                                          ? raw.length
+                                          : Number(raw.length);
+                                    const storedStop =
+                                      raw.stopbarSetbackDist === undefined ||
+                                      raw.stopbarSetbackDist === null
+                                        ? null
+                                        : typeof raw.stopbarSetbackDist === "number"
+                                          ? raw.stopbarSetbackDist
+                                          : Number(raw.stopbarSetbackDist);
+
+                                    // Convert stored -> display under OLD units
+                                    const oldDisplayLength =
+                                      storedLength == null
+                                        ? null
+                                        : oldIsMetric
+                                          ? Math.round((Number(storedLength) / 100) * 100) / 100
+                                          : Number(storedLength);
+                                    const oldDisplayStop =
+                                      storedStop == null
+                                        ? null
+                                        : oldIsMetric
+                                          ? Math.round((Number(storedStop) / 100) * 100) / 100
+                                          : Number(storedStop);
+
+                                    // Compute display value in TARGET units
+                                    const computeNew = (
+                                      oldVal: number | null,
+                                      oldMetric: boolean,
+                                    ) => {
+                                      if (oldVal == null) return null;
+                                      if (oldMetric === targetIsMetric) return oldVal;
+                                      if (targetIsMetric) {
+                                        // feet -> meters
+                                        return Math.round(oldVal * 0.3048 * 100) / 100;
+                                      }
+                                      // meters -> feet
+                                      return Math.round((oldVal / 0.3048) * 100) / 100;
+                                    };
+
+                                    const newLength = computeNew(oldDisplayLength, !!oldIsMetric);
+                                    const newStop = computeNew(oldDisplayStop, !!oldIsMetric);
+
+                                    // Now update via detectorStorage which expects display values
+                                    // and will convert them to stored units using the newly
+                                    // saved agency flag.
+                                    try {
+                                      const rawId = raw.id!;
+                                      detectorStorage.update(rawId, {
+                                        length: newLength,
+                                        stopbarSetbackDist: newStop,
+                                      });
+                                    } catch {
+                                      // ignore per-item errors
+                                    }
                                   } catch {
-                                    // ignore
+                                    // ignore item-level failures and continue
                                   }
                                 });
 
