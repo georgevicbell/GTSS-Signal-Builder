@@ -61,8 +61,15 @@ const getTechnologyColor = (techType: string): string => {
 };
 
 // Check if detector is advanced (not at stop bar)
-const isAdvancedDetector = (purpose: string, setback?: number | null): boolean => {
-  if (setback !== undefined && setback !== null && Math.abs(setback) > 20) return true;
+// `setback` units follow the API boundary: meters when `isMetric` is true.
+const isAdvancedDetector = (
+  purpose: string,
+  setback?: number | null,
+  isMetric: boolean = false,
+): boolean => {
+  const thresholdFeet = 20;
+  const threshold = isMetric ? thresholdFeet * 0.3048 : thresholdFeet;
+  if (setback !== undefined && setback !== null && Math.abs(setback) > threshold) return true;
   return ["Advanced Loop", "Count Detector", "Extension", "Dilemma Zone"].includes(purpose);
 };
 
@@ -126,9 +133,12 @@ export default function DetectorDiagram({
   signal,
   svgRef,
 }: DetectorDiagramProps) {
+  // Unit system (API: metric detector setbacks are in meters)
+  const isMetric = isMetricForSignalId(signal?.signalId);
+  const lengthUnit = isMetric ? "m" : "ft";
   // Determine if we have any advanced detectors - if not, zoom in more
   const hasAdvancedDetectors = detectors.some((d) =>
-    isAdvancedDetector(d.purpose, d.stopbarSetbackDist),
+    isAdvancedDetector(d.purpose, d.stopbarSetbackDist, isMetric),
   );
 
   // Dynamic sizing - maximize use of canvas space with larger intersection
@@ -422,7 +432,8 @@ export default function DetectorDiagram({
           .filter((d) => {
             const ap = getApproachForDetector(d);
             return (
-              ap?.approachId === a.approachId && isAdvancedDetector(d.purpose, d.stopbarSetbackDist)
+              ap?.approachId === a.approachId &&
+              isAdvancedDetector(d.purpose, d.stopbarSetbackDist, isMetric)
             );
           })
           .map((d) => effectiveSetback(d, isMetric)),
@@ -445,18 +456,22 @@ export default function DetectorDiagram({
     const adjustedBearing = (approach.compassBearing + 180) % 360;
     const angleRad = (adjustedBearing - 90) * (Math.PI / 180);
     const perpAngle = angleRad + Math.PI / 2;
-    const advanced = isAdvancedDetector(det.purpose, det.stopbarSetbackDist);
+    const advanced = isAdvancedDetector(det.purpose, det.stopbarSetbackDist, isMetric);
 
     let magnitude: number;
     if (advanced) {
       magnitude =
-        advancedSlots.get(approach.approachId)?.get(effectiveSetback(det)) ??
+        advancedSlots.get(approach.approachId)?.get(effectiveSetback(det, isMetric)) ??
         INTERSECTION_RADIUS + ROAD_LENGTH - 14;
     } else {
       // Stop-bar detectors: right behind the stop bar, nudged slightly by any
-      // small (≤20 ft) setback.
+      // small setback. The cap is 20 ft (≈6.096 m) when metric input is used.
+      const stopbarCapFeet = 20;
+      const stopbarCap = isMetric ? stopbarCapFeet * 0.3048 : stopbarCapFeet;
       magnitude =
-        INTERSECTION_RADIUS + 12 + Math.min(Math.abs(det.stopbarSetbackDist ?? 0), 20) * 0.9;
+        INTERSECTION_RADIUS +
+        12 +
+        Math.min(Math.abs(det.stopbarSetbackDist ?? 0), stopbarCap) * 0.9;
     }
 
     // angleRad points back up the approach leg, toward oncoming traffic. A
@@ -510,15 +525,13 @@ export default function DetectorDiagram({
       });
     }
   });
-  const isMetric = isMetricForSignalId(signal?.signalId);
-  const lengthUnit = isMetric ? "m" : "ft";
   // One distance label per advanced row that has a real measured setback,
   // placed off the road edge beside the row.
   const distanceLabels: React.ReactElement[] = [];
   rowGroups.forEach((group, key) => {
     const sample = group[0];
 
-    if (!isAdvancedDetector(sample.det.purpose, sample.det.stopbarSetbackDist)) return;
+    if (!isAdvancedDetector(sample.det.purpose, sample.det.stopbarSetbackDist, isMetric)) return;
     const measured = group
       .map((pd) => pd.det.stopbarSetbackDist)
       .find((sb): sb is number => sb !== undefined && sb !== null && sb !== 0);

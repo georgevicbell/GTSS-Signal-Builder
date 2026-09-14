@@ -1021,21 +1021,30 @@ export function generateApproachesCSV(approaches: Approach[]): string {
 // Crosswalk length code for phases.txt. Knowing the crosswalk distance is an
 // important aspect of intersection safety (finding the longest crossings,
 // cross-checking timing values against standards). Codes:
-//   LE-#  lane-estimated distance: 12 ft × total lanes crossed. The crosswalk
-//         spans the WHOLE street, so this counts the approach (inbound) lanes
-//         plus the leg's departure lanes — sized by the widest phase that
-//         discharges onto the leg (opposite through, turns into the street).
-//   TE-#  time-estimated distance: ped clearance × 3.5 ft/s walking speed
+//   LE-#  lane-estimated distance: lane_width × total lanes crossed. The
+//         crosswalk spans the WHOLE street, so this counts the approach
+//         (inbound) lanes plus the leg's departure lanes — sized by the
+//         widest phase that discharges onto the leg (opposite through, turns
+//         into the street).
+//   TE-#  time-estimated distance: ped clearance × walking speed
 //         (when both exist, the SHORTER of LE and TE is exported)
-//   #     measured distance in feet — overrides both estimates
+//   #     measured distance in the agency's units — overrides both estimates
+// Constants for imperial units (feet)
 const FT_PER_LANE = 12;
 const WALKING_SPEED_FPS = 3.5;
+// Constants for metric units (meters)
+const M_PER_LANE = 3.65;
+const WALKING_SPEED_MPS = 1.05;
 
 export function crosswalkLengthCode(
   phase: Phase,
   allPhases: Phase[],
   basicTimings: BasicTiming[] = [],
   approaches: Approach[] = [],
+  // When true produce estimates in meters; otherwise in feet. Measured
+  // `phase.crosswalkLength` is treated as already being in the agency's
+  // units and is returned unchanged.
+  isMetric: boolean = false,
 ): string {
   // A measured value always wins, whether or not a crossing is configured.
   if (typeof phase.crosswalkLength === "number" && phase.crosswalkLength > 0) {
@@ -1132,14 +1141,16 @@ export function crosswalkLengthCode(
     }
 
     const totalLanes = inboundLanes + departureLanes;
-    if (totalLanes > 0) laneEstimate = totalLanes * FT_PER_LANE;
+    if (totalLanes > 0) laneEstimate = totalLanes * (isMetric ? M_PER_LANE : FT_PER_LANE);
   }
 
   // TE — from the phase's ped clearance interval at standard walking speed.
   let timeEstimate: number | null = null;
   const timing = basicTimings.find((t) => t.signalId === phase.signalId && t.phase === phase.phase);
   if (timing?.pedClearance && timing.pedClearance > 0) {
-    timeEstimate = Math.round(timing.pedClearance * WALKING_SPEED_FPS);
+    timeEstimate = Math.round(
+      timing.pedClearance * (isMetric ? WALKING_SPEED_MPS : WALKING_SPEED_FPS),
+    );
   }
 
   if (laneEstimate !== null && timeEstimate !== null) {
@@ -1181,7 +1192,11 @@ export function generatePhasesCSV(
         : phase.movementType === "Through"
           ? 1
           : 0;
-    const crosswalk = crosswalkLengthCode(phase, phases, basicTimings, approaches);
+    // Determine unit context for this phase's signal and generate LE/TE in
+    // the correct units. Measured `crosswalkLength` values are assumed to be
+    // recorded in the agency's units and are returned verbatim.
+    const isMetric = isMetricForSignalId(phase.signalId);
+    const crosswalk = crosswalkLengthCode(phase, phases, basicTimings, approaches, isMetric);
     return `${sanitizeCSVField(phase.phase)},${sanitizeCSVField(phase.signalId)},${sanitizeCSVField(encodedMovementType)},${sanitizeCSVField(phase.numOfLanes || 1)},${sanitizeCSVField(phase.approachId)},${sanitizeCSVField(pedMode)},${crosswalk}`;
   });
 
