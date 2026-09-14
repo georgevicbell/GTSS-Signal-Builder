@@ -17,11 +17,9 @@ export type {
 } from "./src/agencyDefaults";
 export { evaluateGTSSCompleteness } from "./src/gtssValidation";
 export type { ValidationResult, ValidationSummary } from "./src/gtssValidation";
-// Only the pure/stateless helpers are public; raw storage tables
-// (agencyStorage, agencyListStorage, signalStorage, etc.) stay internal and
-// are only reachable through the hooks in ./src/localStorageHooks.
+export { isMetricForSignalId } from "./src/localStorage/agency-units";
+export { clearAllData } from "./src/localStorage/clearAll";
 export {
-  clearAllData,
   generateAgenciesCSV,
   generateAgencyCSV,
   generateApproachesCSV,
@@ -29,15 +27,17 @@ export {
   generateDetectionCSV,
   generatePhasesCSV,
   generateSignalsCSV,
-  isMetricForSignalId,
-  parseAgenciesTXT,
-  parseAgencyTXT,
+} from "./src/localStorage/csv-export";
+export { exportAsIndividualFiles, exportAsZip, exportData } from "./src/localStorage/exports";
+export { importData } from "./src/localStorage/imports";
+export {
   parseApproachesTXT,
   parseBasicTimingsTXT,
   parseDetectorsTXT,
   parsePhasesTXT,
   parseSignalsTXT,
-} from "./src/localStorage";
+} from "./src/localStorage/parsers";
+export { parseAgenciesTXT, parseAgencyTXT } from "./src/localStorage/storage/agencies";
 export {
   convertAgencyUnits,
   useAgencies,

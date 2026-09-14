@@ -8,6 +8,7 @@ export default defineConfig({
       reporter: ["text", "html"],
       include: [
         "src/localStorage.ts",
+        "src/localStorage/**/*.ts",
         "store/gtss-store.ts",
         "src/gtssValidation.ts",
         "src/utils.ts",

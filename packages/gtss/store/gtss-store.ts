@@ -10,7 +10,7 @@ import {
   detectorStorage,
   phaseStorage,
   signalStorage,
-} from "../src/localStorage";
+} from "../src/localStorage/storage";
 
 interface GTSSStore {
   agency: Agency | null;

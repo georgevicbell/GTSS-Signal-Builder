@@ -1,26 +1,38 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { clearAllData } from "../src/localStorage/clearAll";
 import {
-  agencyStorage,
-  approachStorage,
-  basicTimingStorage,
-  clearAllData,
-  detectorStorage,
-  exportData,
+  crosswalkLengthCode,
+  generateAgenciesCSV,
+  generateAgencyCSV,
   generateApproachesCSV,
   generateBasicTimingsCSV,
   generateDetectionCSV,
   generatePhasesCSV,
   generateSignalsCSV,
-  importData,
+} from "../src/localStorage/csv-export";
+import { exportAsIndividualFiles, exportData } from "../src/localStorage/exports";
+import { importData } from "../src/localStorage/imports";
+import { isMetricForSignalId } from "../src/localStorage/agency-units";
+import {
   parseApproachesTXT,
   parseBasicTimingsTXT,
   parseDetectorsTXT,
   parsePhasesTXT,
   parseSignalsTXT,
+} from "../src/localStorage/parsers";
+import {
+  agencyListStorage,
+  agencyStorage,
+  agencyDefaultsStorage,
+  approachStorage,
+  basicTimingStorage,
+  detectorStorage,
   phaseStorage,
   signalStorage,
-} from "../src/localStorage";
+} from "../src/localStorage/storage";
+import { parseAgenciesTXT, parseAgencyTXT } from "../src/localStorage/storage/agencies";
 import { useGTSSStore } from "../store/gtss-store";
+import * as localStorageApi from "../src/localStorage";
 
 class MemoryStorage implements Storage {
   private readonly values = new Map<string, string>();
@@ -59,6 +71,14 @@ beforeEach(() => {
 });
 
 describe("GTSS local storage lifecycle", () => {
+  it("keeps the localStorage compatibility barrel public", () => {
+    expect(localStorageApi.clearAllData).toBeTypeOf("function");
+    expect(localStorageApi.importData).toBeTypeOf("function");
+    expect(localStorageApi.exportData).toBeTypeOf("function");
+    expect(localStorageApi.generateSignalsCSV).toBeTypeOf("function");
+    expect(localStorageApi.parseSignalsTXT).toBeTypeOf("function");
+  });
+
   it("saves data and loads it into the store", () => {
     const agency = agencyStorage.save({
       agencyId: "CITY",
@@ -265,5 +285,378 @@ describe("GTSS local storage lifecycle", () => {
       "1,SIG-1,2,Camera,Stop Bar,Car,Left,Video,20,5",
     );
     expect(generateBasicTimingsCSV(timings)).toContain("2,SIG-1,7,14,2,10,35,3,1,Max,true");
+  });
+
+  it("resolves metric units from the signal agency and default agency", () => {
+    const defaultAgency = agencyStorage.save({
+      agencyId: "US",
+      agencyName: "US Agency",
+      agencyTimezone: "America/Los_Angeles",
+      agencyIsMetric: false,
+    });
+    agencyStorage.save({
+      agencyId: "CA",
+      agencyName: "Metric Agency",
+      agencyTimezone: "America/Vancouver",
+      agencyIsMetric: true,
+    });
+    signalStorage.save({
+      agencyId: "CA",
+      signalId: "METRIC-1",
+      streetName1: "First Street",
+      streetName2: "Main Avenue",
+      latitude: 49,
+      longitude: -123,
+    });
+
+    expect(isMetricForSignalId("METRIC-1")).toBe(true);
+    expect(isMetricForSignalId("UNKNOWN")).toBe(defaultAgency.agencyIsMetric);
+    expect(isMetricForSignalId()).toBe(false);
+  });
+
+  it("replaces imported data and stores metric detector distances in centimeters", () => {
+    importData(
+      {
+        agency: {
+          id: "agency-metric",
+          agencyId: "CA",
+          agencyName: "Metric Agency",
+          agencyTimezone: "America/Vancouver",
+          agencyIsMetric: true,
+        },
+        signals: [
+          {
+            id: "signal-metric",
+            signalId: "METRIC-1",
+            agencyId: "CA",
+            streetName1: "First Street",
+            streetName2: "Main Avenue",
+            latitude: 49,
+            longitude: -123,
+          },
+        ],
+        detectors: [
+          {
+            id: "detector-metric",
+            signalId: "METRIC-1",
+            channel: "1",
+            phase: null,
+            description: null,
+            purpose: "Stop Bar",
+            vehicleType: null,
+            lane: null,
+            technologyType: "Video",
+            length: 2.5,
+            stopbarSetbackDist: 4,
+            approachId: null,
+          },
+        ],
+      },
+      "replace",
+    );
+
+    expect(agencyStorage.get()).toMatchObject({ agencyId: "CA", agencyIsMetric: true });
+    expect(detectorStorage.getAll()[0]).toMatchObject({ length: 2.5, stopbarSetbackDist: 4 });
+    expect(localStorage.getItem("gtss_detectors")).toContain('"length":250');
+    expect(localStorage.getItem("gtss_detectors")).toContain('"stopbarSetbackDist":400');
+  });
+
+  it("reports validation errors for malformed imported records", () => {
+    expect(() =>
+      parseSignalsTXT("signal_id,agency_id,latitude,longitude\nSIG-1,CITY,nope,-122"),
+    ).toThrow(/Latitude must be a valid number/);
+    expect(() =>
+      parseApproachesTXT(
+        "approach_id,signal_id,street_name,compass_bearing,posted_speed\nA-1,SIG-1,Main,sideways,25",
+      ),
+    ).toThrow(/Compass bearing must be a valid integer/);
+    expect(() =>
+      parsePhasesTXT("phase,signal_id,movement_type,num_of_lanes,approach_id\n2,SIG-1,Unknown,1,"),
+    ).toThrow(/Movement type .* is not recognized/);
+    expect(() =>
+      parseDetectorsTXT(
+        "channel,signal_id,phase,description,purpose,vehicle_type,lane,technology_type,length,stopbar_setback_dist\n1,SIG-1,,Camera,Stop Bar,Car,Left,Video,nope,5",
+      ),
+    ).toThrow(/Length must be a valid number/);
+    expect(() =>
+      parseBasicTimingsTXT(
+        "phase,signal_id,ped_walk,ped_clearance,leading_ped_interval,min_green,max_green,yellow,all_red,veh_recall_type,ped_recall\n2,SIG-1,,,,,,,,Bad,true",
+      ),
+    ).toThrow(/veh_recall_type must be None, Min, Max, or Soft/);
+  });
+
+  it("exports only the selected agency's files", async () => {
+    const agency = agencyStorage.save({
+      agencyId: "CITY",
+      agencyName: "City Traffic",
+      agencyTimezone: "America/Los_Angeles",
+    });
+    signalStorage.save({
+      agencyId: agency.agencyId,
+      signalId: "SIG-1",
+      streetName1: "First Street",
+      streetName2: "Main Avenue",
+      latitude: 47.61,
+      longitude: -122.33,
+    });
+    const downloads: string[] = [];
+    Object.defineProperty(globalThis, "document", {
+      configurable: true,
+      value: {
+        body: { appendChild: () => undefined, removeChild: () => undefined },
+        createElement: () => ({
+          click: () => downloads.push("downloaded"),
+          download: "",
+          href: "",
+        }),
+      },
+    });
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+
+    await exportAsIndividualFiles(
+      {
+        agency: false,
+        signals: true,
+        approaches: false,
+        phases: false,
+        detection: false,
+        basicTimings: false,
+      },
+      [agency.id],
+    );
+
+    expect(downloads).toHaveLength(1);
+    vi.restoreAllMocks();
+  });
+
+  it("handles agency parsing, default selection, and cascade deletion", () => {
+    const agencies = parseAgenciesTXT(
+      "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric\nCITY,City Traffic,,America/Los_Angeles,ops@city.test,true\nCOUNTY,County Traffic,https://county.test,America/Denver,,false",
+    );
+    expect(agencies).toHaveLength(2);
+    expect(
+      parseAgencyTXT(
+        "agency_id,agency_name,agency_url,agency_timezone,agency_email\nCITY,City Traffic,,UTC,ops@city.test",
+      ),
+    ).toMatchObject({ agencyId: "CITY", agencyIsMetric: false });
+    expect(() =>
+      parseAgenciesTXT("agency_id,agency_name,agency_url,agency_timezone,agency_email"),
+    ).toThrow(/at least one data row/);
+
+    const first = agencyListStorage.save(agencies[0]);
+    const second = agencyListStorage.save(agencies[1]);
+    agencyListStorage.setDefaultId(second.id);
+    expect(agencyStorage.get()).toMatchObject({ agencyId: "COUNTY" });
+
+    signalStorage.save({
+      agencyId: first.agencyId,
+      signalId: "CITY-1",
+      streetName1: "First Street",
+      streetName2: "Main Avenue",
+      latitude: 47,
+      longitude: -122,
+    });
+    agencyListStorage.deleteWithCascade(first.id);
+    expect(signalStorage.get("CITY-1")).toBeUndefined();
+    expect(agencyListStorage.get(first.id)).toBeUndefined();
+    expect(agencyListStorage.getDefaultId()).toBe(second.id);
+  });
+
+  it("covers empty and agency CSV output plus crosswalk estimates", () => {
+    expect(generateAgencyCSV(null)).toContain("agency_id,agency_name");
+    expect(generateAgenciesCSV([])).toBe(
+      "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric\n",
+    );
+    expect(
+      generateAgencyCSV({
+        id: "agency-1",
+        agencyId: "CITY",
+        agencyName: "City, Traffic",
+        agencyUrl: null,
+        agencyTimezone: "UTC",
+        agencyLanguage: null,
+        agencyEmail: "ops@city.test",
+        agencyIsMetric: true,
+        latitude: null,
+        longitude: null,
+      }),
+    ).toContain('"City, Traffic"');
+
+    const pedestrianPhase = {
+      id: "phase-1",
+      signalId: "SIG-1",
+      phase: 2,
+      movementType: "Pedestrian" as const,
+      isPedestrian: 1,
+      numOfLanes: 1,
+      approachId: null,
+      crosswalkLength: null,
+    };
+    expect(
+      crosswalkLengthCode({ ...pedestrianPhase, crosswalkLength: 42 }, [pedestrianPhase]),
+    ).toBe("42");
+    expect(crosswalkLengthCode({ ...pedestrianPhase, isPedestrian: 0 }, [pedestrianPhase])).toBe(
+      "",
+    );
+    expect(
+      crosswalkLengthCode(
+        pedestrianPhase,
+        [pedestrianPhase],
+        [
+          {
+            id: "timing-1",
+            signalId: "SIG-1",
+            phase: 2,
+            pedWalk: null,
+            pedClearance: 10,
+            leadingPedInterval: null,
+            minGreen: null,
+            maxGreen: null,
+            yellow: null,
+            allRed: null,
+            vehRecallType: "None",
+            pedRecall: false,
+          },
+        ],
+      ),
+    ).toBe("TE-35");
+  });
+
+  it("persists and normalizes agency defaults", () => {
+    expect(agencyDefaultsStorage.get()).toBeNull();
+    const saved = agencyDefaultsStorage.save({
+      agencyId: "CITY",
+      phaseDirectionStandard: {},
+      defaultPhaseCount: 8,
+      mapScrollWheel: "zoom",
+      updatedAt: "old",
+    });
+    expect(saved.updatedAt).not.toBe("old");
+    expect(agencyDefaultsStorage.get()).toMatchObject({ mapScrollWheel: "zoom" });
+    localStorage.setItem(
+      "gtss_agency_defaults",
+      JSON.stringify({ ...saved, mapScrollWheel: "unknown" }),
+    );
+    expect(agencyDefaultsStorage.get()?.mapScrollWheel).toBe("page");
+    agencyDefaultsStorage.clear();
+    expect(agencyDefaultsStorage.get()).toBeNull();
+  });
+
+  it("imports all record types in replace and merge modes", () => {
+    const importedAgency = {
+      id: "agency-imported",
+      agencyId: "IMPORTED",
+      agencyName: "Imported Agency",
+      agencyUrl: null,
+      agencyTimezone: "UTC",
+      agencyLanguage: null,
+      agencyEmail: null,
+      agencyIsMetric: false,
+      latitude: null,
+      longitude: null,
+    };
+    const importedSignal = {
+      id: "signal-imported",
+      signalId: "IMPORTED-1",
+      agencyId: "IMPORTED",
+      streetName1: "First",
+      streetName2: "Second",
+      latitude: 1,
+      longitude: 2,
+    };
+    const importedApproach = {
+      id: "approach-imported",
+      approachId: "IMPORTED-1-1",
+      signalId: "IMPORTED-1",
+      streetName: "First",
+      compassBearing: 0,
+      postedSpeed: 25,
+      freeRight: 0,
+      freeRightLanes: 1,
+    };
+    const importedPhase = {
+      id: "phase-imported",
+      signalId: "IMPORTED-1",
+      phase: 2,
+      movementType: "Through",
+      isPedestrian: 1,
+      numOfLanes: 1,
+      approachId: "IMPORTED-1-1",
+      crosswalkLength: null,
+    };
+    const importedDetector = {
+      id: "detector-imported",
+      signalId: "IMPORTED-1",
+      phase: 2,
+      channel: "1",
+      description: null,
+      purpose: "Stop Bar",
+      vehicleType: null,
+      lane: null,
+      technologyType: "Video",
+      length: null,
+      stopbarSetbackDist: null,
+      approachId: "IMPORTED-1-1",
+    };
+    const importedTiming = {
+      id: "timing-imported",
+      signalId: "IMPORTED-1",
+      phase: 2,
+      pedWalk: null,
+      pedClearance: null,
+      leadingPedInterval: null,
+      minGreen: 10,
+      maxGreen: 35,
+      yellow: 3,
+      allRed: 1,
+      vehRecallType: "Max",
+      pedRecall: false,
+    };
+
+    importData(
+      {
+        agency: [importedAgency],
+        signals: [importedSignal],
+        approaches: [importedApproach],
+        phases: [importedPhase],
+        detectors: [importedDetector],
+        basicTimings: [importedTiming],
+      },
+      "replace",
+    );
+    importData(
+      {
+        agency: [{ ...importedAgency, agencyName: "Updated Agency" }],
+        signals: [importedSignal, { ...importedSignal, id: "signal-2", signalId: "IMPORTED-2" }],
+        approaches: [
+          importedApproach,
+          {
+            ...importedApproach,
+            id: "approach-2",
+            approachId: "IMPORTED-2-1",
+            signalId: "IMPORTED-2",
+          },
+        ],
+        phases: [importedPhase, { ...importedPhase, id: "phase-2", signalId: "IMPORTED-2" }],
+        detectors: [
+          importedDetector,
+          { ...importedDetector, id: "detector-2", channel: "2", signalId: "IMPORTED-2" },
+        ],
+        basicTimings: [
+          importedTiming,
+          { ...importedTiming, id: "timing-2", signalId: "IMPORTED-2" },
+        ],
+      },
+      "merge",
+    );
+
+    expect(agencyListStorage.getAll()).toHaveLength(1);
+    expect(agencyStorage.get()?.agencyName).toBe("Updated Agency");
+    expect(signalStorage.getAll()).toHaveLength(2);
+    expect(approachStorage.getAll()).toHaveLength(2);
+    expect(phaseStorage.getAll()).toHaveLength(2);
+    expect(detectorStorage.getAll()).toHaveLength(2);
+    expect(basicTimingStorage.getAll()).toHaveLength(2);
   });
 });

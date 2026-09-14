@@ -10,6 +10,8 @@ import {
 } from "../schema/public";
 import { useGTSSStore } from "../store/gtss-store";
 import { AgencyDefaults, isMapScrollZoomEnabled } from "./agencyDefaults";
+import { exportAsIndividualFiles, exportAsZip } from "./localStorage/exports";
+import { importData } from "./localStorage/imports";
 import {
   agencyDefaultsStorage,
   agencyListStorage,
@@ -17,14 +19,11 @@ import {
   approachStorage,
   basicTimingStorage,
   detectorStorage,
-  exportAsIndividualFiles,
-  exportAsZip,
-  importData,
   phaseStorage,
   signalStorage,
-} from "./localStorage";
+} from "./localStorage/storage";
 
-// Custom hooks to replace TanStack Query for localStorage operations
+//Custom hooks to replace TanStack Query for localStorage operations
 
 export const useAgencyDefaults = () => {
   const { agencyDefaults, setAgencyDefaults } = useGTSSStore();
