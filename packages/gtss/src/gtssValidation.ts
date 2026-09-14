@@ -1,4 +1,4 @@
-import type { Detector, Phase, Signal } from "../schema/schema";
+import type { Detector, Phase, Signal } from "../schema/public";
 
 export interface ValidationResult {
   signalId: string;

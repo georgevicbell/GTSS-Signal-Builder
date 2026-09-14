@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Approach, Signal } from "../schema/schema";
+import type { Approach, Signal } from "../schema/public";
 import {
   cn,
   getDerivedStreetNames,

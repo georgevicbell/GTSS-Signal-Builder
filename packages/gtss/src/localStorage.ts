@@ -12,7 +12,7 @@ import type {
   InsertSignal,
   Phase,
   Signal,
-} from "../schema/schema";
+} from "../schema/public";
 import { AgencyDefaults } from "./agencyDefaults";
 
 // Storage keys

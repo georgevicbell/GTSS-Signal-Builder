@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Agency, Approach, BasicTiming, Detector, Phase, Signal } from "../schema/schema";
+import type { Agency, Approach, BasicTiming, Detector, Phase, Signal } from "../schema/public";
 import { AgencyDefaults } from "../src/agencyDefaults";
 import {
   agencyDefaultsStorage,

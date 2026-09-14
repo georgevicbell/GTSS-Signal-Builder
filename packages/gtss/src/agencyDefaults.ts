@@ -1,4 +1,4 @@
-import type { Approach } from "../schema/schema";
+import type { Approach } from "../schema/public";
 
 export type CardinalDirection = "N" | "S" | "E" | "W";
 

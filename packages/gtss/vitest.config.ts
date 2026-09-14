@@ -10,7 +10,6 @@ export default defineConfig({
         "src/localStorage.ts",
         "store/gtss-store.ts",
         "src/gtssValidation.ts",
-        "src/queryClient.ts",
         "src/utils.ts",
       ],
     },

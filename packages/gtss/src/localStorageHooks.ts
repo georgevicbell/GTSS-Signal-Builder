@@ -7,7 +7,7 @@ import {
   InsertDetector,
   InsertPhase,
   InsertSignal,
-} from "../schema/schema";
+} from "../schema/public";
 import { useGTSSStore } from "../store/gtss-store";
 import { AgencyDefaults, isMapScrollZoomEnabled } from "./agencyDefaults";
 import {
