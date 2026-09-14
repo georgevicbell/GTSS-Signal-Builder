@@ -19,15 +19,17 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import {
+  DEFAULT_PHASE_COUNT,
+  PHASE_COUNT_OPTIONS,
   downloadSvgAsJpg,
   getSignalDisplayName,
   guessPhaseDirectionMapping,
   handleColumnMajorTab,
+  isMetricForSignalId,
   isTypicallyThroughPhase,
   phaseDiagramFileName,
   useGTSSStore,
   usePhases,
-  isMetricForSignalId,
 } from "gtss";
 import { ChevronDown, ChevronUp, Download, Plus, Save, Trash2, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -84,8 +86,6 @@ const getDirectionFromBearing = (bearing: number | null): string => {
   return "NWB";
 };
 
-const PHASE_COUNT_OPTIONS = [2, 4, 6, 8] as const;
-
 export default function BulkPhaseModal({
   onClose,
   preSelectedSignalId,
@@ -106,7 +106,7 @@ export default function BulkPhaseModal({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [targetPhaseCount, setTargetPhaseCount] = useState<number>(
-    agencyDefaults?.defaultPhaseCount ?? 8,
+    agencyDefaults?.defaultPhaseCount ?? DEFAULT_PHASE_COUNT,
   );
   const isMetric = isMetricForSignalId(selectedSignalId);
   const lengthUnit = isMetric ? "m" : "ft";

@@ -20,6 +20,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  DEFAULT_DETECTOR_LENGTH,
   DEFAULT_STOPBAR_SETBACK_DISTANCE,
   getSignalDisplayName,
   isMetricForSignalId,
@@ -608,7 +609,11 @@ export default function DetectorModal({
                         type="number"
                         step="0.1"
                         min={MIN_DETECTOR_LENGTH}
-                        placeholder="6.0"
+                        placeholder={String(
+                          isMetric
+                            ? DEFAULT_DETECTOR_LENGTH.metric
+                            : DEFAULT_DETECTOR_LENGTH.imperial,
+                        )}
                         {...field}
                         disabled={!isSignalSelected}
                         onChange={(e) => {

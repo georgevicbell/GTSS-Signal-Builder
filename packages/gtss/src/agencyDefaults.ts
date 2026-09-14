@@ -24,7 +24,7 @@ export type MapScrollWheelMode = "page" | "zoom";
 export const MIN_PHASE_NUMBER = 1;
 export const MAX_PHASE_NUMBER = 8;
 export const DEFAULT_PHASE_COUNT = MAX_PHASE_NUMBER;
-export const PHASE_COUNT_OPTIONS = [2, 4, 6, DEFAULT_PHASE_COUNT] as const;
+export const PHASE_COUNT_OPTIONS = [2, 4, 6, 8] as const;
 
 export type AgencyDefaults = {
   agencyId: string;

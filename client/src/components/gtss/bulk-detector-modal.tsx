@@ -332,8 +332,14 @@ export default function BulkDetectorModal({
       purpose: staticFields.purpose ? staticValues.purpose : "Stop Bar",
       technologyType: staticFields.technologyType ? staticValues.technologyType : "Inductance Loop",
       vehicleType: staticFields.vehicleType ? staticValues.vehicleType : "Vehicle",
-      length: staticFields.length ? staticValues.length : isMetric ? 1.8 : 6.0,
-      stopbarSetbackDist: staticFields.stopbarSetbackDist ? staticValues.stopbarSetbackDist : 0,
+      length: staticFields.length
+        ? staticValues.length
+        : isMetric
+          ? DEFAULT_DETECTOR_LENGTH.metric
+          : DEFAULT_DETECTOR_LENGTH.imperial,
+      stopbarSetbackDist: staticFields.stopbarSetbackDist
+        ? staticValues.stopbarSetbackDist
+        : DEFAULT_STOPBAR_SETBACK_DISTANCE,
       description: buildDescription(direction, formattedPurpose, nextLane),
       isDescriptionManual: false,
     };
@@ -375,8 +381,14 @@ export default function BulkDetectorModal({
           ? staticValues.technologyType
           : "Inductance Loop",
         vehicleType: staticFields.vehicleType ? staticValues.vehicleType : "Vehicle",
-        length: staticFields.length ? staticValues.length : isMetric ? 1.8 : 6.0,
-        stopbarSetbackDist: staticFields.stopbarSetbackDist ? staticValues.stopbarSetbackDist : 0,
+        length: staticFields.length
+          ? staticValues.length
+          : isMetric
+            ? DEFAULT_DETECTOR_LENGTH.metric
+            : DEFAULT_DETECTOR_LENGTH.imperial,
+        stopbarSetbackDist: staticFields.stopbarSetbackDist
+          ? staticValues.stopbarSetbackDist
+          : DEFAULT_STOPBAR_SETBACK_DISTANCE,
         description: buildDescription(direction, formattedPurpose, currentLane),
         isDescriptionManual: false,
       });
