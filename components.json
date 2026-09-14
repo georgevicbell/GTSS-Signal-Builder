@@ -12,9 +12,9 @@
   },
   "aliases": {
     "components": "@/components",
-    "utils": "gtss",
+    "utils": "@/lib/utils",
     "ui": "@/components/ui",
-    "lib": "gtss",
+    "lib": "@/lib",
     "hooks": "@/hooks"
   }
 }

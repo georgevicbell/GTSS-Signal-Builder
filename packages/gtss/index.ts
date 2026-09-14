@@ -1,4 +1,6 @@
 export * as schema from "./schema/public";
+// Drizzle table definitions, kept separate from the public Zod schema for server-side use (e.g. server/db.ts).
+export * as dbSchema from "./schema/schema";
 export {
   bearingToCardinal,
   DEFAULT_AGENCY_DEFAULTS,

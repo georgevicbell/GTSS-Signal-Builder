@@ -82,6 +82,8 @@ export const useAgencies = () => {
     agencyStorage.save(data); // keep legacy single-agency mirror in sync
     setAgencies(agencyListStorage.getAll());
     setAgency(saved);
+    // agencyListStorage.save may set a default ID in storage when none existed
+    useGTSSStore.setState({ defaultAgencyId: agencyListStorage.getDefaultId() });
     return saved;
   };
 
@@ -136,8 +138,9 @@ export function convertAgencyUnits(agency: Agency, targetIsMetric: boolean): Age
       phaseStorage.update(p.id, { crosswalkLength: converted });
     });
 
-  // Persist the metric flag first so the detector updates below interpret
-  // incoming display values under the new unit system.
+  // Snapshot detectors before the flag flip so their old (pre-conversion) values are used below.
+  const detectorsToConvert = detectorStorage.getAll().filter((d) => sigIds.includes(d.signalId));
+
   const updatedAgencyData: InsertAgency = {
     agencyId: agency.agencyId,
     agencyName: agency.agencyName,
@@ -151,26 +154,23 @@ export function convertAgencyUnits(agency: Agency, targetIsMetric: boolean): Age
   const updatedAgency = agencyListStorage.save(updatedAgencyData);
   agencyStorage.save(updatedAgencyData);
 
-  detectorStorage
-    .getAll()
-    .filter((d) => sigIds.includes(d.signalId))
-    .forEach((d) => {
-      const oldLength = d.length as number | null;
-      const oldStop = d.stopbarSetbackDist as number | null;
-      const newLength =
-        oldLength == null
-          ? null
-          : targetIsMetric
-            ? Math.round(oldLength * 0.3048 * 100) / 100
-            : Math.round((oldLength / 0.3048) * 100) / 100;
-      const newStop =
-        oldStop == null
-          ? null
-          : targetIsMetric
-            ? Math.round(oldStop * 0.3048 * 100) / 100
-            : Math.round((oldStop / 0.3048) * 100) / 100;
-      detectorStorage.update(d.id, { length: newLength, stopbarSetbackDist: newStop });
-    });
+  detectorsToConvert.forEach((d) => {
+    const oldLength = d.length as number | null;
+    const oldStop = d.stopbarSetbackDist as number | null;
+    const newLength =
+      oldLength == null
+        ? null
+        : targetIsMetric
+          ? Math.round(oldLength * 0.3048 * 100) / 100
+          : Math.round((oldLength / 0.3048) * 100) / 100;
+    const newStop =
+      oldStop == null
+        ? null
+        : targetIsMetric
+          ? Math.round(oldStop * 0.3048 * 100) / 100
+          : Math.round((oldStop / 0.3048) * 100) / 100;
+    detectorStorage.update(d.id, { length: newLength, stopbarSetbackDist: newStop });
+  });
 
   useGTSSStore.getState().loadFromStorage();
   return updatedAgency;

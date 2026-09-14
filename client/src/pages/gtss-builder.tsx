@@ -93,12 +93,7 @@ export default function GTSSBuilder() {
     detectors,
     basicTimings,
     currentView,
-    setAgency,
-    setSignals,
-    setApproaches,
-    setPhases,
-    setDetectors,
-    setBasicTimings,
+    loadFromStorage,
     navigateToSignalDetails,
   } = useGTSSStore();
   const { toast } = useToast();
@@ -219,13 +214,9 @@ export default function GTSSBuilder() {
 
   const handleClearAllData = () => {
     clearAllData();
-    // Reset store to empty state
-    setAgency(null);
-    setSignals([]);
-    setApproaches([]);
-    setPhases([]);
-    setDetectors([]);
-    setBasicTimings([]);
+    // Reload store from (now-empty) storage so all cached fields, including
+    // the agency list and default agency id, stay in sync
+    loadFromStorage();
 
     toast({
       title: "Data Cleared",
