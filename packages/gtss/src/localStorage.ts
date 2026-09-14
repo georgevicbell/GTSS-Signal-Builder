@@ -152,6 +152,23 @@ function normalizeAgency(
   }
 }
 
+// Resolve whether a given signal's agency uses metric units. Falls back to
+// the currently selected/default agency when the signal or agency cannot be
+// resolved. Accepts a signalId string and returns a boolean.
+function isMetricForSignalId(signalId?: string | null): boolean {
+  try {
+    if (!signalId) return agencyStorage.get()?.agencyIsMetric ?? false;
+    const sig = signalStorage.get(signalId);
+    if (!sig) return agencyStorage.get()?.agencyIsMetric ?? false;
+    const agencies = agencyListStorage.getAll();
+    const matching = agencies.find((a) => a.agencyId === sig.agencyId);
+    if (matching) return !!matching.agencyIsMetric;
+    return agencyStorage.get()?.agencyIsMetric ?? false;
+  } catch {
+    return agencyStorage.get()?.agencyIsMetric ?? false;
+  }
+}
+
 // Helper function to save to localStorage with size limit check
 function saveToStorage<T>(key: string, data: T): void {
   try {
@@ -500,23 +517,23 @@ export const approachStorage = {
   },
 
   delete: (id: string): void => {
-    const approaches = approachStorage.getAll();
-    const updatedApproaches = approaches.filter((a) => a.id !== id);
-    saveToStorage(STORAGE_KEYS.APPROACHES, updatedApproaches);
+    const raw = getFromStorage<Approach[]>(STORAGE_KEYS.APPROACHES, []);
+    const updated = raw.filter((a) => a.id !== id);
+    saveToStorage(STORAGE_KEYS.APPROACHES, updated);
   },
 
   deleteBySignal: (signalId: string): void => {
-    const approaches = approachStorage.getAll();
-    const updatedApproaches = approaches.filter((a) => a.signalId !== signalId);
-    saveToStorage(STORAGE_KEYS.APPROACHES, updatedApproaches);
+    const raw = getFromStorage<Approach[]>(STORAGE_KEYS.APPROACHES, []);
+    const updated = raw.filter((a) => a.signalId !== signalId);
+    saveToStorage(STORAGE_KEYS.APPROACHES, updated);
   },
 
   updateSignalId: (oldSignalId: string, newSignalId: string): void => {
-    const approaches = approachStorage.getAll();
-    const updatedApproaches = approaches.map((approach) =>
+    const raw = getFromStorage<Approach[]>(STORAGE_KEYS.APPROACHES, []);
+    const updated = raw.map((approach) =>
       approach.signalId === oldSignalId ? { ...approach, signalId: newSignalId } : approach,
     );
-    saveToStorage(STORAGE_KEYS.APPROACHES, updatedApproaches);
+    saveToStorage(STORAGE_KEYS.APPROACHES, updated);
   },
 
   clear: (): void => {
@@ -627,23 +644,23 @@ export const phaseStorage = {
   },
 
   delete: (id: string): void => {
-    const phases = phaseStorage.getAll();
-    const updatedPhases = phases.filter((p) => p.id !== id);
-    saveToStorage(STORAGE_KEYS.PHASES, updatedPhases);
+    const raw = getFromStorage<Phase[]>(STORAGE_KEYS.PHASES, []);
+    const updated = raw.filter((p) => p.id !== id);
+    saveToStorage(STORAGE_KEYS.PHASES, updated);
   },
 
   deleteBySignal: (signalId: string): void => {
-    const phases = phaseStorage.getAll();
-    const updatedPhases = phases.filter((p) => p.signalId !== signalId);
-    saveToStorage(STORAGE_KEYS.PHASES, updatedPhases);
+    const raw = getFromStorage<Phase[]>(STORAGE_KEYS.PHASES, []);
+    const updated = raw.filter((p) => p.signalId !== signalId);
+    saveToStorage(STORAGE_KEYS.PHASES, updated);
   },
 
   updateSignalId: (oldSignalId: string, newSignalId: string): void => {
-    const phases = phaseStorage.getAll();
-    const updatedPhases = phases.map((phase) =>
+    const raw = getFromStorage<Phase[]>(STORAGE_KEYS.PHASES, []);
+    const updated = raw.map((phase) =>
       phase.signalId === oldSignalId ? { ...phase, signalId: newSignalId } : phase,
     );
-    saveToStorage(STORAGE_KEYS.PHASES, updatedPhases);
+    saveToStorage(STORAGE_KEYS.PHASES, updated);
   },
 
   clear: (): void => {
@@ -655,21 +672,20 @@ export const phaseStorage = {
 export const detectorStorage = {
   getAll: (): Detector[] => {
     const raw = getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
-    // Determine whether the current agency uses metric units so we can
-    // convert stored cm values back to meters for display.
-    const agency = agencyStorage.get();
-    const isMetric = agency?.agencyIsMetric ?? false;
-
     // Rows stored before detectors could carry an approach (or stand without a
     // phase) are missing these keys entirely. Convert metric-stored distances
-    // from cm -> m for consumers.
-    return raw.map((d) => ({
-      ...d,
-      phase: d.phase ?? null,
-      approachId: (d as { approachId?: string | null }).approachId ?? null,
-      length: storedDistanceToDisplay(d.length ?? null, isMetric),
-      stopbarSetbackDist: storedDistanceToDisplay(d.stopbarSetbackDist ?? null, isMetric),
-    }));
+    // from cm -> m for consumers. Resolve the unit per-detector using its
+    // signal -> agency mapping (not the current default agency).
+    return raw.map((d) => {
+      const isMetric = isMetricForSignalId(d.signalId);
+      return {
+        ...d,
+        phase: d.phase ?? null,
+        approachId: (d as { approachId?: string | null }).approachId ?? null,
+        length: storedDistanceToDisplay(d.length ?? null, isMetric),
+        stopbarSetbackDist: storedDistanceToDisplay(d.stopbarSetbackDist ?? null, isMetric),
+      };
+    });
   },
 
   getBySignal: (signalId: string): Detector[] => {
@@ -679,8 +695,8 @@ export const detectorStorage = {
 
   save: (detector: InsertDetector): Detector => {
     const raw = getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
-    const agency = agencyStorage.get();
-    const isMetric = agency?.agencyIsMetric ?? false;
+    // Resolve units based on the detector's signal -> agency.
+    const isMetric = isMetricForSignalId(detector.signalId);
 
     const storedDetector = {
       id: nanoid(),
@@ -724,8 +740,13 @@ export const detectorStorage = {
 
     if (index === -1) return null;
 
-    const agency = agencyStorage.get();
-    const isMetric = agency?.agencyIsMetric ?? false;
+    // If the update changes the signalId use the new signal's agency when
+    // converting distances; otherwise use the detector's existing signal.
+    const targetSignalId =
+      "signalId" in updates && typeof updates.signalId === "string"
+        ? (updates.signalId as string)
+        : raw[index].signalId;
+    const isMetric = isMetricForSignalId(targetSignalId);
 
     // Convert any incoming distance updates from display -> stored units
     const updatesForStorage: Partial<Record<string, unknown>> = { ...updates };
@@ -743,7 +764,7 @@ export const detectorStorage = {
     raw[index] = mergedStored as Detector;
     saveToStorage(STORAGE_KEYS.DETECTORS, raw);
 
-    // Return display-facing object
+    // Return display-facing object (resolve units using target signal)
     const displayObj = {
       ...mergedStored,
       length: storedDistanceToDisplay(mergedStored.length ?? null, isMetric),
@@ -756,23 +777,23 @@ export const detectorStorage = {
   },
 
   delete: (id: string): void => {
-    const detectors = detectorStorage.getAll();
-    const updatedDetectors = detectors.filter((d) => d.id !== id);
-    saveToStorage(STORAGE_KEYS.DETECTORS, updatedDetectors);
+    const raw = getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
+    const updated = raw.filter((d) => d.id !== id);
+    saveToStorage(STORAGE_KEYS.DETECTORS, updated);
   },
 
   deleteBySignal: (signalId: string): void => {
-    const detectors = detectorStorage.getAll();
-    const updatedDetectors = detectors.filter((d) => d.signalId !== signalId);
-    saveToStorage(STORAGE_KEYS.DETECTORS, updatedDetectors);
+    const raw = getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
+    const updated = raw.filter((d) => d.signalId !== signalId);
+    saveToStorage(STORAGE_KEYS.DETECTORS, updated);
   },
 
   updateSignalId: (oldSignalId: string, newSignalId: string): void => {
-    const detectors = detectorStorage.getAll();
-    const updatedDetectors = detectors.map((detector) =>
+    const raw = getFromStorage<Detector[]>(STORAGE_KEYS.DETECTORS, []);
+    const updated = raw.map((detector) =>
       detector.signalId === oldSignalId ? { ...detector, signalId: newSignalId } : detector,
     );
-    saveToStorage(STORAGE_KEYS.DETECTORS, updatedDetectors);
+    saveToStorage(STORAGE_KEYS.DETECTORS, updated);
   },
 
   clear: (): void => {
@@ -831,23 +852,23 @@ export const basicTimingStorage = {
   },
 
   delete: (id: string): void => {
-    const timings = basicTimingStorage.getAll();
-    const updatedTimings = timings.filter((t) => t.id !== id);
-    saveToStorage(STORAGE_KEYS.BASIC_TIMINGS, updatedTimings);
+    const raw = getFromStorage<BasicTiming[]>(STORAGE_KEYS.BASIC_TIMINGS, []);
+    const updated = raw.filter((t) => t.id !== id);
+    saveToStorage(STORAGE_KEYS.BASIC_TIMINGS, updated);
   },
 
   deleteBySignal: (signalId: string): void => {
-    const timings = basicTimingStorage.getAll();
-    const updatedTimings = timings.filter((t) => t.signalId !== signalId);
-    saveToStorage(STORAGE_KEYS.BASIC_TIMINGS, updatedTimings);
+    const raw = getFromStorage<BasicTiming[]>(STORAGE_KEYS.BASIC_TIMINGS, []);
+    const updated = raw.filter((t) => t.signalId !== signalId);
+    saveToStorage(STORAGE_KEYS.BASIC_TIMINGS, updated);
   },
 
   updateSignalId: (oldSignalId: string, newSignalId: string): void => {
-    const timings = basicTimingStorage.getAll();
-    const updatedTimings = timings.map((timing) =>
+    const raw = getFromStorage<BasicTiming[]>(STORAGE_KEYS.BASIC_TIMINGS, []);
+    const updated = raw.map((timing) =>
       timing.signalId === oldSignalId ? { ...timing, signalId: newSignalId } : timing,
     );
-    saveToStorage(STORAGE_KEYS.BASIC_TIMINGS, updatedTimings);
+    saveToStorage(STORAGE_KEYS.BASIC_TIMINGS, updated);
   },
 
   clear: (): void => {
