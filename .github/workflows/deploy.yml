@@ -28,8 +28,7 @@ jobs:
       - name: Build application
         run: npm run build
 
-  test:
-    <<: *base_job
+  test: *base_job
     runs-on: ubuntu-latest
     steps:
       - name: Run tests
@@ -41,8 +40,7 @@ jobs:
         with:
            working-directory: ./packages/gtss
       
-  deploy:
-    <<: *base_job
+  deploy: *base_job
     runs-on: ubuntu-latest
 
     steps:  
