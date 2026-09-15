@@ -8,6 +8,8 @@ export const insertAgencySchema = z.object({
   agencyLanguage: z.string().nullable().optional(),
   agencyEmail: z.string().nullable().optional(),
   agencyIsMetric: z.boolean().nullable().optional(),
+  // LHT — left-hand traffic. Mirrors turn-lane offsets/ordering in diagrams.
+  agencyIsLht: z.boolean().nullable().optional(),
   latitude: z.number().nullable().optional(),
   longitude: z.number().nullable().optional(),
 });

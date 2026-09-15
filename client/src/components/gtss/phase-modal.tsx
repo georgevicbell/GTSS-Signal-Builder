@@ -20,11 +20,18 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getSignalDisplayName, useGTSSStore, usePhases, isMetricForSignalId } from "gtss";
+import {
+  getSignalDisplayName,
+  isLhtForSignalId,
+  isMetricForSignalId,
+  useGTSSStore,
+  usePhases,
+} from "gtss";
 import { type InsertPhase, insertPhaseSchema, type Phase } from "gtss/schema";
 import { Copy, Navigation, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { getMovementTypeOptions } from "./movement-types";
 
 interface PhaseModalProps {
   phase: Phase | null;
@@ -50,7 +57,9 @@ export default function PhaseModal({ phase, onClose, preSelectedSignalId }: Phas
     },
   });
 
-  const isMetric = isMetricForSignalId(form.watch("signalId"));
+  const selectedSignalId = form.watch("signalId");
+  const isMetric = isMetricForSignalId(selectedSignalId);
+  const movementTypeOptions = getMovementTypeOptions(isLhtForSignalId(selectedSignalId));
   const speedUnit = isMetric ? "km/h" : "mph";
 
   const movementType = form.watch("movementType");
@@ -341,22 +350,11 @@ export default function PhaseModal({ phase, onClose, preSelectedSignalId }: Phas
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Through">Through (T)</SelectItem>
-                        <SelectItem value="Left Turn">Left (L)</SelectItem>
-                        <SelectItem value="Left Protected-Permissive">
-                          Left Protected-Permissive (LPP)
-                        </SelectItem>
-                        <SelectItem value="Left Through Shared">
-                          Left Through Shared Lane (LT)
-                        </SelectItem>
-                        <SelectItem value="Permissive Phase">Permissive Phase (TL)</SelectItem>
-                        <SelectItem value="Flashing Yellow Arrow">
-                          Flashing Yellow Arrow (FYA)
-                        </SelectItem>
-                        <SelectItem value="U-Turn">U-turn (U)</SelectItem>
-                        <SelectItem value="Right Turn">Right Turn (R)</SelectItem>
-                        <SelectItem value="Through-Right">Through-Right (TR)</SelectItem>
-                        <SelectItem value="Pedestrian">Pedestrian Phase (PED)</SelectItem>
+                        {movementTypeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

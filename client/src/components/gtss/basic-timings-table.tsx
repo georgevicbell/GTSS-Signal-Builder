@@ -1,19 +1,32 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import SignalsMap from "@/components/ui/signals-map";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import SignalsMap from "@/components/ui/signals-map";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { getSignalDisplayName, useBasicTimings, useGTSSStore } from "gtss";
 import { BasicTiming } from "gtss/schema";
-import { ChevronDown, ChevronUp, Download, MapPin, Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, MapPin } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import BasicTimingModal from "./basic-timing-modal";
 import PhaseDiagram from "./phase-diagram";
 
-type SortField = 'phase' | 'minGreen' | 'maxGreen' | 'yellow' | 'allRed' | 'vehRecallType';
-type SortDirection = 'asc' | 'desc';
+type SortField = "phase" | "minGreen" | "maxGreen" | "yellow" | "allRed" | "vehRecallType";
+type SortDirection = "asc" | "desc";
 
 interface BasicTimingsTableProps {
   triggerAdd?: number;
@@ -52,10 +65,10 @@ function TimingBarChart({ timings, svgRef, intersectionName }: TimingBarChartPro
   }
 
   const maxTotal = Math.max(
-    ...sortedTimings.map(t =>
-      (t.minGreen || 0) + (t.maxGreen || 0) + (t.yellow || 0) + (t.allRed || 0)
+    ...sortedTimings.map(
+      (t) => (t.minGreen || 0) + (t.maxGreen || 0) + (t.yellow || 0) + (t.allRed || 0),
     ),
-    1
+    1,
   );
 
   const chartWidth = 340;
@@ -67,23 +80,38 @@ function TimingBarChart({ timings, svgRef, intersectionName }: TimingBarChartPro
   return (
     <svg ref={svgRef} viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-full">
       {intersectionName && (
-        <text x={chartWidth / 2} y="16" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#374151">
+        <text
+          x={chartWidth / 2}
+          y="16"
+          textAnchor="middle"
+          fontSize="12"
+          fontWeight="bold"
+          fill="#374151"
+        >
           {intersectionName} - Timing Parameters
         </text>
       )}
 
       <g transform={`translate(${labelWidth}, ${intersectionName ? 30 : 10})`}>
         <rect x="0" y="0" width="12" height="12" fill="#22c55e" rx="2" />
-        <text x="16" y="10" fontSize="9" fill="#374151">Min Green</text>
+        <text x="16" y="10" fontSize="9" fill="#374151">
+          Min Green
+        </text>
 
         <rect x="70" y="0" width="12" height="12" fill="#86efac" rx="2" />
-        <text x="86" y="10" fontSize="9" fill="#374151">Max Green</text>
+        <text x="86" y="10" fontSize="9" fill="#374151">
+          Max Green
+        </text>
 
         <rect x="145" y="0" width="12" height="12" fill="#fbbf24" rx="2" />
-        <text x="161" y="10" fontSize="9" fill="#374151">Yellow</text>
+        <text x="161" y="10" fontSize="9" fill="#374151">
+          Yellow
+        </text>
 
         <rect x="200" y="0" width="12" height="12" fill="#ef4444" rx="2" />
-        <text x="216" y="10" fontSize="9" fill="#374151">All-Red</text>
+        <text x="216" y="10" fontSize="9" fill="#374151">
+          All-Red
+        </text>
       </g>
 
       <g transform={`translate(0, ${intersectionName ? 55 : 35})`}>
@@ -99,20 +127,20 @@ function TimingBarChart({ timings, svgRef, intersectionName }: TimingBarChartPro
 
           const scale = chartAreaWidth / Math.max(maxTotal, 60);
 
-          let xOffset = labelWidth;
+          const xOffset = labelWidth;
 
           return (
             <g key={timing.id}>
               <g transform={`translate(0, ${y})`}>
-                <rect
-                  x="5"
-                  y="2"
-                  width="45"
-                  height="20"
-                  rx="4"
-                  fill={phaseColor}
-                />
-                <text x="27" y="16" textAnchor="middle" fontSize="11" fontWeight="bold" fill="white">
+                <rect x="5" y="2" width="45" height="20" rx="4" fill={phaseColor} />
+                <text
+                  x="27"
+                  y="16"
+                  textAnchor="middle"
+                  fontSize="11"
+                  fontWeight="bold"
+                  fill="white"
+                >
                   Ph {timing.phase}
                 </text>
               </g>
@@ -128,82 +156,108 @@ function TimingBarChart({ timings, svgRef, intersectionName }: TimingBarChartPro
                     rx="2"
                   />
                   {minGreen * scale > 20 && (
-                    <text x={xOffset + (minGreen * scale) / 2} y={y + 15} textAnchor="middle" fontSize="9" fill="white" fontWeight="bold">
+                    <text
+                      x={xOffset + (minGreen * scale) / 2}
+                      y={y + 15}
+                      textAnchor="middle"
+                      fontSize="9"
+                      fill="white"
+                      fontWeight="bold"
+                    >
                       {minGreen}s
                     </text>
                   )}
                 </g>
               )}
 
-              {maxGreen > 0 && (() => {
-                const x = xOffset + minGreen * scale;
-                return (
-                  <g>
-                    <rect
-                      x={x}
-                      y={y + 2}
-                      width={maxGreen * scale}
-                      height={barHeight - 4}
-                      fill="#86efac"
-                      rx="2"
-                    />
-                    {maxGreen * scale > 20 && (
-                      <text x={x + (maxGreen * scale) / 2} y={y + 15} textAnchor="middle" fontSize="9" fill="#166534" fontWeight="bold">
-                        {maxGreen}s
-                      </text>
-                    )}
-                  </g>
-                );
-              })()}
+              {maxGreen > 0 &&
+                (() => {
+                  const x = xOffset + minGreen * scale;
+                  return (
+                    <g>
+                      <rect
+                        x={x}
+                        y={y + 2}
+                        width={maxGreen * scale}
+                        height={barHeight - 4}
+                        fill="#86efac"
+                        rx="2"
+                      />
+                      {maxGreen * scale > 20 && (
+                        <text
+                          x={x + (maxGreen * scale) / 2}
+                          y={y + 15}
+                          textAnchor="middle"
+                          fontSize="9"
+                          fill="#166534"
+                          fontWeight="bold"
+                        >
+                          {maxGreen}s
+                        </text>
+                      )}
+                    </g>
+                  );
+                })()}
 
-              {yellow > 0 && (() => {
-                const x = xOffset + (minGreen + maxGreen) * scale;
-                return (
-                  <g>
-                    <rect
-                      x={x}
-                      y={y + 2}
-                      width={yellow * scale}
-                      height={barHeight - 4}
-                      fill="#fbbf24"
-                      rx="2"
-                    />
-                    {yellow * scale > 15 && (
-                      <text x={x + (yellow * scale) / 2} y={y + 15} textAnchor="middle" fontSize="9" fill="#92400e" fontWeight="bold">
-                        {yellow}s
-                      </text>
-                    )}
-                  </g>
-                );
-              })()}
+              {yellow > 0 &&
+                (() => {
+                  const x = xOffset + (minGreen + maxGreen) * scale;
+                  return (
+                    <g>
+                      <rect
+                        x={x}
+                        y={y + 2}
+                        width={yellow * scale}
+                        height={barHeight - 4}
+                        fill="#fbbf24"
+                        rx="2"
+                      />
+                      {yellow * scale > 15 && (
+                        <text
+                          x={x + (yellow * scale) / 2}
+                          y={y + 15}
+                          textAnchor="middle"
+                          fontSize="9"
+                          fill="#92400e"
+                          fontWeight="bold"
+                        >
+                          {yellow}s
+                        </text>
+                      )}
+                    </g>
+                  );
+                })()}
 
-              {allRed > 0 && (() => {
-                const x = xOffset + (minGreen + maxGreen + yellow) * scale;
-                return (
-                  <g>
-                    <rect
-                      x={x}
-                      y={y + 2}
-                      width={allRed * scale}
-                      height={barHeight - 4}
-                      fill="#ef4444"
-                      rx="2"
-                    />
-                    {allRed * scale > 12 && (
-                      <text x={x + (allRed * scale) / 2} y={y + 15} textAnchor="middle" fontSize="9" fill="white" fontWeight="bold">
-                        {allRed}s
-                      </text>
-                    )}
-                  </g>
-                );
-              })()}
+              {allRed > 0 &&
+                (() => {
+                  const x = xOffset + (minGreen + maxGreen + yellow) * scale;
+                  return (
+                    <g>
+                      <rect
+                        x={x}
+                        y={y + 2}
+                        width={allRed * scale}
+                        height={barHeight - 4}
+                        fill="#ef4444"
+                        rx="2"
+                      />
+                      {allRed * scale > 12 && (
+                        <text
+                          x={x + (allRed * scale) / 2}
+                          y={y + 15}
+                          textAnchor="middle"
+                          fontSize="9"
+                          fill="white"
+                          fontWeight="bold"
+                        >
+                          {allRed}s
+                        </text>
+                      )}
+                    </g>
+                  );
+                })()}
 
-              <text
-                x={xOffset + total * scale + 5}
-                y={y + 15}
-                fontSize="9"
-                fill="#6b7280"
-              >
+              <text x={xOffset + total * scale + 5} y={y + 15} fontSize="9" fill="#6b7280">
                 {total}s
               </text>
             </g>
@@ -217,9 +271,16 @@ function TimingBarChart({ timings, svgRef, intersectionName }: TimingBarChartPro
 export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps) {
   const [editingTiming, setEditingTiming] = useState<BasicTiming | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [sortField, setSortField] = useState<SortField>('phase');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const { basicTimings, signals, approaches, phases, selectedSignalIdForTables, setSelectedSignalIdForTables } = useGTSSStore();
+  const [sortField, setSortField] = useState<SortField>("phase");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const {
+    basicTimings,
+    signals,
+    approaches,
+    phases,
+    selectedSignalIdForTables,
+    setSelectedSignalIdForTables,
+  } = useGTSSStore();
   const { deepLinkTarget, setDeepLinkTarget } = useGTSSStore();
   const svgRef = useRef<SVGSVGElement>(null);
   const phaseDiagramRef = useRef<SVGSVGElement>(null);
@@ -237,8 +298,8 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
 
   // Open timing modal when deep-linked
   useEffect(() => {
-    if (deepLinkTarget?.type === 'basicTiming' && deepLinkTarget.id) {
-      const t = basicTimings.find(bt => bt.id === deepLinkTarget.id);
+    if (deepLinkTarget?.type === "basicTiming" && deepLinkTarget.id) {
+      const t = basicTimings.find((bt) => bt.id === deepLinkTarget.id);
       if (t) {
         setSelectedSignalId(t.signalId);
         setEditingTiming(t);
@@ -246,10 +307,9 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
         setDeepLinkTarget({ type: null, id: null });
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deepLinkTarget, basicTimings]);
 
-  const timingHooks = useBasicTimings();
+  useBasicTimings();
 
   // Handle triggers from parent component. Capture initial value so the
   // modal doesn't auto-open when the table re-mounts after navigation.
@@ -263,22 +323,22 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
 
   // Filter timings by selected signal
   const filteredTimings = selectedSignalId
-    ? basicTimings.filter(timing => timing.signalId === selectedSignalId)
+    ? basicTimings.filter((timing) => timing.signalId === selectedSignalId)
     : [];
 
   // Filter approaches for selected signal
   const filteredApproaches = selectedSignalId
-    ? approaches.filter(a => a.signalId === selectedSignalId)
+    ? approaches.filter((a) => a.signalId === selectedSignalId)
     : [];
 
   // Filter phases for selected signal
   const filteredPhases = selectedSignalId
-    ? phases.filter(p => p.signalId === selectedSignalId)
+    ? phases.filter((p) => p.signalId === selectedSignalId)
     : [];
 
   // Get intersection name
   const intersectionName = useMemo(() => {
-    const signal = signals.find(s => s.signalId === selectedSignalId);
+    const signal = signals.find((s) => s.signalId === selectedSignalId);
     if (!signal) return "";
     return getSignalDisplayName(signal, approaches);
   }, [signals, selectedSignalId, approaches]);
@@ -288,49 +348,53 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
     if (!svgRef.current) return;
 
     const svg = svgRef.current;
-    const viewBox = svg.getAttribute('viewBox');
+    const viewBox = svg.getAttribute("viewBox");
     let svgWidth = 340;
     let svgHeight = 300;
 
     if (viewBox) {
-      const [, , width, height] = viewBox.split(' ').map(Number);
+      const [, , width, height] = viewBox.split(" ").map(Number);
       svgWidth = width;
       svgHeight = height;
     }
 
     const svgClone = svg.cloneNode(true) as SVGSVGElement;
-    svgClone.setAttribute('width', String(svgWidth));
-    svgClone.setAttribute('height', String(svgHeight));
+    svgClone.setAttribute("width", String(svgWidth));
+    svgClone.setAttribute("height", String(svgHeight));
 
     const svgData = new XMLSerializer().serializeToString(svgClone);
-    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
     const svgUrl = URL.createObjectURL(svgBlob);
 
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       const scale = 2;
       canvas.width = svgWidth * scale;
       canvas.height = svgHeight * scale;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      ctx.fillStyle = 'white';
+      ctx.fillStyle = "white";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.scale(scale, scale);
       ctx.drawImage(img, 0, 0, svgWidth, svgHeight);
 
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${selectedSignalId || 'timing-chart'}.jpg`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 'image/jpeg', 0.95);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return;
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${selectedSignalId || "timing-chart"}.jpg`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        },
+        "image/jpeg",
+        0.95,
+      );
 
       URL.revokeObjectURL(svgUrl);
     };
@@ -349,10 +413,10 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
@@ -367,41 +431,41 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
       let bValue: string | number;
 
       switch (sortField) {
-        case 'phase':
+        case "phase":
           aValue = a.phase;
           bValue = b.phase;
           break;
-        case 'minGreen':
+        case "minGreen":
           aValue = a.minGreen || 0;
           bValue = b.minGreen || 0;
           break;
-        case 'maxGreen':
+        case "maxGreen":
           aValue = a.maxGreen || 0;
           bValue = b.maxGreen || 0;
           break;
-        case 'yellow':
+        case "yellow":
           aValue = a.yellow || 0;
           bValue = b.yellow || 0;
           break;
-        case 'allRed':
+        case "allRed":
           aValue = a.allRed || 0;
           bValue = b.allRed || 0;
           break;
-        case 'vehRecallType':
-          aValue = a.vehRecallType || 'None';
-          bValue = b.vehRecallType || 'None';
+        case "vehRecallType":
+          aValue = a.vehRecallType || "None";
+          bValue = b.vehRecallType || "None";
           break;
         default:
           aValue = a.phase;
           bValue = b.phase;
       }
 
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc'
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        return sortDirection === "asc"
           ? aValue.localeCompare(bValue)
           : bValue.localeCompare(aValue);
       } else {
-        return sortDirection === 'asc'
+        return sortDirection === "asc"
           ? (aValue as number) - (bValue as number)
           : (bValue as number) - (aValue as number);
       }
@@ -409,7 +473,7 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
   };
 
   const formatTime = (value: number | null) => {
-    if (value === null) return '-';
+    if (value === null) return "-";
     return `${value}s`;
   };
 
@@ -422,10 +486,10 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
         {children}
         <div className="flex flex-col ml-1">
           <ChevronUp
-            className={`w-3 h-3 ${sortField === field && sortDirection === 'asc' ? 'text-primary-600' : 'text-grey-300'}`}
+            className={`w-3 h-3 ${sortField === field && sortDirection === "asc" ? "text-primary-600" : "text-grey-300"}`}
           />
           <ChevronDown
-            className={`w-3 h-3 -mt-1 ${sortField === field && sortDirection === 'desc' ? 'text-primary-600' : 'text-grey-300'}`}
+            className={`w-3 h-3 -mt-1 ${sortField === field && sortDirection === "desc" ? "text-primary-600" : "text-grey-300"}`}
           />
         </div>
       </div>
@@ -434,10 +498,14 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
 
   const getRecallBadgeColor = (type: string | null) => {
     switch (type) {
-      case 'Max': return 'bg-red-100 text-red-800';
-      case 'Min': return 'bg-yellow-100 text-yellow-800';
-      case 'Soft': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-grey-100 text-grey-800';
+      case "Max":
+        return "bg-red-100 text-red-800";
+      case "Min":
+        return "bg-yellow-100 text-yellow-800";
+      case "Soft":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-grey-100 text-grey-800";
     }
   };
 
@@ -469,7 +537,10 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
             </div>
           )}
         </ResizablePanel>
-        <ResizableHandle withHandle className="bg-grey-200 hover:bg-primary-300 transition-colors" />
+        <ResizableHandle
+          withHandle
+          className="bg-grey-200 hover:bg-primary-300 transition-colors"
+        />
         <ResizablePanel defaultSize={50} minSize={20} className="flex flex-col min-h-0">
           <Card className="rounded-none border-0 flex flex-col h-full min-h-0">
             <CardHeader className="bg-grey-50 border-b border-grey-200 p-0">
@@ -522,20 +593,21 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
                       <div className="h-56">
                         {filteredPhases.length > 0 ? (
                           <PhaseDiagram
-                            phases={filteredPhases.map(p => ({
+                            phases={filteredPhases.map((p) => ({
                               phase: p.phase,
                               approachId: p.approachId,
                               movementType: p.movementType,
                               isPedestrian: p.isPedestrian,
-                              numOfLanes: p.numOfLanes
+                              numOfLanes: p.numOfLanes,
                             }))}
-                            approaches={filteredApproaches.map(a => ({
+                            approaches={filteredApproaches.map((a) => ({
                               approachId: a.approachId,
                               compassBearing: a.compassBearing,
                               freeRight: a.freeRight,
-                              freeRightLanes: a.freeRightLanes
+                              freeRightLanes: a.freeRightLanes,
                             }))}
                             intersectionName={intersectionName}
+                            signalId={selectedSignalId}
                             svgRef={phaseDiagramRef}
                             compact={true}
                           />
@@ -568,7 +640,9 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
                     </Select>
                   </div>
                   {selectedSignalId && (
-                    <div className="text-xs text-grey-600 whitespace-nowrap">{filteredTimings.length} timing{filteredTimings.length !== 1 ? 's' : ''}</div>
+                    <div className="text-xs text-grey-600 whitespace-nowrap">
+                      {filteredTimings.length} timing{filteredTimings.length !== 1 ? "s" : ""}
+                    </div>
                   )}
                 </div>
               </div>
@@ -577,15 +651,23 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
                   <TableHeader>
                     <TableRow className="bg-grey-50 border-b border-grey-200">
                       <SortableHeader field="phase">Phase</SortableHeader>
-                      <TableHead className="text-xs font-medium text-grey-500 uppercase tracking-wider py-1.5 px-2">Ped Walk</TableHead>
-                      <TableHead className="text-xs font-medium text-grey-500 uppercase tracking-wider py-1.5 px-2">Ped Clear</TableHead>
-                      <TableHead className="text-xs font-medium text-grey-500 uppercase tracking-wider py-1.5 px-2">LPI</TableHead>
+                      <TableHead className="text-xs font-medium text-grey-500 uppercase tracking-wider py-1.5 px-2">
+                        Ped Walk
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-grey-500 uppercase tracking-wider py-1.5 px-2">
+                        Ped Clear
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-grey-500 uppercase tracking-wider py-1.5 px-2">
+                        LPI
+                      </TableHead>
                       <SortableHeader field="minGreen">Min Green</SortableHeader>
                       <SortableHeader field="maxGreen">Max Green</SortableHeader>
                       <SortableHeader field="yellow">Yellow</SortableHeader>
                       <SortableHeader field="allRed">All-Red</SortableHeader>
                       <SortableHeader field="vehRecallType">Veh Recall</SortableHeader>
-                      <TableHead className="text-xs font-medium text-grey-500 uppercase tracking-wider py-1.5 px-2">Ped Recall</TableHead>
+                      <TableHead className="text-xs font-medium text-grey-500 uppercase tracking-wider py-1.5 px-2">
+                        Ped Recall
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -598,7 +680,8 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
                     ) : filteredTimings.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={10} className="text-center py-4 text-xs text-grey-500">
-                          No timing configurations for this signal. Add your first timing to get started.
+                          No timing configurations for this signal. Add your first timing to get
+                          started.
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -612,28 +695,55 @@ export default function BasicTimingsTable({ triggerAdd }: BasicTimingsTableProps
                             <Badge
                               variant="secondary"
                               className="text-xs py-0 px-1.5 h-4 text-white"
-                              style={{ backgroundColor: phaseColors[timing.phase] || '#6b7280' }}
+                              style={{ backgroundColor: phaseColors[timing.phase] || "#6b7280" }}
                             >
                               {timing.phase}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.pedWalk)}</TableCell>
-                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.pedClearance)}</TableCell>
-                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.leadingPedInterval)}</TableCell>
-                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.minGreen)}</TableCell>
-                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.maxGreen)}</TableCell>
-                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.yellow)}</TableCell>
-                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">{formatTime(timing.allRed)}</TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">
+                            {formatTime(timing.pedWalk)}
+                          </TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">
+                            {formatTime(timing.pedClearance)}
+                          </TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">
+                            {formatTime(timing.leadingPedInterval)}
+                          </TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">
+                            {formatTime(timing.minGreen)}
+                          </TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">
+                            {formatTime(timing.maxGreen)}
+                          </TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">
+                            {formatTime(timing.yellow)}
+                          </TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1.5 px-2">
+                            {formatTime(timing.allRed)}
+                          </TableCell>
                           <TableCell className="py-1.5 px-2">
-                            <Badge variant="secondary" className={`text-xs py-0 px-1.5 h-4 ${getRecallBadgeColor(timing.vehRecallType)}`}>
-                              {timing.vehRecallType || 'None'}
+                            <Badge
+                              variant="secondary"
+                              className={`text-xs py-0 px-1.5 h-4 ${getRecallBadgeColor(timing.vehRecallType)}`}
+                            >
+                              {timing.vehRecallType || "None"}
                             </Badge>
                           </TableCell>
                           <TableCell className="py-1.5 px-2">
                             {timing.pedRecall ? (
-                              <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs py-0 px-1.5 h-4">Yes</Badge>
+                              <Badge
+                                variant="secondary"
+                                className="bg-green-100 text-green-800 text-xs py-0 px-1.5 h-4"
+                              >
+                                Yes
+                              </Badge>
                             ) : (
-                              <Badge variant="secondary" className="bg-grey-100 text-grey-600 text-xs py-0 px-1.5 h-4">No</Badge>
+                              <Badge
+                                variant="secondary"
+                                className="bg-grey-100 text-grey-600 text-xs py-0 px-1.5 h-4"
+                              >
+                                No
+                              </Badge>
                             )}
                           </TableCell>
                         </TableRow>

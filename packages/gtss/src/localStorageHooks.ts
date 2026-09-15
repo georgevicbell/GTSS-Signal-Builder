@@ -148,6 +148,7 @@ export function convertAgencyUnits(agency: Agency, targetIsMetric: boolean): Age
     agencyTimezone: agency.agencyTimezone,
     agencyEmail: agency.agencyEmail || "",
     agencyIsMetric: targetIsMetric,
+    agencyIsLht: agency.agencyIsLht ?? false,
     latitude: agency.latitude ?? undefined,
     longitude: agency.longitude ?? undefined,
   };

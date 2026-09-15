@@ -35,6 +35,7 @@ export const agencyStorage = {
       agencyTimezone: agency.agencyTimezone,
       agencyLanguage: agency.agencyLanguage ?? null,
       agencyIsMetric: agency.agencyIsMetric ?? false,
+      agencyIsLht: agency.agencyIsLht ?? false,
       agencyEmail: agency.agencyEmail ?? null,
       latitude: agency.latitude ?? null,
       longitude: agency.longitude ?? null,
@@ -84,6 +85,7 @@ export const agencyListStorage = {
       agencyTimezone: agency.agencyTimezone,
       agencyLanguage: agency.agencyLanguage ?? null,
       agencyIsMetric: agency.agencyIsMetric ?? false,
+      agencyIsLht: agency.agencyIsLht ?? false,
       agencyEmail: agency.agencyEmail ?? null,
       latitude: agency.latitude ?? null,
       longitude: agency.longitude ?? null,
@@ -189,6 +191,7 @@ export function parseAgenciesTXT(content: string): Agency[] {
       latitude: null,
       longitude: null,
       agencyIsMetric: values[5] ? values[5].toLowerCase() === "true" : false,
+      agencyIsLht: values[6] ? values[6].toLowerCase() === "true" : false,
     });
   }
 

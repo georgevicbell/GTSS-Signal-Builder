@@ -1,4 +1,4 @@
-import { isMetricForSignalId } from "gtss";
+import { isLhtForSignalId, isMetricForSignalId } from "gtss";
 import React from "react";
 import { freeRightPedMarkings } from "./free-right-markings";
 
@@ -44,6 +44,9 @@ interface DetectorDiagramProps {
   phases: PhaseData[];
   approaches: ApproachData[];
   signal?: SignalData;
+  /** Force left-hand-traffic lane mirroring regardless of the stored agency
+   * flag for `signal.signalId` (used by the demo page's side-by-side compare). */
+  forceLht?: boolean;
   svgRef?: React.RefObject<SVGSVGElement>;
 }
 
@@ -131,11 +134,15 @@ export default function DetectorDiagram({
   phases,
   approaches,
   signal,
+  forceLht,
   svgRef,
 }: DetectorDiagramProps) {
   // Unit system (API: metric detector setbacks are in meters)
   const isMetric = isMetricForSignalId(signal?.signalId);
   const lengthUnit = isMetric ? "m" : "ft";
+  // LHT mirrors which side of the roadway a turn lane sits on.
+  const isLht = forceLht ?? isLhtForSignalId(signal?.signalId);
+  const mirror = isLht ? -1 : 1;
   // Determine if we have any advanced detectors - if not, zoom in more
   const hasAdvancedDetectors = detectors.some((d) =>
     isAdvancedDetector(d.purpose, d.stopbarSetbackDist, isMetric),
@@ -222,7 +229,7 @@ export default function DetectorDiagram({
       const laneNum = parseInt(detector.lane ?? "") || 0;
       if (laneNum < 1) return 0;
       const totalLanes = config.totalLanes || 1;
-      return (laneNum - (totalLanes + 1) / 2) * LANE_WIDTH;
+      return mirror * (laneNum - (totalLanes + 1) / 2) * LANE_WIDTH;
     }
 
     const config = getLaneConfigForApproach(phase.approachId);
@@ -253,7 +260,7 @@ export default function DetectorDiagram({
     const totalLanes = config.totalLanes || 1;
     const offset = (lanePosition - (totalLanes + 1) / 2) * LANE_WIDTH;
 
-    return offset;
+    return mirror * offset;
   };
 
   // Helper to create arrow path for lane arrows with tails
@@ -322,7 +329,7 @@ export default function DetectorDiagram({
     const laneArrows = [];
 
     for (let i = 1; i < numLanes; i++) {
-      const laneOffset = (i - numLanes / 2) * LANE_WIDTH;
+      const laneOffset = mirror * (i - numLanes / 2) * LANE_WIDTH;
       const divStartX = startX + laneOffset * Math.cos(perpAngle);
       const divStartY = startY + laneOffset * Math.sin(perpAngle);
       const divEndX = endX + laneOffset * Math.cos(perpAngle);
@@ -350,7 +357,7 @@ export default function DetectorDiagram({
     // Add lane arrows in each lane, close to the stop bar so they read as
     // pavement markings and stay clear of the advanced-detector band.
     for (let laneIdx = 0; laneIdx < numLanes; laneIdx++) {
-      const laneOffset = (laneIdx + 0.5 - numLanes / 2) * LANE_WIDTH;
+      const laneOffset = mirror * (laneIdx + 0.5 - numLanes / 2) * LANE_WIDTH;
       const arrowDist = roadStartDist + ROAD_LENGTH * 0.3;
       const arrowX = CENTER_X + arrowDist * Math.cos(angleRad) + laneOffset * Math.cos(perpAngle);
       const arrowY = CENTER_Y + arrowDist * Math.sin(angleRad) + laneOffset * Math.sin(perpAngle);
@@ -362,11 +369,11 @@ export default function DetectorDiagram({
       let arrowDirection: "up" | "left" | "right" | "up-left" | "up-right";
 
       if (laneIdx < config.rightLanes) {
-        arrowDirection = "right";
+        arrowDirection = isLht ? "left" : "right";
       } else if (laneIdx < config.rightLanes + config.throughLanes) {
         arrowDirection = "up";
       } else {
-        arrowDirection = "left";
+        arrowDirection = isLht ? "right" : "left";
       }
 
       const arrowPath = createArrowPath(arrowX, arrowY, 10, arrowDirection);
@@ -657,10 +664,11 @@ export default function DetectorDiagram({
         {approaches.map((approach, idx) => renderApproachRoad(approach, idx))}
 
         {/* FR — free right slip lanes: an arc peeling off the approach road
-            to the right, departing onto the neighboring approach's actual
-            road (sweep angle follows the real compass bearings). Mode 2 (FR-P)
-            adds a crosswalk; mode 3 (FR-P-I) adds a traffic-calmed ladder
-            crosswalk with a shark's-teeth yield line. */}
+            to the driver's right (left in LHT), departing onto the
+            neighboring approach's actual road (sweep angle follows the real
+            compass bearings). Mode 2 (FR-P) adds a crosswalk; mode 3 (FR-P-I)
+            adds a traffic-calmed ladder crosswalk with a shark's-teeth yield
+            line. */}
         {approaches.map((approach, idx) => {
           const frMode =
             typeof approach.freeRight === "number"
@@ -671,19 +679,21 @@ export default function DetectorDiagram({
           if (frMode === 0 || approach.compassBearing === null) return null;
           const adjustedBearing = (approach.compassBearing + 180) % 360;
           const angleRad = (adjustedBearing - 90) * (Math.PI / 180);
-          // Sweep = clockwise gap to the nearest other approach on the right
-          // side (10°–170°); falls back to 90° when there is none.
+          // Sweep direction: clockwise (driver's right) for RHT, counter-
+          // clockwise (driver's left) for LHT — mirrors with lane offsets.
+          // Gap to the nearest other approach on that side (10°–170°);
+          // falls back to 90° when there is none.
           const rightGaps = approaches
             .filter((o) => o !== approach && o.compassBearing !== null)
             .map((o) => {
               const oRad = ((((o.compassBearing as number) + 180) % 360) - 90) * (Math.PI / 180);
-              const gap = (angleRad - oRad) % (2 * Math.PI);
+              const gap = ((angleRad - oRad) * mirror) % (2 * Math.PI);
               return gap < 0 ? gap + 2 * Math.PI : gap;
             })
             .filter((gap) => gap > 0.17 && gap < Math.PI - 0.17);
           const sweep = rightGaps.length > 0 ? Math.min(...rightGaps) : Math.PI / 2;
-          const exitRad = angleRad - sweep;
-          const midRad = angleRad - sweep / 2;
+          const exitRad = angleRad - mirror * sweep;
+          const midRad = angleRad - mirror * (sweep / 2);
           const p = (r: number, a: number) => [
             CENTER_X + r * Math.cos(a),
             CENTER_Y + r * Math.sin(a),

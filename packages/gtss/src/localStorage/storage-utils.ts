@@ -37,11 +37,27 @@ export function saveToStorage<T>(key: string, data: T): void {
   }
 }
 
+// Storage/import data may carry these flags as real booleans, "true"/"false"
+// strings, or 0/1 — `!!value` alone would treat the string "false" as truthy.
+function coerceBoolean(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value === "string") return value.trim().toLowerCase() === "true" || value === "1";
+  return false;
+}
+
 export function normalizeAgency(
-  agency: (Partial<{ agencyIsMetric?: unknown }> & Record<string, unknown>) | null | undefined,
+  agency:
+    | (Partial<{ agencyIsMetric?: unknown; agencyIsLht?: unknown }> & Record<string, unknown>)
+    | null
+    | undefined,
 ): Agency | null {
   if (agency == null) return null;
-  return { ...agency, agencyIsMetric: !!agency.agencyIsMetric } as Agency;
+  return {
+    ...agency,
+    agencyIsMetric: coerceBoolean(agency.agencyIsMetric),
+    agencyIsLht: coerceBoolean(agency.agencyIsLht),
+  } as Agency;
 }
 
 export function storedDistanceToDisplay(value: number | null | undefined, isMetric: boolean) {

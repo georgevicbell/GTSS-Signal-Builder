@@ -25,6 +25,7 @@ import {
   getSignalDisplayName,
   guessPhaseDirectionMapping,
   handleColumnMajorTab,
+  isLhtForSignalId,
   isMetricForSignalId,
   isTypicallyThroughPhase,
   phaseDiagramFileName,
@@ -33,6 +34,7 @@ import {
 } from "gtss";
 import { ChevronDown, ChevronUp, Download, Plus, Save, Trash2, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getMovementTypeOptions } from "./movement-types";
 import { PhaseDiagram, phaseColors } from "./phase-diagram-svg";
 
 interface PendingPhase {
@@ -54,20 +56,6 @@ interface BulkPhaseModalProps {
 
 // phaseColors is now imported from ./phase-diagram-svg so the diagram can be
 // reused on the signal-details page next to the map.
-
-// Movement type options
-const movementTypes = [
-  { value: "Through", label: "Through (T)" },
-  { value: "Left Turn", label: "Left Turn (L)" },
-  { value: "Left Protected-Permissive", label: "Left Protected-Permissive (LPP)" },
-  { value: "Left Through Shared", label: "Left Through Shared (LT)" },
-  { value: "Permissive Phase", label: "Permissive Phase (TL)" },
-  { value: "Flashing Yellow Arrow", label: "Flashing Yellow Arrow (FYA)" },
-  { value: "U-Turn", label: "U-Turn (U)" },
-  { value: "Right Turn", label: "Right Turn (R)" },
-  { value: "Through-Right", label: "Through-Right (TR)" },
-  { value: "Pedestrian", label: "Pedestrian (PED)" },
-];
 
 // Left turn phase mapping: Through phase -> Left turn phase
 //const leftTurnMapping: Record<number, number> = { 2: 5, 4: 7, 6: 1, 8: 3 };
@@ -109,6 +97,7 @@ export default function BulkPhaseModal({
     agencyDefaults?.defaultPhaseCount ?? DEFAULT_PHASE_COUNT,
   );
   const isMetric = isMetricForSignalId(selectedSignalId);
+  const movementTypes = getMovementTypeOptions(isLhtForSignalId(selectedSignalId));
   const lengthUnit = isMetric ? "m" : "ft";
 
   // Sorting state. Default is `null` so the table preserves insertion order
