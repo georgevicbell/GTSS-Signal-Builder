@@ -17,20 +17,21 @@ const MOVEMENT_TYPE_MAP: Record<string, string> = {
 
 export function generateAgencyCSV(agency: Agency | null): string {
   if (!agency)
-    return "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric\n";
+    return "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric,agency_islht\n";
 
   return [
-    "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric",
-    `${sanitizeCSVField(agency.agencyId)},${sanitizeCSVField(agency.agencyName)},${sanitizeCSVField(agency.agencyUrl)},${sanitizeCSVField(agency.agencyTimezone)},${sanitizeCSVField(agency.agencyEmail)},${sanitizeCSVField(agency.agencyIsMetric)}`,
+    "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric,agency_islht",
+    `${sanitizeCSVField(agency.agencyId)},${sanitizeCSVField(agency.agencyName)},${sanitizeCSVField(agency.agencyUrl)},${sanitizeCSVField(agency.agencyTimezone)},${sanitizeCSVField(agency.agencyEmail)},${sanitizeCSVField(agency.agencyIsMetric)},${sanitizeCSVField(agency.agencyIsLht)}`,
   ].join("\n");
 }
 
 export function generateAgenciesCSV(agencies: Agency[]): string {
-  const header = "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric";
+  const header =
+    "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric,agency_islht";
   if (!agencies || agencies.length === 0) return header + "\n";
   const rows = agencies.map(
     (agency) =>
-      `${sanitizeCSVField(agency.agencyId)},${sanitizeCSVField(agency.agencyName)},${sanitizeCSVField(agency.agencyUrl)},${sanitizeCSVField(agency.agencyTimezone)},${sanitizeCSVField(agency.agencyEmail)},${sanitizeCSVField(agency.agencyIsMetric)}`,
+      `${sanitizeCSVField(agency.agencyId)},${sanitizeCSVField(agency.agencyName)},${sanitizeCSVField(agency.agencyUrl)},${sanitizeCSVField(agency.agencyTimezone)},${sanitizeCSVField(agency.agencyEmail)},${sanitizeCSVField(agency.agencyIsMetric)},${sanitizeCSVField(agency.agencyIsLht)}`,
   );
   return [header, ...rows].join("\n");
 }

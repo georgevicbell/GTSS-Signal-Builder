@@ -37,6 +37,7 @@ import {
   Download,
   Layers,
   Shuffle,
+  SignpostBig,
   Sliders,
   Sparkles,
   Target,
@@ -285,7 +286,7 @@ export default function DemoPage() {
 
   const [selectedId, setSelectedId] = useState<string>(presets[0]?.id || "demo-4-nema-standard");
   const [activeViewTab, setActiveViewTab] = useState<
-    "phase" | "timing" | "detectors" | "approaches"
+    "phase" | "timing" | "detectors" | "approaches" | "trafficSide"
   >("phase");
   const [approachFilter, setApproachFilter] = useState<string>("all");
 
@@ -627,7 +628,7 @@ export default function DemoPage() {
                 onValueChange={(v) => setActiveViewTab(v as typeof activeViewTab)}
                 className="w-full space-y-4"
               >
-                <TabsList className="grid w-full grid-cols-4 h-9">
+                <TabsList className="grid w-full grid-cols-5 h-9">
                   <TabsTrigger value="phase" className="text-xs flex items-center gap-1.5">
                     <ArrowUpDown className="w-3.5 h-3.5" />
                     <span>Phase Diagram</span>
@@ -643,6 +644,10 @@ export default function DemoPage() {
                   <TabsTrigger value="approaches" className="text-xs flex items-center gap-1.5">
                     <Compass className="w-3.5 h-3.5" />
                     <span>Approaches & Slip Lanes</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="trafficSide" className="text-xs flex items-center gap-1.5">
+                    <SignpostBig className="w-3.5 h-3.5" />
+                    <span>Traffic Side</span>
                   </TabsTrigger>
                 </TabsList>
 
@@ -725,6 +730,46 @@ export default function DemoPage() {
                         })}
                       </TableBody>
                     </Table>
+                  </div>
+                </TabsContent>
+
+                {/* TAB: TRAFFIC SIDE — compare RHT vs LHT lane mirroring side-by-side */}
+                <TabsContent value="trafficSide" className="space-y-4 m-0">
+                  <div className="text-xs text-grey-500">
+                    Same intersection, mirrored for left-hand-traffic countries. Turn lanes and turn
+                    arrows switch to the traffic side used by the selected agency.
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="border border-grey-200 rounded-lg p-3 bg-white">
+                      <div className="text-xs font-semibold text-grey-600 mb-2 text-center">
+                        Right-Hand Traffic
+                      </div>
+                      <div className="flex items-center justify-center min-h-[340px]">
+                        <div className="w-full max-w-[380px]">
+                          <PhaseDiagram
+                            phases={currentIntersection.phases}
+                            approaches={currentIntersection.approaches}
+                            intersectionId={currentIntersection.signal.signalId}
+                            forceLht={false}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="border border-grey-200 rounded-lg p-3 bg-white">
+                      <div className="text-xs font-semibold text-grey-600 mb-2 text-center">
+                        Left-Hand Traffic
+                      </div>
+                      <div className="flex items-center justify-center min-h-[340px]">
+                        <div className="w-full max-w-[380px]">
+                          <PhaseDiagram
+                            phases={currentIntersection.phases}
+                            approaches={currentIntersection.approaches}
+                            intersectionId={currentIntersection.signal.signalId}
+                            forceLht={true}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </TabsContent>
 

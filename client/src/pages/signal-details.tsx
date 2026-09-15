@@ -5,6 +5,7 @@ import BulkDetectorModal from "@/components/gtss/bulk-detector-modal";
 import BulkPhaseModal from "@/components/gtss/bulk-phase-modal";
 import DetectorModal from "@/components/gtss/detector-modal";
 import GTSSFileViewer, { GTSSFilePreview } from "@/components/gtss/gtss-file-viewer";
+import { getMovementTypeOptions } from "@/components/gtss/movement-types";
 import { PhaseDiagram } from "@/components/gtss/phase-diagram-svg";
 import { StreetNameInput } from "@/components/gtss/street-name-input";
 import TimingBulkImport from "@/components/gtss/timing-bulk-import";
@@ -50,6 +51,7 @@ import {
   generateDetectionCSV,
   generatePhasesCSV,
   generateSignalsCSV,
+  isLhtForSignalId,
   isMapScrollZoomEnabled,
   isMetricForSignalId,
   phaseDiagramFileName,
@@ -169,6 +171,9 @@ export default function SignalDetails() {
     setTempNewSignalLocation,
   } = useGTSSStore();
   const isMetric = isMetricForSignalId(currentSignalId ?? undefined);
+  const movementTypeOptions = getMovementTypeOptions(
+    isLhtForSignalId(currentSignalId ?? undefined),
+  );
   const lengthUnit = isMetric ? "m" : "feet";
 
   const speedUnit = isMetric ? "km/h" : "mph";
@@ -1644,20 +1649,11 @@ export default function SignalDetails() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Through">Through (T)</SelectItem>
-                        <SelectItem value="Left Turn">Left Turn (L)</SelectItem>
-                        <SelectItem value="Left Protected-Permissive">
-                          Left Protected-Permissive (LPP)
-                        </SelectItem>
-                        <SelectItem value="Right Turn">Right Turn (R)</SelectItem>
-                        <SelectItem value="Through-Right">Through-Right (TR)</SelectItem>
-                        <SelectItem value="Left Through Shared">
-                          Left Through Shared (LT)
-                        </SelectItem>
-                        <SelectItem value="Permissive Phase">Permissive (TL)</SelectItem>
-                        <SelectItem value="Flashing Yellow Arrow">Flashing Yellow Arrow</SelectItem>
-                        <SelectItem value="U-Turn">U-Turn</SelectItem>
-                        <SelectItem value="Pedestrian">Pedestrian</SelectItem>
+                        {movementTypeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -2548,22 +2544,11 @@ export default function SignalDetails() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Through">Through (T)</SelectItem>
-                          <SelectItem value="Left Turn">Left Turn (L)</SelectItem>
-                          <SelectItem value="Left Protected-Permissive">
-                            Left Protected-Permissive (LPP)
-                          </SelectItem>
-                          <SelectItem value="Left Through Shared">
-                            Left Through Shared (LT)
-                          </SelectItem>
-                          <SelectItem value="Permissive Phase">Permissive Phase (TL)</SelectItem>
-                          <SelectItem value="Flashing Yellow Arrow">
-                            Flashing Yellow Arrow (FYA)
-                          </SelectItem>
-                          <SelectItem value="U-Turn">U-Turn (U)</SelectItem>
-                          <SelectItem value="Right Turn">Right Turn (R)</SelectItem>
-                          <SelectItem value="Through-Right">Through-Right (TR)</SelectItem>
-                          <SelectItem value="Pedestrian">Pedestrian (PED)</SelectItem>
+                          {movementTypeOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

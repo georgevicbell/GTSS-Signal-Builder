@@ -1,3 +1,4 @@
+import { isLhtForSignalId } from "gtss";
 import * as React from "react";
 import { freeRightPedMarkings } from "./free-right-markings";
 
@@ -46,6 +47,9 @@ export interface PhaseDiagramProps {
   intersectionName?: string;
   /** Signal/intersection ID shown large in the center of the diagram. */
   intersectionId?: string;
+  /** Force left-hand-traffic lane mirroring regardless of the stored agency
+   * flag for `intersectionId` (used by the demo page's side-by-side compare). */
+  forceLht?: boolean;
   svgRef?: React.RefObject<SVGSVGElement>;
 }
 
@@ -115,8 +119,11 @@ export const PhaseDiagram = ({
   approaches,
   intersectionName,
   intersectionId,
+  forceLht,
   svgRef,
 }: PhaseDiagramProps) => {
+  const isLht = forceLht ?? isLhtForSignalId(intersectionId);
+
   // Unique street names (in approach order).
   const uniqueStreets = Array.from(
     new Set(approaches.map((a) => (a.streetName || "").trim()).filter(Boolean)),
@@ -157,16 +164,28 @@ export const PhaseDiagram = ({
 
   const getMovementType = (
     movementType: string,
-  ): "straight" | "left" | "right" | "uturn" | "pedestrian" | "leftThrough" | "permissive" => {
+  ):
+    | "straight"
+    | "left"
+    | "right"
+    | "uturn"
+    | "pedestrian"
+    | "leftThrough"
+    | "throughRight"
+    | "permissive" => {
     switch (movementType) {
+      case "Left":
       case "Left Turn":
       case "Left Protected-Permissive":
       case "Flashing Yellow Arrow":
         return "left";
       case "Left Through Shared":
         return "leftThrough";
+      case "Through-Right":
+        return "throughRight";
       case "Permissive Phase":
         return "permissive";
+      case "Right":
       case "Right Turn":
         return "right";
       case "U-Turn":
@@ -189,6 +208,7 @@ export const PhaseDiagram = ({
     else if (moveType === "right") baseOffset = -18;
     else if (moveType === "straight") baseOffset = -7;
     else if (moveType === "leftThrough") baseOffset = 0;
+    else if (moveType === "throughRight") baseOffset = 0;
     else if (moveType === "permissive") baseOffset = 0;
 
     const sameTypeCount = sameApproachPhases.filter(
@@ -199,7 +219,9 @@ export const PhaseDiagram = ({
       baseOffset += (typeIndex - (sameTypeCount.length - 1) / 2) * 8;
     }
 
-    return baseOffset;
+    // LHT drives on the left, so the lane a movement occupies relative to the
+    // roadway centerline mirrors.
+    return isLht ? -baseOffset : baseOffset;
   };
 
   // Radius of the central intersection circle. Diagonal pedestrian crossings
@@ -392,6 +414,8 @@ export const PhaseDiagram = ({
     const adjustedBearing = (bearing + 180) % 360;
     const angleRad = (adjustedBearing - 90) * (Math.PI / 180);
     const perpAngle = angleRad + Math.PI / 2;
+    const crossingTurnAngle = angleRad + (isLht ? -Math.PI / 2 : Math.PI / 2);
+    const nearSideTurnAngle = angleRad + (isLht ? Math.PI / 2 : -Math.PI / 2);
     const outerRadius = 105;
     const innerRadius = 48;
     const lateralOffset = getPhaseOffset(phase);
@@ -407,9 +431,8 @@ export const PhaseDiagram = ({
       const bendX = startX + (endX - startX) * (1 - bendPoint);
       const bendY = startY + (endY - startY) * (1 - bendPoint);
       const tipLength = 22;
-      const leftPerpAngle = angleRad + Math.PI / 2;
-      const tipX = bendX + tipLength * Math.cos(leftPerpAngle);
-      const tipY = bendY + tipLength * Math.sin(leftPerpAngle);
+      const tipX = bendX + tipLength * Math.cos(crossingTurnAngle);
+      const tipY = bendY + tipLength * Math.sin(crossingTurnAngle);
 
       // LPP — protected-permissive left: the whole arrow shaft is dashed.
       const isLpp = phase.movementType === "Left Protected-Permissive";
@@ -449,9 +472,8 @@ export const PhaseDiagram = ({
       const bendX = startX + (endX - startX) * (1 - bendPoint);
       const bendY = startY + (endY - startY) * (1 - bendPoint);
       const tipLength = 22;
-      const rightPerpAngle = angleRad - Math.PI / 2;
-      const tipX = bendX + tipLength * Math.cos(rightPerpAngle);
-      const tipY = bendY + tipLength * Math.sin(rightPerpAngle);
+      const tipX = bendX + tipLength * Math.cos(nearSideTurnAngle);
+      const tipY = bendY + tipLength * Math.sin(nearSideTurnAngle);
 
       return (
         <g key={index}>
@@ -527,14 +549,13 @@ export const PhaseDiagram = ({
     }
 
     if (moveType === "leftThrough") {
-      const leftPerpAngle = angleRad + Math.PI / 2;
       const splitX = startX + (endX - startX) * 0.65;
       const splitY = startY + (endY - startY) * 0.65;
       const throughTipX = endX;
       const throughTipY = endY;
       const leftTipLength = 20;
-      const leftTipX = splitX + leftTipLength * Math.cos(leftPerpAngle);
-      const leftTipY = splitY + leftTipLength * Math.sin(leftPerpAngle);
+      const leftTipX = splitX + leftTipLength * Math.cos(crossingTurnAngle);
+      const leftTipY = splitY + leftTipLength * Math.sin(crossingTurnAngle);
 
       return (
         <g key={index}>
@@ -571,13 +592,56 @@ export const PhaseDiagram = ({
       );
     }
 
+    if (moveType === "throughRight") {
+      const splitX = startX + (endX - startX) * 0.65;
+      const splitY = startY + (endY - startY) * 0.65;
+      const throughTipX = endX;
+      const throughTipY = endY;
+      const rightTipLength = 20;
+      const rightTipX = splitX + rightTipLength * Math.cos(nearSideTurnAngle);
+      const rightTipY = splitY + rightTipLength * Math.sin(nearSideTurnAngle);
+
+      return (
+        <g key={index}>
+          <line
+            x1={startX}
+            y1={startY}
+            x2={splitX}
+            y2={splitY}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+          />
+          <line
+            x1={splitX}
+            y1={splitY}
+            x2={throughTipX}
+            y2={throughTipY}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            markerEnd={`url(#arrowhead-${phase.phase})`}
+          />
+          <line
+            x1={splitX}
+            y1={splitY}
+            x2={rightTipX}
+            y2={rightTipY}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            markerEnd={`url(#arrowhead-${phase.phase})`}
+          />
+        </g>
+      );
+    }
+
     if (moveType === "permissive") {
-      const leftPerpAngle = angleRad + Math.PI / 2;
       const splitX = startX + (endX - startX) * 0.65;
       const splitY = startY + (endY - startY) * 0.65;
       const leftTipLength = 20;
-      const leftTipX = splitX + leftTipLength * Math.cos(leftPerpAngle);
-      const leftTipY = splitY + leftTipLength * Math.sin(leftPerpAngle);
+      const leftTipX = splitX + leftTipLength * Math.cos(crossingTurnAngle);
+      const leftTipY = splitY + leftTipLength * Math.sin(crossingTurnAngle);
 
       return (
         <g key={index}>

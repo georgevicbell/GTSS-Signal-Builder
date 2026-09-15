@@ -5,7 +5,7 @@ import { basicTimingStorage } from "./localStorage/storage/basicTimings";
 import { detectorStorage } from "./localStorage/storage/detectors";
 import { phaseStorage } from "./localStorage/storage/phases";
 import { signalStorage } from "./localStorage/storage/signals";
-export { isMetricForSignalId } from "./localStorage/agency-units";
+export { isMetricForSignalId, isLhtForSignalId } from "./localStorage/agency-units";
 export { clearAllData } from "./localStorage/clearAll";
 export {
   generateAgenciesCSV,

@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as localStorageApi from "../src/localStorage";
+import { isLhtForSignalId, isMetricForSignalId } from "../src/localStorage/agency-units";
 import { clearAllData } from "../src/localStorage/clearAll";
 import {
   crosswalkLengthCode,
@@ -12,7 +14,7 @@ import {
 } from "../src/localStorage/csv-export";
 import { exportAsIndividualFiles, exportData } from "../src/localStorage/exports";
 import { importData } from "../src/localStorage/imports";
-import { isMetricForSignalId } from "../src/localStorage/agency-units";
+import { STORAGE_KEYS } from "../src/localStorage/keys";
 import {
   parseApproachesTXT,
   parseBasicTimingsTXT,
@@ -21,9 +23,9 @@ import {
   parseSignalsTXT,
 } from "../src/localStorage/parsers";
 import {
+  agencyDefaultsStorage,
   agencyListStorage,
   agencyStorage,
-  agencyDefaultsStorage,
   approachStorage,
   basicTimingStorage,
   detectorStorage,
@@ -32,7 +34,6 @@ import {
 } from "../src/localStorage/storage";
 import { parseAgenciesTXT, parseAgencyTXT } from "../src/localStorage/storage/agencies";
 import { useGTSSStore } from "../store/gtss-store";
-import * as localStorageApi from "../src/localStorage";
 
 class MemoryStorage implements Storage {
   private readonly values = new Map<string, string>();
@@ -314,6 +315,65 @@ describe("GTSS local storage lifecycle", () => {
     expect(isMetricForSignalId()).toBe(false);
   });
 
+  it("resolves left-hand-traffic flag from the signal agency and default agency", () => {
+    const defaultAgency = agencyStorage.save({
+      agencyId: "US",
+      agencyName: "US Agency",
+      agencyTimezone: "America/Los_Angeles",
+      agencyIsLht: false,
+    });
+    agencyStorage.save({
+      agencyId: "UK",
+      agencyName: "LHT Agency",
+      agencyTimezone: "Europe/London",
+      agencyIsLht: true,
+    });
+    signalStorage.save({
+      agencyId: "UK",
+      signalId: "LHT-1",
+      streetName1: "High Street",
+      streetName2: "Church Road",
+      latitude: 51,
+      longitude: -0.1,
+    });
+
+    expect(isLhtForSignalId("LHT-1")).toBe(true);
+    expect(isLhtForSignalId("UNKNOWN")).toBe(defaultAgency.agencyIsLht);
+    expect(isLhtForSignalId()).toBe(false);
+  });
+
+  it("coerces legacy string booleans for signal-specific agency unit flags", () => {
+    localStorage.setItem(
+      STORAGE_KEYS.AGENCY,
+      JSON.stringify([
+        {
+          id: "default-agency",
+          agencyId: "DEFAULT",
+          agencyName: "Default Agency",
+          agencyTimezone: "America/Los_Angeles",
+          agencyIsMetric: true,
+          agencyIsLht: true,
+        },
+        {
+          id: "legacy-agency",
+          agencyId: "LEGACY",
+          agencyName: "Legacy Agency",
+          agencyTimezone: "Europe/London",
+          agencyIsMetric: "false",
+          agencyIsLht: "0",
+        },
+      ]),
+    );
+    localStorage.setItem(STORAGE_KEYS.DEFAULT_AGENCY, JSON.stringify("default-agency"));
+    localStorage.setItem(
+      STORAGE_KEYS.SIGNALS,
+      JSON.stringify([{ agencyId: "LEGACY", signalId: "LEGACY-1" }]),
+    );
+
+    expect(isMetricForSignalId("LEGACY-1")).toBe(false);
+    expect(isLhtForSignalId("LEGACY-1")).toBe(false);
+  });
+
   it("replaces imported data and stores metric detector distances in centimeters", () => {
     importData(
       {
@@ -432,14 +492,23 @@ describe("GTSS local storage lifecycle", () => {
 
   it("handles agency parsing, default selection, and cascade deletion", () => {
     const agencies = parseAgenciesTXT(
-      "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric\nCITY,City Traffic,,America/Los_Angeles,ops@city.test,true\nCOUNTY,County Traffic,https://county.test,America/Denver,,false",
+      "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric,agency_islht\nCITY,City Traffic,,America/Los_Angeles,ops@city.test,true,true\nCOUNTY,County Traffic,https://county.test,America/Denver,,false,false",
     );
     expect(agencies).toHaveLength(2);
+    expect(agencies[0]).toMatchObject({ agencyId: "CITY", agencyIsLht: true });
+    expect(agencies[1]).toMatchObject({ agencyId: "COUNTY", agencyIsLht: false });
     expect(
       parseAgencyTXT(
         "agency_id,agency_name,agency_url,agency_timezone,agency_email\nCITY,City Traffic,,UTC,ops@city.test",
       ),
-    ).toMatchObject({ agencyId: "CITY", agencyIsMetric: false });
+    ).toMatchObject({ agencyId: "CITY", agencyIsMetric: false, agencyIsLht: false });
+    // Files exported before agency_islht existed (legacy 6-column header) must
+    // still parse and default the new field to false.
+    expect(
+      parseAgencyTXT(
+        "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric\nCITY,City Traffic,,America/Los_Angeles,ops@city.test,true",
+      ),
+    ).toMatchObject({ agencyId: "CITY", agencyIsMetric: true, agencyIsLht: false });
     expect(() =>
       parseAgenciesTXT("agency_id,agency_name,agency_url,agency_timezone,agency_email"),
     ).toThrow(/at least one data row/);
@@ -466,7 +535,7 @@ describe("GTSS local storage lifecycle", () => {
   it("covers empty and agency CSV output plus crosswalk estimates", () => {
     expect(generateAgencyCSV(null)).toContain("agency_id,agency_name");
     expect(generateAgenciesCSV([])).toBe(
-      "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric\n",
+      "agency_id,agency_name,agency_url,agency_timezone,agency_email,agency_ismetric,agency_islht\n",
     );
     expect(
       generateAgencyCSV({
@@ -478,6 +547,7 @@ describe("GTSS local storage lifecycle", () => {
         agencyLanguage: null,
         agencyEmail: "ops@city.test",
         agencyIsMetric: true,
+        agencyIsLht: true,
         latitude: null,
         longitude: null,
       }),

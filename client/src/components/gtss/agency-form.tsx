@@ -111,6 +111,8 @@ export default function AgencyForm() {
   const [isGeocodingUserLocation, setIsGeocodingUserLocation] = useState(false);
   const [unitChangeDialogOpen, setUnitChangeDialogOpen] = useState(false);
   const [pendingMetricValue, setPendingMetricValue] = useState<boolean | null>(null);
+  const [lhtChangeDialogOpen, setLhtChangeDialogOpen] = useState(false);
+  const [pendingLhtValue, setPendingLhtValue] = useState<boolean | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>(() => {
     // Initialize map center with saved agency coordinates if available
     if (agency?.latitude != null && agency?.longitude != null) {
@@ -157,6 +159,7 @@ export default function AgencyForm() {
       agencyTimezone: "America/Los_Angeles",
       agencyEmail: "",
       agencyIsMetric: false,
+      agencyIsLht: false,
       latitude: undefined,
       longitude: undefined,
     },
@@ -175,6 +178,7 @@ export default function AgencyForm() {
             agencyTimezone: editAgency.agencyTimezone,
             agencyEmail: editAgency.agencyEmail || "",
             agencyIsMetric: editAgency.agencyIsMetric ?? false,
+            agencyIsLht: editAgency.agencyIsLht ?? false,
             latitude: editAgency.latitude ?? undefined,
             longitude: editAgency.longitude ?? undefined,
           });
@@ -198,6 +202,7 @@ export default function AgencyForm() {
           agencyTimezone: "America/Los_Angeles",
           agencyEmail: "",
           agencyIsMetric: false,
+          agencyIsLht: false,
           latitude: undefined,
           longitude: undefined,
         });
@@ -224,6 +229,7 @@ export default function AgencyForm() {
       ...data,
       agencyUrl: normalizeAgencyUrl(data.agencyUrl || ""),
       agencyIsMetric: data.agencyIsMetric ?? false,
+      agencyIsLht: data.agencyIsLht ?? false,
       latitude: selectedLocation?.lat ?? data.latitude,
       longitude: selectedLocation?.lon ?? data.longitude,
     };
@@ -241,6 +247,7 @@ export default function AgencyForm() {
       agencyTimezone: a.agencyTimezone,
       agencyEmail: a.agencyEmail || "",
       agencyIsMetric: a.agencyIsMetric ?? false,
+      agencyIsLht: a.agencyIsLht ?? false,
       latitude: a.latitude ?? undefined,
       longitude: a.longitude ?? undefined,
     });
@@ -256,6 +263,24 @@ export default function AgencyForm() {
   const handleSetDefault = (id: string) => {
     agenciesApi.setDefault(id);
     toast({ title: "Default Set", description: "Default agency updated" });
+  };
+
+  const getAgencyDataCounts = (agencyId: string) => {
+    const agencySignals = signals.filter((s) => s.agencyId === agencyId);
+    const signalIds = agencySignals.map((s) => s.signalId);
+    const approachCount = approaches.filter((a) => signalIds.includes(a.signalId)).length;
+    const phaseCount = phases.filter((p) => signalIds.includes(p.signalId)).length;
+    const detectorCount = detectors.filter((d) => signalIds.includes(d.signalId)).length;
+    const timingCount = basicTimings.filter((t) => signalIds.includes(t.signalId)).length;
+
+    return {
+      signalCount: agencySignals.length,
+      approachCount,
+      phaseCount,
+      detectorCount,
+      timingCount,
+      total: agencySignals.length + approachCount + phaseCount + detectorCount + timingCount,
+    };
   };
   // Note: deletion is only allowed via cascade to avoid orphaned records.
 
@@ -849,6 +874,90 @@ export default function AgencyForm() {
                         </FormItem>
                       )}
                     />
+
+                    <FormField
+                      control={form.control}
+                      name="agencyIsLht"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-3">
+                          <FormControl>
+                            <Checkbox
+                              checked={!!field.value}
+                              onCheckedChange={(v) => {
+                                const newVal = Boolean(v);
+                                const editingAgency = agencyModalEditingId
+                                  ? agenciesApi.get(agencyModalEditingId)
+                                  : null;
+
+                                if (editingAgency && Boolean(field.value) !== newVal) {
+                                  const counts = getAgencyDataCounts(editingAgency.agencyId);
+                                  if (counts.total > 0) {
+                                    setPendingLhtValue(newVal);
+                                    setLhtChangeDialogOpen(true);
+                                    return;
+                                  }
+                                }
+
+                                field.onChange(newVal);
+                              }}
+                            />
+                          </FormControl>
+                          <div>
+                            <FormLabel className="m-0">Left-hand traffic (LHT)</FormLabel>
+                            <div className="text-xs text-grey-500">
+                              Vehicles drive on the left; mirrors turn lane positions in diagrams
+                            </div>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Dialog
+                      open={lhtChangeDialogOpen}
+                      onOpenChange={(open) => {
+                        setLhtChangeDialogOpen(open);
+                        if (!open) setPendingLhtValue(null);
+                      }}
+                    >
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Change traffic side?</DialogTitle>
+                        </DialogHeader>
+                        <div className="py-2">
+                          <p className="text-sm text-grey-700">
+                            This agency already has signal data. Changing left-hand traffic will
+                            reinterpret movement labels and mirror turn lanes, detector lanes, and
+                            phase diagrams for those signals. Existing phase movement codes will not
+                            be converted.
+                          </p>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-4">
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setLhtChangeDialogOpen(false);
+                              setPendingLhtValue(null);
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              const targetIsLht = !!pendingLhtValue;
+                              form.setValue("agencyIsLht", targetIsLht, {
+                                shouldDirty: true,
+                                shouldValidate: true,
+                              });
+                              setLhtChangeDialogOpen(false);
+                              setPendingLhtValue(null);
+                            }}
+                          >
+                            Change Traffic Side
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
 
                     {/* Confirmation dialog for unit conversion */}
                     <Dialog open={unitChangeDialogOpen} onOpenChange={setUnitChangeDialogOpen}>

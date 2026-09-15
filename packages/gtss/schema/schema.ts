@@ -14,6 +14,8 @@ export const agencies = pgTable("agencies", {
   agencyLanguage: text("agency_language").default("en"),
   agencyEmail: text("agency_email"),
   agencyIsMetric: boolean("agency_ismetric").default(false),
+  // LHT — left-hand traffic. Mirrors turn-lane offsets/ordering in diagrams.
+  agencyIsLht: boolean("agency_islht").default(false),
   latitude: real("latitude"),
   longitude: real("longitude"),
 });
@@ -132,6 +134,7 @@ export const insertAgencySchema = createInsertSchema(agencies)
   .extend({
     agencyLanguage: z.string().optional(),
     agencyIsMetric: z.boolean().optional(),
+    agencyIsLht: z.boolean().optional(),
   });
 
 export const insertSignalSchema = createInsertSchema(signals)
