@@ -936,20 +936,22 @@ export const PhaseDiagram = ({
           const adjustedBearing = (approach.compassBearing + 180) % 360;
           const angleRad = (adjustedBearing - 90) * (Math.PI / 180);
           // angleRad points from center to the outer end of the leg; traffic
-          // flows inward, so right-turn exit legs sit clockwise of the leg.
-          // Sweep = clockwise gap to the nearest other approach on the right
-          // side (10°–170°); falls back to 90° when there is none.
+          // flows inward, so right-turn exit legs sit clockwise of the leg
+          // (RHT) or mirrored, counter-clockwise, of the leg (LHT).
+          // Sweep = gap to the nearest other approach on that side
+          // (10°–170°); falls back to 90° when there is none.
+          const dir = isLht ? -1 : 1;
           const rightGaps = approaches
             .filter((o) => o !== approach && o.compassBearing !== null)
             .map((o) => {
               const oRad = ((((o.compassBearing as number) + 180) % 360) - 90) * (Math.PI / 180);
-              const gap = (angleRad - oRad) % (2 * Math.PI);
+              const gap = (dir * (angleRad - oRad)) % (2 * Math.PI);
               return gap < 0 ? gap + 2 * Math.PI : gap;
             })
             .filter((gap) => gap > 0.17 && gap < Math.PI - 0.17);
           const sweep = rightGaps.length > 0 ? Math.min(...rightGaps) : Math.PI / 2;
-          const exitRad = angleRad - sweep; // departure (exit leg) direction
-          const midRad = angleRad - sweep / 2; // bisector of the corner
+          const exitRad = angleRad - dir * sweep; // departure (exit leg) direction
+          const midRad = angleRad - (dir * sweep) / 2; // bisector of the corner
           const p = (r: number, a: number) => [150 + r * Math.cos(a), 150 + r * Math.sin(a)];
           const d = 98; // peel-off / merge radius on each leg
           const h = sweep / 2;

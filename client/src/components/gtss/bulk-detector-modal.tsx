@@ -25,6 +25,7 @@ import {
   DEFAULT_DETECTOR_LENGTH,
   DEFAULT_STOPBAR_SETBACK_DISTANCE,
   getSignalDisplayName,
+  isLhtForSignalId,
   isMetricForSignalId,
   MIN_DETECTOR_LENGTH,
   MIN_STOPBAR_SETBACK_DISTANCE,
@@ -35,6 +36,7 @@ import { AlertTriangle, Copy, Download, HelpCircle, Lock, Plus, Save, Trash2 } f
 import { useEffect, useMemo, useRef, useState } from "react";
 import { approachColorFor } from "./approach-colors";
 import DetectorDiagram from "./detector-diagram";
+import { formatMovementType } from "./movement-types";
 
 // Detector purposes
 const purposeOptions = [
@@ -148,6 +150,7 @@ export default function BulkDetectorModal({
   const { signals, approaches, phases, detectors: existingDetectorsFromStore } = useGTSSStore();
   const [selectedSignalId, setSelectedSignalId] = useState<string>(preSelectedSignalId || "");
   const isMetric = isMetricForSignalId(selectedSignalId);
+  const isLht = isLhtForSignalId(selectedSignalId);
   const lengthUnit = isMetric ? "m" : "ft";
   const { toast } = useToast();
   const detectorHooks = useDetectors();
@@ -1597,7 +1600,8 @@ export default function BulkDetectorModal({
                       className="cursor-pointer hover:bg-grey-100"
                       onClick={() => handleAddDetector(phase.phase)}
                     >
-                      Phase {phase.phase} - {phase.movementType} {direction && `(${direction})`}
+                      Phase {phase.phase} - {formatMovementType(phase.movementType, isLht)}{" "}
+                      {direction && `(${direction})`}
                       {detectorsForPhase > 0 && (
                         <span className="ml-1 bg-blue-100 text-blue-700 px-1 rounded">
                           {detectorsForPhase}

@@ -664,10 +664,11 @@ export default function DetectorDiagram({
         {approaches.map((approach, idx) => renderApproachRoad(approach, idx))}
 
         {/* FR — free right slip lanes: an arc peeling off the approach road
-            to the right, departing onto the neighboring approach's actual
-            road (sweep angle follows the real compass bearings). Mode 2 (FR-P)
-            adds a crosswalk; mode 3 (FR-P-I) adds a traffic-calmed ladder
-            crosswalk with a shark's-teeth yield line. */}
+            to the driver's right (left in LHT), departing onto the
+            neighboring approach's actual road (sweep angle follows the real
+            compass bearings). Mode 2 (FR-P) adds a crosswalk; mode 3 (FR-P-I)
+            adds a traffic-calmed ladder crosswalk with a shark's-teeth yield
+            line. */}
         {approaches.map((approach, idx) => {
           const frMode =
             typeof approach.freeRight === "number"
@@ -678,19 +679,21 @@ export default function DetectorDiagram({
           if (frMode === 0 || approach.compassBearing === null) return null;
           const adjustedBearing = (approach.compassBearing + 180) % 360;
           const angleRad = (adjustedBearing - 90) * (Math.PI / 180);
-          // Sweep = clockwise gap to the nearest other approach on the right
-          // side (10°–170°); falls back to 90° when there is none.
+          // Sweep direction: clockwise (driver's right) for RHT, counter-
+          // clockwise (driver's left) for LHT — mirrors with lane offsets.
+          // Gap to the nearest other approach on that side (10°–170°);
+          // falls back to 90° when there is none.
           const rightGaps = approaches
             .filter((o) => o !== approach && o.compassBearing !== null)
             .map((o) => {
               const oRad = ((((o.compassBearing as number) + 180) % 360) - 90) * (Math.PI / 180);
-              const gap = (angleRad - oRad) % (2 * Math.PI);
+              const gap = ((angleRad - oRad) * mirror) % (2 * Math.PI);
               return gap < 0 ? gap + 2 * Math.PI : gap;
             })
             .filter((gap) => gap > 0.17 && gap < Math.PI - 0.17);
           const sweep = rightGaps.length > 0 ? Math.min(...rightGaps) : Math.PI / 2;
-          const exitRad = angleRad - sweep;
-          const midRad = angleRad - sweep / 2;
+          const exitRad = angleRad - mirror * sweep;
+          const midRad = angleRad - mirror * (sweep / 2);
           const p = (r: number, a: number) => [
             CENTER_X + r * Math.cos(a),
             CENTER_Y + r * Math.sin(a),

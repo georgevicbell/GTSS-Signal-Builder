@@ -33,6 +33,7 @@ import {
   signalStorage,
 } from "../src/localStorage/storage";
 import { parseAgenciesTXT, parseAgencyTXT } from "../src/localStorage/storage/agencies";
+import { convertAgencyUnits } from "../src/localStorageHooks";
 import { useGTSSStore } from "../store/gtss-store";
 
 class MemoryStorage implements Storage {
@@ -72,6 +73,21 @@ beforeEach(() => {
 });
 
 describe("GTSS local storage lifecycle", () => {
+  it("preserves traffic side when converting agency units", () => {
+    const agency = agencyStorage.save({
+      agencyId: "LHT-CITY",
+      agencyName: "LHT City Traffic",
+      agencyTimezone: "Asia/Kolkata",
+      agencyIsLht: true,
+      agencyIsMetric: false,
+    });
+
+    const convertedAgency = convertAgencyUnits(agency, true);
+
+    expect(convertedAgency.agencyIsLht).toBe(true);
+    expect(agencyStorage.get()).toMatchObject({ agencyIsLht: true, agencyIsMetric: true });
+  });
+
   it("keeps the localStorage compatibility barrel public", () => {
     expect(localStorageApi.clearAllData).toBeTypeOf("function");
     expect(localStorageApi.importData).toBeTypeOf("function");

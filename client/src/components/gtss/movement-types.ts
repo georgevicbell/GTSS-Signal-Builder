@@ -3,6 +3,22 @@ export interface MovementTypeOption {
   label: string;
 }
 
+export function formatMovementType(movementType: string, isLht: boolean): string {
+  if (!isLht) return movementType;
+
+  const lhtMovementTypes: Record<string, string> = {
+    "Left Turn": "Right Turn",
+    "Left Protected-Permissive": "Right Protected-Permissive",
+    "Left Through Shared": "Right Through Shared",
+    "Permissive Phase": "Right Permissive",
+    "Flashing Yellow Arrow": "Right Flashing Yellow Arrow",
+    "Right Turn": "Left Turn",
+    "Through-Right": "Through-Left",
+  };
+
+  return lhtMovementTypes[movementType] ?? movementType;
+}
+
 export function getMovementTypeOptions(isLht: boolean): MovementTypeOption[] {
   const crossingTurn = isLht ? "Right" : "Left";
   const nearSideTurn = isLht ? "Left" : "Right";

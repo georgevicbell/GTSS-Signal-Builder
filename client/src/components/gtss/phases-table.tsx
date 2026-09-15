@@ -1,19 +1,33 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import SignalsMap from "@/components/ui/signals-map";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { downloadSvgAsJpg, getSignalDisplayName, phaseDiagramFileName, useGTSSStore, usePhases } from "gtss";
+import { getSignalDisplayName, isLhtForSignalId, useGTSSStore, usePhases } from "gtss";
 import { Phase } from "gtss/schema";
 import { AlertTriangle, ChevronDown, ChevronUp, MapPin, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import BulkPhaseModal from "./bulk-phase-modal";
+import { formatMovementType } from "./movement-types";
 import PhaseModal from "./phase-modal";
 
-type SortField = 'phase' | 'signalId' | 'movementType' | 'approachId' | 'numOfLanes';
-type SortDirection = 'asc' | 'desc';
+type SortField = "phase" | "signalId" | "movementType" | "approachId" | "numOfLanes";
+type SortDirection = "asc" | "desc";
 
 interface PhasesTableProps {
   triggerAdd?: number;
@@ -24,9 +38,10 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
   const [editingPhase, setEditingPhase] = useState<Phase | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
-  const [sortField, setSortField] = useState<SortField>('phase');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const { signals, phases, approaches, selectedSignalIdForTables, setSelectedSignalIdForTables } = useGTSSStore();
+  const [sortField, setSortField] = useState<SortField>("phase");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const { signals, phases, approaches, selectedSignalIdForTables, setSelectedSignalIdForTables } =
+    useGTSSStore();
   const { deepLinkTarget, setDeepLinkTarget } = useGTSSStore();
 
   // Use shared signal selection from store
@@ -34,14 +49,15 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
   const setFilterSignal = setSelectedSignalIdForTables;
   const { toast } = useToast();
   const phaseHooks = usePhases();
-  const svgRef = useRef<SVGSVGElement>(null);
+  // const svgRef = useRef<SVGSVGElement>(null);
 
   // Download diagram as JPG
+  /*
   const handleDownloadImage = () => {
     if (!svgRef.current) return;
     downloadSvgAsJpg(svgRef.current, phaseDiagramFileName(filterSignal));
   };
-
+*/
   // Handle triggers from parent component. Capture initial values so the
   // modal doesn't auto-open when the table re-mounts after navigation.
   const initialTriggerAdd = useRef(triggerAdd);
@@ -68,8 +84,8 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
 
   // Handle deep link to a specific phase: open modal for that phase
   useEffect(() => {
-    if (deepLinkTarget?.type === 'phase' && deepLinkTarget.id) {
-      const phase = phases.find(p => p.id === deepLinkTarget.id);
+    if (deepLinkTarget?.type === "phase" && deepLinkTarget.id) {
+      const phase = phases.find((p) => p.id === deepLinkTarget.id);
       if (phase) {
         setFilterSignal(phase.signalId);
         setEditingPhase(phase);
@@ -77,19 +93,20 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
         setDeepLinkTarget({ type: null, id: null });
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deepLinkTarget, phases]);
 
-  const filteredPhases = phases.filter(phase => phase.signalId === filterSignal);
-  const orphanPhases = phases.filter(phase => !signals.some(signal => signal.signalId === phase.signalId));
-  const signalApproaches = approaches.filter(a => a.signalId === filterSignal);
+  const filteredPhases = phases.filter((phase) => phase.signalId === filterSignal);
+  const orphanPhases = phases.filter(
+    (phase) => !signals.some((signal) => signal.signalId === phase.signalId),
+  );
+  //  const signalApproaches = approaches.filter(a => a.signalId === filterSignal);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
@@ -99,8 +116,8 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
     const bParts = b.split(/(\d+)/);
 
     for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-      const aPart = aParts[i] || '';
-      const bPart = bParts[i] || '';
+      const aPart = aParts[i] || "";
+      const bPart = bParts[i] || "";
 
       const aNum = parseInt(aPart, 10);
       const bNum = parseInt(bPart, 10);
@@ -116,29 +133,29 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
 
   const getSortedPhases = () => {
     return [...filteredPhases].sort((a, b) => {
-      let comparison = 0;
+      let comparison;
 
       switch (sortField) {
-        case 'phase':
+        case "phase":
           comparison = a.phase - b.phase;
           break;
-        case 'signalId':
+        case "signalId":
           comparison = naturalCompare(a.signalId, b.signalId);
           break;
-        case 'movementType':
+        case "movementType":
           comparison = a.movementType.localeCompare(b.movementType);
           break;
-        case 'approachId':
-          comparison = naturalCompare(a.approachId || '', b.approachId || '');
+        case "approachId":
+          comparison = naturalCompare(a.approachId || "", b.approachId || "");
           break;
-        case 'numOfLanes':
+        case "numOfLanes":
           comparison = (a.numOfLanes || 1) - (b.numOfLanes || 1);
           break;
         default:
           comparison = a.phase - b.phase;
       }
 
-      return sortDirection === 'asc' ? comparison : -comparison;
+      return sortDirection === "asc" ? comparison : -comparison;
     });
   };
 
@@ -156,10 +173,10 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
         {children}
         <div className="flex flex-col ml-1">
           <ChevronUp
-            className={`w-3 h-3 ${sortField === field && sortDirection === 'asc' ? 'text-primary-600' : 'text-grey-300'}`}
+            className={`w-3 h-3 ${sortField === field && sortDirection === "asc" ? "text-primary-600" : "text-grey-300"}`}
           />
           <ChevronDown
-            className={`w-3 h-3 -mt-1 ${sortField === field && sortDirection === 'desc' ? 'text-primary-600' : 'text-grey-300'}`}
+            className={`w-3 h-3 -mt-1 ${sortField === field && sortDirection === "desc" ? "text-primary-600" : "text-grey-300"}`}
           />
         </div>
       </div>
@@ -171,12 +188,16 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
       return;
     }
 
-    if (!confirm(`Delete ${orphanPhases.length} orphaned phase${orphanPhases.length > 1 ? "s" : ""}? This action cannot be undone.`)) {
+    if (
+      !confirm(
+        `Delete ${orphanPhases.length} orphaned phase${orphanPhases.length > 1 ? "s" : ""}? This action cannot be undone.`,
+      )
+    ) {
       return;
     }
 
     orphanPhases.forEach((phase) => phaseHooks.delete(phase.id));
-    if (filterSignal && !signals.some(signal => signal.signalId === filterSignal)) {
+    if (filterSignal && !signals.some((signal) => signal.signalId === filterSignal)) {
       setFilterSignal(signals[0]?.signalId || "");
     }
     toast({
@@ -213,7 +234,10 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
           ) : (
             <div className="w-full h-full relative z-0">
               {filterSignal ? (
-                <SignalsMap signals={signals.filter(s => s.signalId === filterSignal)} className="w-full h-full" />
+                <SignalsMap
+                  signals={signals.filter((s) => s.signalId === filterSignal)}
+                  className="w-full h-full"
+                />
               ) : (
                 <div className="w-full h-full bg-grey-100 flex items-center justify-center">
                   <MapPin className="w-6 h-6 text-grey-400" />
@@ -222,7 +246,10 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
             </div>
           )}
         </ResizablePanel>
-        <ResizableHandle withHandle className="bg-grey-200 hover:bg-primary-300 transition-colors" />
+        <ResizableHandle
+          withHandle
+          className="bg-grey-200 hover:bg-primary-300 transition-colors"
+        />
         <ResizablePanel defaultSize={60} minSize={20} className="flex flex-col min-h-0">
           <Card className="rounded-none border-0 flex flex-col h-full min-h-0">
             <CardHeader className="bg-grey-50 p-0" />
@@ -234,7 +261,8 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
                     <div>
                       <p className="text-xs font-medium">Orphaned phases detected</p>
                       <p className="text-xs text-amber-700">
-                        {orphanPhases.length} phase{orphanPhases.length > 1 ? "s" : ""} reference deleted signals.
+                        {orphanPhases.length} phase{orphanPhases.length > 1 ? "s" : ""} reference
+                        deleted signals.
                       </p>
                     </div>
                   </div>
@@ -286,8 +314,7 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
                         <TableCell colSpan={5} className="text-center py-8 text-grey-500">
                           {filterSignal === "all"
                             ? "No phases configured. Add your first phase to get started."
-                            : "No phases found for the selected signal."
-                          }
+                            : "No phases found for the selected signal."}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -297,11 +324,20 @@ export default function PhasesTable({ triggerAdd, triggerBulk }: PhasesTableProp
                           className="hover:bg-grey-50 cursor-pointer transition-colors"
                           onClick={() => handleRowClick(phase)}
                         >
-                          <TableCell className="font-medium text-grey-900 text-xs py-1 px-2">{phase.signalId}</TableCell>
-                          <TableCell className="text-grey-600 text-xs py-1 px-2">{phase.phase}</TableCell>
-                          <TableCell className="text-grey-600 text-xs py-1 px-2">{phase.movementType}</TableCell>
+                          <TableCell className="font-medium text-grey-900 text-xs py-1 px-2">
+                            {phase.signalId}
+                          </TableCell>
                           <TableCell className="text-grey-600 text-xs py-1 px-2">
-                            {phase.approachId || '-'}
+                            {phase.phase}
+                          </TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1 px-2">
+                            {formatMovementType(
+                              phase.movementType,
+                              isLhtForSignalId(phase.signalId),
+                            )}
+                          </TableCell>
+                          <TableCell className="text-grey-600 text-xs py-1 px-2">
+                            {phase.approachId || "-"}
                           </TableCell>
                           <TableCell className="text-grey-600 text-xs py-1 px-2">
                             {phase.numOfLanes}

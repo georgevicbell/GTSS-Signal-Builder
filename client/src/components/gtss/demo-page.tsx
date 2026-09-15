@@ -27,6 +27,7 @@ import {
   downloadSvgAsJpg,
   generateProceduralIntersection,
   getAllDemoIntersections,
+  isLhtForSignalId,
   type DemoIntersection,
 } from "gtss";
 import type { BasicTiming } from "gtss/schema";
@@ -43,6 +44,7 @@ import {
   Target,
 } from "lucide-react";
 import React, { useMemo, useRef, useState } from "react";
+import { formatMovementType } from "./movement-types";
 
 // Phase color mapping matching the phase diagram
 const phaseColors: Record<number, string> = {
@@ -326,6 +328,8 @@ export default function DemoPage() {
   if (!currentIntersection) {
     return <div className="p-4 text-sm text-grey-500">No demo intersections available.</div>;
   }
+
+  const isLht = isLhtForSignalId(currentIntersection.signal.signalId);
 
   const handleGenerateCustom = () => {
     const seed = Math.floor(Math.random() * 90000) + 10000;
@@ -707,7 +711,9 @@ export default function DemoPage() {
                                   {ph.phase}
                                 </span>
                               </TableCell>
-                              <TableCell className="text-xs py-1.5">{ph.movementType}</TableCell>
+                              <TableCell className="text-xs py-1.5">
+                                {formatMovementType(ph.movementType, isLht)}
+                              </TableCell>
                               <TableCell className="text-xs font-mono py-1.5">
                                 {ph.approachId || "—"}{" "}
                                 {app?.compassBearing != null && `(${app.compassBearing}°)`}
