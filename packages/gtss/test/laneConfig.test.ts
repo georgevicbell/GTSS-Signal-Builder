@@ -22,13 +22,22 @@ describe("laneConfig tokenizer", () => {
     ]);
   });
 
-  it("handles multi-char codes and '+'-joined shared lanes", () => {
-    expect(tokenizeLaneConfig("AL|B+C|CP")).toEqual([
-      { kind: "lane", raw: "AL", parts: ["AL"] },
+  it("handles single-char codes and '+'-joined combined lanes", () => {
+    expect(tokenizeLaneConfig("A+L|B+C|K")).toEqual([
+      { kind: "lane", raw: "A+L", parts: ["A", "L"] },
       { kind: "divider", raw: "|", parts: ["|"] },
       { kind: "lane", raw: "B+C", parts: ["B", "C"] },
       { kind: "divider", raw: "|", parts: ["|"] },
-      { kind: "lane", raw: "CP", parts: ["CP"] },
+      { kind: "lane", raw: "K", parts: ["K"] },
+    ]);
+  });
+
+  it("splits adjacent single-char lane items", () => {
+    expect(tokenizeLaneConfig("SABC")).toEqual([
+      { kind: "lane", raw: "S", parts: ["S"] },
+      { kind: "lane", raw: "A", parts: ["A"] },
+      { kind: "lane", raw: "B", parts: ["B"] },
+      { kind: "lane", raw: "C", parts: ["C"] },
     ]);
   });
 
@@ -41,7 +50,11 @@ describe("laneConfig tokenizer", () => {
 describe("validateLaneConfig", () => {
   it("accepts known codes and rejects unknown ones", () => {
     expect(validateLaneConfig("S-C:C|B")).toEqual([]);
-    expect(validateLaneConfig("S-ZZ:C")).toEqual([`Segment 3: unknown lane code "ZZ"`]);
+    expect(validateLaneConfig("S-ZZ:C")).toEqual([
+      `Segment 3: unknown lane code "Z"`,
+      `Segment 4: unknown lane code "Z"`,
+    ]);
+    expect(validateLaneConfig("AL")).toEqual([]);
   });
 
   it("rejects more than two '+'-joined codes", () => {
@@ -55,10 +68,10 @@ describe("parseLaneConfig / serializeLaneConfig round-trip", () => {
   it("zips widths and directions with tokens and serializes back to the same strings", () => {
     const laneConfig = "S-C:C";
     const laneWidth = "60|0|132|0|132";
-    const laneDirection = "B|B|I|I|O";
+    const laneDirection = "B|B|I|T|O";
     const segments = parseLaneConfig(laneConfig, laneWidth, laneDirection);
     expect(segments.map((s) => s.width)).toEqual([60, 0, 132, 0, 132]);
-    expect(segments.map((s) => s.direction)).toEqual(["B", "B", "I", "I", "O"]);
+    expect(segments.map((s) => s.direction)).toEqual(["B", "B", "I", "T", "O"]);
     expect(serializeLaneConfig(segments)).toEqual({ laneConfig, laneWidth, laneDirection });
   });
 

@@ -34,7 +34,7 @@ import { MapPin, Navigation, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { MapContainer, Marker, Polyline, Popup, useMapEvents } from "react-leaflet";
-import LaneConfigEditor from "./lane-config-editor";
+import LaneConfigEditor, { CommonLaneConfigsButton } from "./lane-config-editor";
 import { StreetNameInput } from "./street-name-input";
 
 interface ApproachModalProps {
@@ -436,26 +436,6 @@ export default function ApproachModal({
               />
             </div>
 
-            <div className="bg-gray-50 p-4 rounded-lg border">
-              <h3 className="text-lg font-medium mb-3">Lane Configuration</h3>
-              <p className="text-sm text-grey-600 mb-3">
-                Left-to-right cross-section of this approach: sidewalks, transit/bike/car lanes, and
-                the dividers between them.
-              </p>
-              <LaneConfigEditor
-                laneConfig={form.watch("laneConfig")}
-                laneWidth={form.watch("laneWidth")}
-                laneDirection={form.watch("laneDirection")}
-                isMetric={isMetric}
-                isLht={isLht}
-                onChange={(laneConfig, laneWidth, laneDirection) => {
-                  form.setValue("laneConfig", laneConfig);
-                  form.setValue("laneWidth", laneWidth);
-                  form.setValue("laneDirection", laneDirection);
-                }}
-              />
-            </div>
-
             {/* Map section with clickable bearing selector */}
             {selectedSignalId && (
               <div className="bg-gray-50 p-4 rounded-lg border">
@@ -509,6 +489,36 @@ export default function ApproachModal({
                 </div>
               </div>
             )}
+
+            <div className="bg-gray-50 p-4 rounded-lg border">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <h3 className="text-lg font-medium">Lane Configuration</h3>
+                <CommonLaneConfigsButton
+                  isLht={isLht}
+                  onApply={(laneConfig, laneWidth, laneDirection) => {
+                    form.setValue("laneConfig", laneConfig);
+                    form.setValue("laneWidth", laneWidth);
+                    form.setValue("laneDirection", laneDirection);
+                  }}
+                />
+              </div>
+              <p className="text-sm text-grey-600 mb-3">
+                Left-to-right cross-section of this approach: sidewalks, transit/bike/car lanes, and
+                the dividers between them. The up arrow points toward the light.
+              </p>
+              <LaneConfigEditor
+                laneConfig={form.watch("laneConfig")}
+                laneWidth={form.watch("laneWidth")}
+                laneDirection={form.watch("laneDirection")}
+                isMetric={isMetric}
+                isLht={isLht}
+                onChange={(laneConfig, laneWidth, laneDirection) => {
+                  form.setValue("laneConfig", laneConfig);
+                  form.setValue("laneWidth", laneWidth);
+                  form.setValue("laneDirection", laneDirection);
+                }}
+              />
+            </div>
 
             <div className="flex justify-between space-x-3 border-t border-grey-200 pt-4">
               <div>

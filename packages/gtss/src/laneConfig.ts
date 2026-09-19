@@ -1,7 +1,6 @@
 // Lane cross-section encoding: a left-to-right sequence of concatenated tokens (no delimiter).
-// Symbol characters are always single-char divider/surface tokens; runs of letters (optionally
-// joined with "+" for shared lanes, e.g. "B+C") are lane tokens. See LANE_TYPE_CODES/DIVIDER_CODES
-// below for the full grammar.
+// Every lane item and divider is one character. Lane items may be joined with "+" for a combined
+// lane, e.g. "B+C". See LANE_TYPE_CODES/DIVIDER_CODES below for the full grammar.
 
 export type LaneCategory = "sidewalk" | "transit" | "bike" | "car" | "rail";
 export type DividerCategory = "line" | "barrier" | "surface";
@@ -23,14 +22,14 @@ export interface DividerInfo {
 
 export const LANE_TYPE_CODES: Record<string, LaneTypeInfo> = {
   S: { code: "S", label: "Sidewalk", category: "sidewalk", color: "#d4d4d8" },
-  AL: { code: "AL", label: "Autobus lay-by", category: "transit", color: "#93c5fd" },
-  AS: { code: "AS", label: "Autobus stop", category: "transit", color: "#60a5fa" },
-  A: { code: "A", label: "Autobus lane", category: "transit", color: "#3b82f6" },
+  A: { code: "A", label: "Autobus lane", category: "transit", color: "#dc2626" },
+  Y: { code: "Y", label: "Autobus lay-by", category: "transit", color: "#93c5fd" },
+  T: { code: "T", label: "Autobus stop", category: "transit", color: "#60a5fa" },
   B: { code: "B", label: "Bike lane", category: "bike", color: "#4ade80" },
-  BP: { code: "BP", label: "Protected bike lane", category: "bike", color: "#16a34a" },
+  P: { code: "P", label: "Protected bike lane", category: "bike", color: "#16a34a" },
   C: { code: "C", label: "Car lane", category: "car", color: "#000000" },
-  CP: { code: "CP", label: "Car parking", category: "car", color: "#c4b5fd" },
-  RT: { code: "RT", label: "Streetcar", category: "rail", color: "#f97316" },
+  K: { code: "K", label: "Car parking", category: "car", color: "#c4b5fd" },
+  R: { code: "R", label: "Streetcar", category: "rail", color: "#f97316" },
   L: { code: "L", label: "LRT", category: "rail", color: "#ea580c" },
 };
 
@@ -64,11 +63,11 @@ const DIVIDER_CHARS = new Set(Object.keys(DIVIDER_CODES));
 export interface LaneToken {
   kind: "lane" | "divider";
   raw: string;
-  /** For kind "lane": one or two lane codes joined by "+". For "divider": the single symbol. */
+  /** For kind "lane": one or two single-character codes joined by "+". */
   parts: string[];
 }
 
-export type LaneDirection = "I" | "O" | "B";
+export type LaneDirection = "I" | "O" | "B" | "T";
 
 export interface LaneSegment extends LaneToken {
   /** Width in the agency-native unit (inches or cm). Dividers default to 0. */
@@ -77,26 +76,35 @@ export interface LaneSegment extends LaneToken {
   direction: LaneDirection;
 }
 
-/** Splits a lane-config string into lane/divider tokens. Unknown-code validation is separate. */
+/** Splits a lane-config string into single-character lane/divider tokens. */
 export function tokenizeLaneConfig(laneConfig: string | null | undefined): LaneToken[] {
   if (!laneConfig) return [];
   const tokens: LaneToken[] = [];
-  let buffer = "";
-  const flushLane = () => {
-    if (buffer) {
-      tokens.push({ kind: "lane", raw: buffer, parts: buffer.split("+") });
-      buffer = "";
+  let combinedParts: string[] = [];
+  const flushCombined = () => {
+    if (combinedParts.length > 0) {
+      tokens.push({ kind: "lane", raw: combinedParts.join("+"), parts: combinedParts });
+      combinedParts = [];
     }
   };
   for (const ch of laneConfig) {
     if (DIVIDER_CHARS.has(ch)) {
-      flushLane();
+      flushCombined();
       tokens.push({ kind: "divider", raw: ch, parts: [ch] });
+    } else if (ch === "+") {
+      if (combinedParts.length > 0) {
+        combinedParts.push("");
+      }
     } else {
-      buffer += ch;
+      if (combinedParts.length > 0 && combinedParts[combinedParts.length - 1] === "") {
+        combinedParts[combinedParts.length - 1] = ch;
+      } else {
+        flushCombined();
+        combinedParts.push(ch);
+      }
     }
   }
-  flushLane();
+  flushCombined();
   return tokens;
 }
 
@@ -111,7 +119,7 @@ export function validateLaneConfig(laneConfig: string | null | undefined): strin
       return;
     }
     token.parts.forEach((part) => {
-      if (!part || !LANE_TYPE_CODES[part]) {
+      if (part.length !== 1 || !LANE_TYPE_CODES[part]) {
         errors.push(`Segment ${index + 1}: unknown lane code "${part}"`);
       }
     });
@@ -165,7 +173,10 @@ export function parseLaneConfig(
     const parsedDirection = directions[index];
     const direction: LaneDirection =
       directions.length === tokens.length &&
-      (parsedDirection === "I" || parsedDirection === "O" || parsedDirection === "B")
+      (parsedDirection === "I" ||
+        parsedDirection === "O" ||
+        parsedDirection === "B" ||
+        parsedDirection === "T")
         ? parsedDirection
         : defaultDirections[index];
     return { ...token, width, direction };
