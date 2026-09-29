@@ -14,18 +14,18 @@ export {
   NEMA_DEFAULTS,
   PHASE_COUNT_OPTIONS,
   sanitizePhaseDirectionStandard,
-  validatePhaseDirectionStandard,
+  validatePhaseDirectionStandard
 } from "./src/agencyDefaults";
 export type {
   AgencyDefaults,
   CardinalDirection,
   MapScrollWheelMode,
-  PhaseDirectionStandard,
+  PhaseDirectionStandard
 } from "./src/agencyDefaults";
 export {
   generateProceduralIntersection,
   getAllDemoIntersections,
-  PRESET_DEMO_INTERSECTIONS,
+  PRESET_DEMO_INTERSECTIONS
 } from "./src/demoIntersections";
 export type { DemoIntersection, ProceduralGeneratorOptions } from "./src/demoIntersections";
 export {
@@ -33,10 +33,11 @@ export {
   DEFAULT_STOPBAR_SETBACK_DISTANCE,
   MIN_DETECTOR_LENGTH,
   MIN_STOPBAR_SETBACK_DISTANCE,
-  POSTED_SPEED_LIMITS,
+  POSTED_SPEED_LIMITS
 } from "./src/fieldDefaults";
 export { evaluateGTSSCompleteness } from "./src/gtssValidation";
 export type { ValidationResult, ValidationSummary } from "./src/gtssValidation";
+export { shouldShowHeaderActions } from "./src/headerConfig";
 export {
   computeDefaultDirections,
   DIVIDER_CODES,
@@ -46,7 +47,7 @@ export {
   serializeLaneConfig,
   toDisplayWidth,
   tokenizeLaneConfig,
-  validateLaneConfig,
+  validateLaneConfig
 } from "./src/laneConfig";
 export type {
   DividerCategory,
@@ -55,9 +56,9 @@ export type {
   LaneDirection,
   LaneSegment,
   LaneToken,
-  LaneTypeInfo,
+  LaneTypeInfo
 } from "./src/laneConfig";
-export { isMetricForSignalId, isLhtForSignalId } from "./src/localStorage/agency-units";
+export { isLhtForSignalId, isMetricForSignalId } from "./src/localStorage/agency-units";
 export { clearAllData } from "./src/localStorage/clearAll";
 export {
   generateAgenciesCSV,
@@ -66,7 +67,7 @@ export {
   generateBasicTimingsCSV,
   generateDetectionCSV,
   generatePhasesCSV,
-  generateSignalsCSV,
+  generateSignalsCSV
 } from "./src/localStorage/csv-export";
 export { exportAsIndividualFiles, exportAsZip, exportData } from "./src/localStorage/exports";
 export { importData } from "./src/localStorage/imports";
@@ -75,7 +76,7 @@ export {
   parseBasicTimingsTXT,
   parseDetectorsTXT,
   parsePhasesTXT,
-  parseSignalsTXT,
+  parseSignalsTXT
 } from "./src/localStorage/parsers";
 export { parseAgenciesTXT, parseAgencyTXT } from "./src/localStorage/storage/agencies";
 export {
@@ -90,13 +91,14 @@ export {
   useLoadFromStorage,
   useMapScrollZoom,
   usePhases,
-  useSignals,
+  useSignals
 } from "./src/localStorageHooks";
 export { downloadSvgAsJpg, phaseDiagramFileName } from "./src/svg-export";
 export {
   getDerivedStreetNames,
   getSignalDisplayName,
   handleColumnMajorTab,
-  suggestStreetNameForApproach,
+  suggestStreetNameForApproach
 } from "./src/utils";
 export { useGTSSStore } from "./store/gtss-store";
+

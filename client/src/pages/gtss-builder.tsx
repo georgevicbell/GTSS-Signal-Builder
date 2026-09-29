@@ -31,7 +31,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import SignalDetails from "@/pages/signal-details";
-import { clearAllData, isDemoEnabled, useGTSSStore, useLoadFromStorage } from "gtss";
+import {
+  clearAllData,
+  isDemoEnabled,
+  shouldShowHeaderActions,
+  useGTSSStore,
+  useLoadFromStorage,
+} from "gtss";
 import {
   ArrowUpDown,
   Building,
@@ -651,8 +657,11 @@ export default function GTSSBuilder() {
                 </p>
               </div>
             </div>
-            {!showExportPanel &&
-              !showImportPanel &&
+            {shouldShowHeaderActions({
+              showExportPanel,
+              showImportPanel,
+              showAgencyDefaults,
+            }) &&
               (activeTab === "signals" ? (
                 <div className="flex space-x-1">
                   <Button
