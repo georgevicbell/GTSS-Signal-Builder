@@ -7,6 +7,7 @@ import DetectorsTable from "@/components/gtss/detectors-table";
 import ExportPanel from "@/components/gtss/export-panel";
 import { ImportPanel } from "@/components/gtss/import-panel";
 import PhasesTable from "@/components/gtss/phases-table";
+import SignalSearchBox from "@/components/gtss/signal-search-box";
 import SignalsTable from "@/components/gtss/signals-table";
 import {
   AlertDialog,
@@ -661,82 +662,86 @@ export default function GTSSBuilder() {
               showExportPanel,
               showImportPanel,
               showAgencyDefaults,
-            }) &&
-              (activeTab === "signals" ? (
-                <div className="flex space-x-1">
-                  <Button
-                    onClick={handleAddMultiple}
-                    variant="outline"
-                    className="h-7 px-2 text-xs border-primary-200 text-primary-700 hover:bg-primary-50 flex items-center gap-1"
-                  >
-                    <Navigation className="w-3 h-3" />
-                    <span>Add Multiple</span>
-                  </Button>
-                  <Button
-                    onClick={handleAddSignal}
-                    className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Add Signal</span>
-                  </Button>
-                </div>
-              ) : activeTab === "approaches" ? (
-                <div className="flex space-x-1">
-                  <Button
-                    onClick={handleAddApproach}
-                    className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Add Approaches</span>
-                  </Button>
-                </div>
-              ) : activeTab === "phases" ? (
-                <div className="flex space-x-1">
-                  <Button
-                    onClick={handleAddPhase}
-                    className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Add Phases</span>
-                  </Button>
-                </div>
-              ) : activeTab === "detectors" ? (
-                <div className="flex space-x-1">
-                  <Button
-                    onClick={handleAddDetector}
-                    className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Add Detectors</span>
-                  </Button>
-                </div>
-              ) : activeTab === "basic-timings" ? (
-                <div className="flex space-x-1">
-                  <Button
-                    onClick={handleAddBasicTiming}
-                    className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Add Timing</span>
-                  </Button>
-                </div>
-              ) : activeTab === "agency" ? (
-                <div className="flex space-x-1">
-                  <Button
-                    onClick={() => {
-                      setActiveTab("agency");
-                      // Tell the AgencyForm to open its modal for adding
-                      window.dispatchEvent(
-                        new CustomEvent("open-agency-modal", { detail: { editingId: null } }),
-                      );
-                    }}
-                    className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Add Agency</span>
-                  </Button>
-                </div>
-              ) : null)}
+            }) && (
+              <div className="flex items-center gap-2">
+                <SignalSearchBox className="w-40 sm:w-52" />
+                {activeTab === "signals" ? (
+                  <div className="flex space-x-1">
+                    <Button
+                      onClick={handleAddMultiple}
+                      variant="outline"
+                      className="h-7 px-2 text-xs border-primary-200 text-primary-700 hover:bg-primary-50 flex items-center gap-1"
+                    >
+                      <Navigation className="w-3 h-3" />
+                      <span>Add Multiple</span>
+                    </Button>
+                    <Button
+                      onClick={handleAddSignal}
+                      className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add Signal</span>
+                    </Button>
+                  </div>
+                ) : activeTab === "approaches" ? (
+                  <div className="flex space-x-1">
+                    <Button
+                      onClick={handleAddApproach}
+                      className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add Approaches</span>
+                    </Button>
+                  </div>
+                ) : activeTab === "phases" ? (
+                  <div className="flex space-x-1">
+                    <Button
+                      onClick={handleAddPhase}
+                      className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add Phases</span>
+                    </Button>
+                  </div>
+                ) : activeTab === "detectors" ? (
+                  <div className="flex space-x-1">
+                    <Button
+                      onClick={handleAddDetector}
+                      className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add Detectors</span>
+                    </Button>
+                  </div>
+                ) : activeTab === "basic-timings" ? (
+                  <div className="flex space-x-1">
+                    <Button
+                      onClick={handleAddBasicTiming}
+                      className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add Timing</span>
+                    </Button>
+                  </div>
+                ) : activeTab === "agency" ? (
+                  <div className="flex space-x-1">
+                    <Button
+                      onClick={() => {
+                        setActiveTab("agency");
+                        // Tell the AgencyForm to open its modal for adding
+                        window.dispatchEvent(
+                          new CustomEvent("open-agency-modal", { detail: { editingId: null } }),
+                        );
+                      }}
+                      className="h-7 px-2 text-xs bg-primary-600 hover:bg-primary-700 flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add Agency</span>
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
         </header>
 

@@ -41,6 +41,12 @@ The app has a **dual storage architecture**:
   - `src/builders.ts` / `src/textures.ts` - Meshes and canvas-painted road markings
   - `src/scene.ts` - `createIntersectionScene()` (renderer, OrbitControls); `src/react/Intersection3D.tsx` wraps it
   - Lane configs are read left-to-right looking outward from the centre; `compassBearing` is the incoming travel direction, so a leg points at bearing + 180
+- `packages/gtss-diagram/` - Standalone SVG phase-diagram renderer, publishable on its own
+  - `src/phase-diagram.tsx` - The one and only phase diagram; every call site in the app uses it
+  - `src/free-right-markings.tsx` - Slip-lane / crosswalk markings shared with the detector diagram
+  - Depends on React alone. It takes plain data plus a required `isLht` prop rather than reading
+    agency settings, which is what keeps it independent of the app. Vite and `tsconfig.json`
+    resolve `gtss-diagram` to source, so edits hot-reload without rebuilding the package.
 
 ### State Management
 

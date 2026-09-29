@@ -2,9 +2,16 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import SignalsMap from "@/components/ui/signals-map";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { getDerivedStreetNames, useGTSSStore, useSignals } from "gtss";
+import { getDerivedStreetNames, naturalCompare, useGTSSStore, useSignals } from "gtss";
 import type { Signal } from "gtss/schema";
 
 import { ChevronDown, ChevronUp, MapPin, Search, X } from "lucide-react";
@@ -12,10 +19,8 @@ import { useEffect, useRef, useState } from "react";
 import BulkSignalModal from "./bulk-signal-modal";
 import SignalModal from "./signal-modal";
 
-
-
-type SortField = 'signalId' | 'streetName1' | 'streetName2' | 'completeness';
-type SortDirection = 'asc' | 'desc';
+type SortField = "signalId" | "streetName1" | "streetName2" | "completeness";
+type SortDirection = "asc" | "desc";
 
 interface SignalsTableProps {
   triggerAdd?: number;
@@ -26,8 +31,8 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
   const [editingSignal, setEditingSignal] = useState<Signal | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
-  const [sortField, setSortField] = useState<SortField>('signalId');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortField, setSortField] = useState<SortField>("signalId");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   // Track which row is being hovered so the matching marker on the map can
   // be drawn with a distinct color.
   const [hoveredSignalId, setHoveredSignalId] = useState<string | null>(null);
@@ -35,12 +40,13 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
   // (both the stored names and the ones derived from approaches).
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { agency, signals, approaches, phases, detectors, basicTimings, navigateToSignalDetails } = useGTSSStore();
+  const { agency, signals, approaches, phases, detectors, basicTimings, navigateToSignalDetails } =
+    useGTSSStore();
 
   // % complete: 25% for each of approaches, phases, detectors, timings that
   // has at least one row for the signal.
   const getCompletenessPct = (signalId: string): number => {
-    const has = (arr: { signalId: string }[]) => arr.some(x => x.signalId === signalId);
+    const has = (arr: { signalId: string }[]) => arr.some((x) => x.signalId === signalId);
     let n = 0;
     if (has(approaches)) n++;
     if (has(phases)) n++;
@@ -71,11 +77,11 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
     }
   }, [triggerBulk]);
 
-  const handleEdit = (signal: Signal) => {
-    setEditingSignal(signal);
-    setShowModal(true);
-  };
-
+  /* const handleEdit = (signal: Signal) => {
+     setEditingSignal(signal);
+     setShowModal(true);
+   };
+ */
   const handleSignalUpdate = (signalId: string, updates: Partial<Signal>) => {
     try {
       const updatedSignal = signalHooks.update(signalId, updates);
@@ -85,7 +91,7 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
           description: "Signal updated successfully",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to update signal",
@@ -93,25 +99,25 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
       });
     }
   };
-
-  const handleDelete = (signalId: string) => {
-    if (confirm("Are you sure you want to delete this signal? This will also delete all related phases and detectors.")) {
-      try {
-        signalHooks.delete(signalId);
-        toast({
-          title: "Success",
-          description: "Signal deleted successfully",
-        });
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to delete signal",
-          variant: "destructive",
-        });
+  /*
+    const handleDelete = (signalId: string) => {
+      if (confirm("Are you sure you want to delete this signal? This will also delete all related phases and detectors.")) {
+        try {
+          signalHooks.delete(signalId);
+          toast({
+            title: "Success",
+            description: "Signal deleted successfully",
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to delete signal",
+            variant: "destructive",
+          });
+        }
       }
-    }
-  };
-
+    };
+  */
   const handleAdd = () => {
     if (!agency?.agencyId) {
       toast({
@@ -131,34 +137,11 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
-  };
-
-  // Natural sort comparison - handles numeric parts in strings properly
-  // e.g., "SIG-1", "SIG-2", "SIG-11" instead of "SIG-1", "SIG-11", "SIG-2"
-  const naturalCompare = (a: string, b: string): number => {
-    const aParts = a.split(/(\d+)/);
-    const bParts = b.split(/(\d+)/);
-
-    for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-      const aPart = aParts[i] || '';
-      const bPart = bParts[i] || '';
-
-      // Check if both parts are numeric
-      const aNum = parseInt(aPart, 10);
-      const bNum = parseInt(bPart, 10);
-
-      if (!isNaN(aNum) && !isNaN(bNum)) {
-        if (aNum !== bNum) return aNum - bNum;
-      } else {
-        if (aPart !== bPart) return aPart.localeCompare(bPart);
-      }
-    }
-    return 0;
   };
 
   const matchesSearch = (signal: Signal): boolean => {
@@ -171,38 +154,38 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
       signal.streetName2,
       derived.streetName1,
       derived.streetName2,
-    ].some(v => (v || "").toLowerCase().includes(query));
+    ].some((v) => (v || "").toLowerCase().includes(query));
   };
 
   const getSortedSignals = () => {
     return signals.filter(matchesSearch).sort((a, b) => {
-      let comparison = 0;
+      let comparison;
 
       switch (sortField) {
-        case 'signalId':
+        case "signalId":
           comparison = naturalCompare(a.signalId, b.signalId);
           break;
-        case 'streetName1':
+        case "streetName1":
           comparison = a.streetName1.localeCompare(b.streetName1);
           break;
-        case 'streetName2':
+        case "streetName2":
           comparison = a.streetName2.localeCompare(b.streetName2);
           break;
-        case 'completeness':
+        case "completeness":
           comparison = getCompletenessPct(a.signalId) - getCompletenessPct(b.signalId);
           break;
         default:
           comparison = naturalCompare(a.signalId, b.signalId);
       }
 
-      return sortDirection === 'asc' ? comparison : -comparison;
+      return sortDirection === "asc" ? comparison : -comparison;
     });
   };
 
-  const handleRowClick = (signal: Signal) => {
-    handleEdit(signal);
-  };
-
+  /* const handleRowClick = (signal: Signal) => {
+     handleEdit(signal);
+   };
+ */
   const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
     <TableHead
       className="text-xs font-medium text-grey-500 uppercase tracking-wider cursor-pointer hover:bg-grey-100 transition-colors py-1.5 px-2"
@@ -212,17 +195,15 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
         {children}
         <div className="flex flex-col ml-1">
           <ChevronUp
-            className={`w-2 h-2 ${sortField === field && sortDirection === 'asc' ? 'text-primary-600' : 'text-grey-300'}`}
+            className={`w-2 h-2 ${sortField === field && sortDirection === "asc" ? "text-primary-600" : "text-grey-300"}`}
           />
           <ChevronDown
-            className={`w-2 h-2 -mt-0.5 ${sortField === field && sortDirection === 'desc' ? 'text-primary-600' : 'text-grey-300'}`}
+            className={`w-2 h-2 -mt-0.5 ${sortField === field && sortDirection === "desc" ? "text-primary-600" : "text-grey-300"}`}
           />
         </div>
       </div>
     </TableHead>
   );
-
-
 
   const visibleSignals = getSortedSignals();
   const isFiltering = searchQuery.trim() !== "";
@@ -272,8 +253,8 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span className="text-sm font-medium text-grey-700 whitespace-nowrap">
                     {isFiltering
-                      ? `${visibleSignals.length} of ${signals.length} signal${signals.length !== 1 ? 's' : ''}`
-                      : `${signals.length} signal${signals.length !== 1 ? 's' : ''}`}
+                      ? `${visibleSignals.length} of ${signals.length} signal${signals.length !== 1 ? "s" : ""}`
+                      : `${signals.length} signal${signals.length !== 1 ? "s" : ""}`}
                   </span>
                 </div>
                 <div className="relative flex-1 max-w-sm">
@@ -326,7 +307,9 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
                                 <>
                                   <MapPin className="w-8 h-8 text-grey-300" />
                                   <p>No traffic signals configured</p>
-                                  <p className="text-grey-400">Add your first signal to get started</p>
+                                  <p className="text-grey-400">
+                                    Add your first signal to get started
+                                  </p>
                                 </>
                               )}
                             </div>
@@ -339,39 +322,59 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
                             className="hover:bg-grey-50 cursor-pointer transition-colors"
                             onClick={() => navigateToSignalDetails(signal.signalId)}
                             onMouseEnter={() => setHoveredSignalId(signal.signalId)}
-                            onMouseLeave={() => setHoveredSignalId(prev => prev === signal.signalId ? null : prev)}
+                            onMouseLeave={() =>
+                              setHoveredSignalId((prev) => (prev === signal.signalId ? null : prev))
+                            }
                             data-testid={`row-signal-${signal.signalId}`}
                           >
-                            <TableCell className="font-medium text-grey-900 text-xs py-1.5 px-2">{signal.signalId}</TableCell>
-                            <TableCell className="text-grey-600 text-xs py-1.5 px-2">
-                              {getDerivedStreetNames(signal.signalId, approaches).streetName1 || signal.streetName1 || '-'}
+                            <TableCell className="font-medium text-grey-900 text-xs py-1.5 px-2">
+                              {signal.signalId}
                             </TableCell>
                             <TableCell className="text-grey-600 text-xs py-1.5 px-2">
-                              {getDerivedStreetNames(signal.signalId, approaches).streetName2 || signal.streetName2 || '-'}
+                              {getDerivedStreetNames(signal.signalId, approaches).streetName1 ||
+                                signal.streetName1 ||
+                                "-"}
+                            </TableCell>
+                            <TableCell className="text-grey-600 text-xs py-1.5 px-2">
+                              {getDerivedStreetNames(signal.signalId, approaches).streetName2 ||
+                                signal.streetName2 ||
+                                "-"}
                             </TableCell>
                             <TableCell className="text-xs py-1.5 px-2">
                               {(() => {
                                 const pct = getCompletenessPct(signal.signalId);
-                                const has = (arr: { signalId: string }[]) => arr.some(x => x.signalId === signal.signalId);
+                                const has = (arr: { signalId: string }[]) =>
+                                  arr.some((x) => x.signalId === signal.signalId);
                                 const parts = [
-                                  `${has(approaches) ? '✓' : '·'} approaches`,
-                                  `${has(phases) ? '✓' : '·'} phases`,
-                                  `${has(detectors) ? '✓' : '·'} detectors`,
-                                  `${has(basicTimings) ? '✓' : '·'} timings`,
-                                ].join('\n');
+                                  `${has(approaches) ? "✓" : "·"} approaches`,
+                                  `${has(phases) ? "✓" : "·"} phases`,
+                                  `${has(detectors) ? "✓" : "·"} detectors`,
+                                  `${has(basicTimings) ? "✓" : "·"} timings`,
+                                ].join("\n");
                                 const barColor =
-                                  pct === 100 ? 'bg-green-500'
-                                    : pct >= 75 ? 'bg-blue-500'
-                                      : pct >= 50 ? 'bg-amber-500'
-                                        : pct >= 25 ? 'bg-orange-500'
-                                          : 'bg-grey-300';
-                                const textColor = pct === 100 ? 'text-green-700' : 'text-grey-700';
+                                  pct === 100
+                                    ? "bg-green-500"
+                                    : pct >= 75
+                                      ? "bg-blue-500"
+                                      : pct >= 50
+                                        ? "bg-amber-500"
+                                        : pct >= 25
+                                          ? "bg-orange-500"
+                                          : "bg-grey-300";
+                                const textColor = pct === 100 ? "text-green-700" : "text-grey-700";
                                 return (
                                   <div className="flex items-center gap-2" title={parts}>
                                     <div className="w-20 h-1.5 bg-grey-200 rounded-full overflow-hidden flex-shrink-0">
-                                      <div className={`h-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
+                                      <div
+                                        className={`h-full ${barColor} transition-all`}
+                                        style={{ width: `${pct}%` }}
+                                      />
                                     </div>
-                                    <span className={`font-mono text-[11px] w-9 text-right ${textColor}`}>{pct}%</span>
+                                    <span
+                                      className={`font-mono text-[11px] w-9 text-right ${textColor}`}
+                                    >
+                                      {pct}%
+                                    </span>
                                   </div>
                                 );
                               })()}
@@ -388,18 +391,9 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
         </ResizablePanel>
       </ResizablePanelGroup>
 
-      {showModal && (
-        <SignalModal
-          signal={editingSignal}
-          onClose={handleModalClose}
-        />
-      )}
+      {showModal && <SignalModal signal={editingSignal} onClose={handleModalClose} />}
 
-      {showBulkModal && (
-        <BulkSignalModal
-          onClose={() => setShowBulkModal(false)}
-        />
-      )}
+      {showBulkModal && <BulkSignalModal onClose={() => setShowBulkModal(false)} />}
     </div>
   );
 }

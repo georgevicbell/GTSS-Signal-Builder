@@ -5,7 +5,8 @@
     "server/**/*",
     "packages/gtss",
     "packages/gtss-3d/index.ts",
-    "packages/gtss-3d/src"
+    "packages/gtss-3d/src",
+    "packages/gtss-diagram"
   ],
   "exclude": [
     "node_modules",
@@ -39,6 +40,12 @@
       ],
       "@shared/*": [
         "./packages/gtss/shared/*"
+      ],
+      "gtss-diagram": [
+        "./packages/gtss-diagram/index.ts"
+      ],
+      "gtss-3d": [
+        "./packages/gtss-3d/index.ts"
       ]
     }
   }

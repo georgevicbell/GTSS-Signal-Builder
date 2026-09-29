@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getSignalDisplayName, useGTSSStore, isMetricForSignalId } from "gtss";
+import { getSignalDisplayName, isMetricForSignalId, naturalCompare, useGTSSStore } from "gtss";
 import { Approach } from "gtss/schema";
 import { ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -120,27 +120,6 @@ export default function ApproachesTable({ triggerAdd, triggerBulk }: ApproachesT
   const handleRowClick = (approach: Approach) => {
     setEditingApproach(approach);
     setShowModal(true);
-  };
-
-  // Natural sort comparison - handles numeric parts in strings properly
-  const naturalCompare = (a: string, b: string): number => {
-    const aParts = a.split(/(\d+)/);
-    const bParts = b.split(/(\d+)/);
-
-    for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-      const aPart = aParts[i] || "";
-      const bPart = bParts[i] || "";
-
-      const aNum = parseInt(aPart, 10);
-      const bNum = parseInt(bPart, 10);
-
-      if (!isNaN(aNum) && !isNaN(bNum)) {
-        if (aNum !== bNum) return aNum - bNum;
-      } else {
-        if (aPart !== bPart) return aPart.localeCompare(bPart);
-      }
-    }
-    return 0;
   };
 
   const getSortedApproaches = () => {
@@ -280,18 +259,27 @@ export default function ApproachesTable({ triggerAdd, triggerBulk }: ApproachesT
                       <SortableHeader field="streetName">Street Name</SortableHeader>
                       <SortableHeader field="compassBearing">Bearing</SortableHeader>
                       <SortableHeader field="postedSpeed">Speed ({speedUnit})</SortableHeader>
+                      <TableHead
+                        className="text-xs font-medium text-grey-500 uppercase tracking-wider"
+                        title="Free right slip lane: FR, FR-P with a ped crossing, FR-P-I traffic calmed."
+                      >
+                        FR
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-grey-500 uppercase tracking-wider">
+                        FR Lanes
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {!selectedSignalId ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-4 text-xs text-grey-500">
+                        <TableCell colSpan={6} className="text-center py-4 text-xs text-grey-500">
                           Please select a signal above to view its approaches.
                         </TableCell>
                       </TableRow>
                     ) : filteredApproaches.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-4 text-xs text-grey-500">
+                        <TableCell colSpan={6} className="text-center py-4 text-xs text-grey-500">
                           No approaches configured for this signal. Add your first approach to get
                           started.
                         </TableCell>
@@ -339,6 +327,18 @@ export default function ApproachesTable({ triggerAdd, triggerBulk }: ApproachesT
                                 ) : (
                                   <span className="text-grey-400 text-xs">-</span>
                                 )}
+                              </TableCell>
+                              <TableCell className="text-grey-600 text-xs py-1.5 px-2">
+                                {approach.freeRight === 3
+                                  ? "FR-P-I"
+                                  : approach.freeRight === 2
+                                    ? "FR-P"
+                                    : approach.freeRight
+                                      ? "FR"
+                                      : "-"}
+                              </TableCell>
+                              <TableCell className="text-grey-600 text-xs py-1.5 px-2">
+                                {approach.freeRight ? (approach.freeRightLanes ?? 1) : "-"}
                               </TableCell>
                             </TableRow>
                           );

@@ -35,7 +35,7 @@ import {
 import { ChevronDown, ChevronUp, Download, Plus, Save, Trash2, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getMovementTypeOptions } from "./movement-types";
-import { PhaseDiagram, phaseColors } from "./phase-diagram-svg";
+import { PhaseDiagram, phaseColors } from "gtss-diagram";
 
 interface PendingPhase {
   id?: string;
@@ -54,8 +54,8 @@ interface BulkPhaseModalProps {
   inline?: boolean;
 }
 
-// phaseColors is now imported from ./phase-diagram-svg so the diagram can be
-// reused on the signal-details page next to the map.
+// phaseColors comes from the gtss-diagram package, so the swatches in this
+// modal always match the colors the diagram actually draws.
 
 // Left turn phase mapping: Through phase -> Left turn phase
 //const leftTurnMapping: Record<number, number> = { 2: 5, 4: 7, 6: 1, 8: 3 };
@@ -461,25 +461,26 @@ export default function BulkPhaseModal({
       return;
     }
 
-    // The same phase number is allowed on multiple approaches (e.g. a
-    // pedestrian phase serving several crossings, or a shared phase across
-    // different approach angles). We only block TRUE duplicates — identical
-    // phase number AND approach — since those would be redundant records.
+    // The same phase number is allowed on multiple approaches (a pedestrian
+    // phase serving several crossings) and on one approach across movements —
+    // phase 2 on the NB approach commonly runs a Through and a U-Turn together.
+    // We only block TRUE duplicates — identical phase number, approach AND
+    // movement — since those would be redundant records.
     const seen = new Set<string>();
     const trueDuplicates: string[] = [];
     for (const p of pendingPhases) {
-      const key = `${p.phase}::${p.approachId || ""}`;
+      const key = `${p.phase}::${p.approachId || ""}::${p.movementType}`;
       if (seen.has(key)) {
         trueDuplicates.push(
-          `Phase ${p.phase}${p.approachId ? ` @ ${p.approachId}` : " (no approach)"}`,
+          `Phase ${p.phase} ${p.movementType}${p.approachId ? ` @ ${p.approachId}` : " (no approach)"}`,
         );
       }
       seen.add(key);
     }
     if (trueDuplicates.length > 0) {
       toast({
-        title: "Duplicate Phase + Approach",
-        description: `Each phase/approach pair must be unique. Duplicates: ${Array.from(new Set(trueDuplicates)).join(", ")}`,
+        title: "Duplicate Phase + Approach + Movement",
+        description: `Each phase/approach/movement combination must be unique. Duplicates: ${Array.from(new Set(trueDuplicates)).join(", ")}`,
         variant: "destructive",
       });
       return;
@@ -686,6 +687,7 @@ export default function BulkPhaseModal({
                   approaches={signalApproaches}
                   intersectionName={intersectionName}
                   intersectionId={selectedSignalId}
+                  isLht={isLhtForSignalId(selectedSignalId)}
                   svgRef={svgRef}
                 />
               </div>

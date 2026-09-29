@@ -6,7 +6,6 @@ import BulkPhaseModal from "@/components/gtss/bulk-phase-modal";
 import DetectorModal from "@/components/gtss/detector-modal";
 import GTSSFileViewer, { GTSSFilePreview } from "@/components/gtss/gtss-file-viewer";
 import { getMovementTypeOptions } from "@/components/gtss/movement-types";
-import { PhaseDiagram } from "@/components/gtss/phase-diagram-svg";
 import { StreetNameInput } from "@/components/gtss/street-name-input";
 import TimingBulkImport from "@/components/gtss/timing-bulk-import";
 import { Badge } from "@/components/ui/badge";
@@ -53,7 +52,9 @@ import {
   generateSignalsCSV,
   isLhtForSignalId,
   isMapScrollZoomEnabled,
+  crosswalkLengthCode,
   isMetricForSignalId,
+  naturalCompare,
   phaseDiagramFileName,
   suggestStreetNameForApproach,
   useAgencies,
@@ -63,6 +64,7 @@ import {
   usePhases,
   useSignals,
 } from "gtss";
+import { PhaseDiagram } from "gtss-diagram";
 import {
   insertPhaseSchema,
   insertSignalSchema,
@@ -92,6 +94,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
+import SignalSearchBox from "@/components/gtss/signal-search-box";
 import { MapContainer, Marker, Polyline, useMap, useMapEvents } from "react-leaflet";
 
 // Location picker component for interactive map editing
@@ -175,6 +178,8 @@ export default function SignalDetails() {
     isLhtForSignalId(currentSignalId ?? undefined),
   );
   const lengthUnit = isMetric ? "m" : "feet";
+  // Short form for tight table headers; `lengthUnit` stays long for prose labels.
+  const lengthUnitShort = isMetric ? "m" : "ft";
 
   const speedUnit = isMetric ? "km/h" : "mph";
   const qaSpeedMax = isMetric ? 200 : 100;
@@ -196,6 +201,25 @@ export default function SignalDetails() {
   };
 
   const [signal, setSignal] = useState<Signal | null>(null);
+
+  // The header arrows step through signals by ID, not by the order the store
+  // happens to hold them in (insertion / import order), so "next" from 128
+  // lands on 1234 rather than whatever was added next. Wraps at both ends.
+  const orderedSignals = useMemo(
+    () => [...signals].sort((a, b) => naturalCompare(a.signalId, b.signalId)),
+    [signals],
+  );
+  const orderedIndex = signal
+    ? orderedSignals.findIndex((s) => s.signalId === signal.signalId)
+    : -1;
+  const prevSignal =
+    orderedIndex >= 0 && orderedSignals.length > 1
+      ? orderedSignals[(orderedIndex - 1 + orderedSignals.length) % orderedSignals.length]
+      : null;
+  const nextSignal =
+    orderedIndex >= 0 && orderedSignals.length > 1
+      ? orderedSignals[(orderedIndex + 1) % orderedSignals.length]
+      : null;
   const [signalPhases, setSignalPhases] = useState<Phase[]>([]);
   const [signalDetectors, setSignalDetectors] = useState<Detector[]>([]);
   const [signalApproaches, setSignalApproaches] = useState<Approach[]>([]);
@@ -568,16 +592,21 @@ export default function SignalDetails() {
       toast({ title: "Invalid Phase", description: "Phase must be 1-8.", variant: "destructive" });
       return;
     }
-    // Same phase number is allowed on different approaches (e.g. a pedestrian
-    // phase serving multiple crossings). Only block an identical phase+approach pair.
+    // A phase number may repeat across approaches (a pedestrian phase serving
+    // several crossings) AND within one approach across movements — phase 2 on
+    // the NB approach commonly runs a Through and a U-Turn together. Only an
+    // identical phase + approach + movement is redundant.
     if (
       signalPhases.some(
-        (p) => p.phase === phaseNum && (p.approachId || "") === (qpApproachId || ""),
+        (p) =>
+          p.phase === phaseNum &&
+          (p.approachId || "") === (qpApproachId || "") &&
+          p.movementType === qpMovementType,
       )
     ) {
       toast({
         title: "Phase Exists",
-        description: `Phase ${phaseNum} is already assigned to ${qpApproachId || "no approach"}. Pick a different approach.`,
+        description: `Phase ${phaseNum} already runs ${qpMovementType} on ${qpApproachId || "no approach"}. Pick a different movement or approach.`,
         variant: "destructive",
       });
       return;
@@ -671,20 +700,23 @@ export default function SignalDetails() {
 
   const handlePhaseSave = (data: InsertPhase) => {
     try {
-      // The same phase number may be assigned to multiple approaches (e.g. a
-      // pedestrian phase covering several crossings). Only block an identical
-      // phase+approach pair, excluding the row being edited.
+      // A phase number may repeat across approaches (a pedestrian phase covering
+      // several crossings) AND within one approach across movements — phase 2 on
+      // the NB approach commonly runs a Through and a U-Turn together. Only an
+      // identical phase + approach + movement is redundant; the row being
+      // edited is excluded.
       const dataApproach = data.approachId || "";
       const conflict = signalPhases.find(
         (p) =>
           p.phase === data.phase &&
           (p.approachId || "") === dataApproach &&
+          p.movementType === data.movementType &&
           (!editingPhase || p.id !== editingPhase.id),
       );
       if (conflict) {
         toast({
           title: "Error",
-          description: `Phase ${data.phase} is already assigned to ${dataApproach || "no approach"} for this signal. Pick a different approach.`,
+          description: `Phase ${data.phase} already runs ${data.movementType} on ${dataApproach || "no approach"} for this signal. Pick a different movement or approach.`,
           variant: "destructive",
         });
         return;
@@ -951,16 +983,10 @@ export default function SignalDetails() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                const currentIndex = signals.findIndex((s) => s.signalId === signal.signalId);
-                const prevIndex = currentIndex > 0 ? currentIndex - 1 : signals.length - 1;
-                const prevSignal = signals[prevIndex];
-                if (prevSignal) {
-                  navigateToSignalDetails(prevSignal.signalId);
-                }
-              }}
+              onClick={() => prevSignal && navigateToSignalDetails(prevSignal.signalId)}
               disabled={signals.length <= 1}
               className="h-6 w-6 p-0"
+              title={prevSignal ? `Previous signal: ${prevSignal.signalId}` : "Previous signal"}
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
@@ -973,19 +999,14 @@ export default function SignalDetails() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                const currentIndex = signals.findIndex((s) => s.signalId === signal.signalId);
-                const nextIndex = currentIndex < signals.length - 1 ? currentIndex + 1 : 0;
-                const nextSignal = signals[nextIndex];
-                if (nextSignal) {
-                  navigateToSignalDetails(nextSignal.signalId);
-                }
-              }}
+              onClick={() => nextSignal && navigateToSignalDetails(nextSignal.signalId)}
               disabled={signals.length <= 1}
               className="h-6 w-6 p-0"
+              title={nextSignal ? `Next signal: ${nextSignal.signalId}` : "Next signal"}
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
+            <SignalSearchBox className="w-40 sm:w-48" />
           </div>
         )}
       </div>
@@ -1329,6 +1350,7 @@ export default function SignalDetails() {
                 phases={signalPhases}
                 approaches={signalApproaches}
                 intersectionId={signal?.signalId}
+                isLht={isLhtForSignalId(signal?.signalId)}
                 svgRef={phaseDiagramRef}
               />
             )}
@@ -1788,6 +1810,20 @@ export default function SignalDetails() {
                             Lanes
                           </TableHead>
                           <TableHead
+                            className="font-medium py-1 px-1.5 text-center"
+                            style={{ fontSize: "12px" }}
+                            title="Pedestrian crossing: 0 none · 1 assigned · 2 both · 3 opposite · 4 diagonal · 5 other diagonal · 6 both diagonals (X) · 7 all directions (4 crosswalks + X)"
+                          >
+                            Ped
+                          </TableHead>
+                          <TableHead
+                            className="font-medium py-1 px-1.5"
+                            style={{ fontSize: "12px" }}
+                            title={`Crosswalk length in ${lengthUnitShort}. A measured value, otherwise the estimate phases.txt carries: LE-# from lanes, TE-# from ped clearance time.`}
+                          >
+                            {`CW ${lengthUnitShort}`}
+                          </TableHead>
+                          <TableHead
                             className="font-medium py-1 px-1.5"
                             style={{ fontSize: "12px" }}
                           >
@@ -1816,6 +1852,22 @@ export default function SignalDetails() {
                             </TableCell>
                             <TableCell className="py-1 px-1.5" style={{ fontSize: "12px" }}>
                               {phase.numOfLanes}
+                            </TableCell>
+                            <TableCell
+                              className="py-1 px-1.5 text-center"
+                              style={{ fontSize: "12px" }}
+                              title="Pedestrian crossing: 0 none · 1 assigned · 2 both · 3 opposite · 4 diagonal · 5 other diagonal · 6 both diagonals (X) · 7 all directions (4 crosswalks + X)"
+                            >
+                              {phase.isPedestrian ?? 0}
+                            </TableCell>
+                            <TableCell className="py-1 px-1.5" style={{ fontSize: "12px" }}>
+                              {crosswalkLengthCode(
+                                phase,
+                                signalPhases,
+                                signalTimings,
+                                signalApproaches,
+                                isMetric,
+                              ) || "-"}
                             </TableCell>
                             <TableCell className="py-1 px-1.5">
                               <Button
@@ -2141,6 +2193,12 @@ export default function SignalDetails() {
                             className="font-medium py-1 px-1.5"
                             style={{ fontSize: "12px" }}
                           >
+                            Lane
+                          </TableHead>
+                          <TableHead
+                            className="font-medium py-1 px-1.5"
+                            style={{ fontSize: "12px" }}
+                          >
                             Dist. to Stop Bar
                           </TableHead>
                           <TableHead
@@ -2154,6 +2212,24 @@ export default function SignalDetails() {
                             style={{ fontSize: "12px" }}
                           >
                             Technology
+                          </TableHead>
+                          <TableHead
+                            className="font-medium py-1 px-1.5"
+                            style={{ fontSize: "12px" }}
+                          >
+                            Vehicle
+                          </TableHead>
+                          <TableHead
+                            className="font-medium py-1 px-1.5"
+                            style={{ fontSize: "12px" }}
+                          >
+                            {`Length (${lengthUnitShort})`}
+                          </TableHead>
+                          <TableHead
+                            className="font-medium py-1 px-1.5"
+                            style={{ fontSize: "12px" }}
+                          >
+                            Description
                           </TableHead>
                           <TableHead
                             className="font-medium py-1 px-1.5"
@@ -2183,6 +2259,9 @@ export default function SignalDetails() {
                               {detector.approachId ?? (
                                 <span className="text-grey-400">&mdash;</span>
                               )}
+                            </TableCell>
+                            <TableCell className="py-1 px-1.5" style={{ fontSize: "12px" }}>
+                              {detector.lane || <span className="text-grey-400">&mdash;</span>}
                             </TableCell>
                             <TableCell className="py-1 px-1.5" style={{ fontSize: "12px" }}>
                               {detector.stopbarSetbackDist == null ? (
@@ -2245,6 +2324,25 @@ export default function SignalDetails() {
                                   ))}
                                 </SelectContent>
                               </Select>
+                            </TableCell>
+                            <TableCell className="py-1 px-1.5" style={{ fontSize: "12px" }}>
+                              {detector.vehicleType || (
+                                <span className="text-grey-400">&mdash;</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-1 px-1.5" style={{ fontSize: "12px" }}>
+                              {detector.length == null ? (
+                                <span className="text-grey-400">&mdash;</span>
+                              ) : isMetric ? (
+                                detector.length.toFixed(2)
+                              ) : (
+                                detector.length
+                              )}
+                            </TableCell>
+                            <TableCell className="py-1 px-1.5" style={{ fontSize: "12px" }}>
+                              {detector.description || (
+                                <span className="text-grey-400">&mdash;</span>
+                              )}
                             </TableCell>
                             <TableCell className="py-1 px-1.5">
                               <Button
@@ -2393,6 +2491,13 @@ export default function SignalDetails() {
                         <TableHead className="font-medium py-1 px-1.5" style={{ fontSize: "12px" }}>
                           Ped Clr
                         </TableHead>
+                        <TableHead
+                          className="font-medium py-1 px-1.5"
+                          style={{ fontSize: "12px" }}
+                          title="Leading Pedestrian Interval"
+                        >
+                          LPI
+                        </TableHead>
                         <TableHead className="font-medium py-1 px-1.5" style={{ fontSize: "12px" }}>
                           Recall
                         </TableHead>
@@ -2426,6 +2531,9 @@ export default function SignalDetails() {
                             </TableCell>
                             <TableCell className="py-1 px-1.5" style={{ fontSize: "12px" }}>
                               {timing.pedClearance ?? "-"}
+                            </TableCell>
+                            <TableCell className="py-1 px-1.5" style={{ fontSize: "12px" }}>
+                              {timing.leadingPedInterval ?? "-"}
                             </TableCell>
                             <TableCell className="py-1 px-1.5" style={{ fontSize: "12px" }}>
                               {timing.vehRecallType !== "None" ? timing.vehRecallType : "-"}
