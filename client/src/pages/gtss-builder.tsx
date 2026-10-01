@@ -7,6 +7,7 @@ import DetectorsTable from "@/components/gtss/detectors-table";
 import ExportPanel from "@/components/gtss/export-panel";
 import { ImportPanel } from "@/components/gtss/import-panel";
 import PhasesTable from "@/components/gtss/phases-table";
+import SignalSearchBox from "@/components/gtss/signal-search-box";
 import SignalsTable from "@/components/gtss/signals-table";
 import {
   AlertDialog,
@@ -20,8 +21,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,9 +29,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import SignalSearchBox from "@/components/gtss/signal-search-box";
 import SignalDetails from "@/pages/signal-details";
 import { clearAllData, isDemoEnabled, useGTSSStore, useLoadFromStorage } from "gtss";
 import {
@@ -171,7 +171,9 @@ export default function GTSSBuilder() {
       return <ExportPanel />;
     }
 
-    // If import panel is shown, render it regardless of active tab
+    // If import panel is shown, render it normally; the library preview flow
+    // opens a narrower modal for the post-import details while keeping the map
+    // and item list visible on the page.
     if (showImportPanel) {
       return <ImportPanel onImportComplete={() => setShowImportPanel(false)} />;
     }
