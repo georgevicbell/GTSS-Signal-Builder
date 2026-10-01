@@ -25,12 +25,26 @@ import { MapPin, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
+/** Six decimals of latitude/longitude is roughly 0.1 m — plenty for a signal,
+ *  and it keeps a map click from dumping 13 decimals into the form. */
+const COORD_DECIMALS = 6;
+const roundCoord = (n: number): number => Number(n.toFixed(COORD_DECIMALS));
+
 interface SignalModalProps {
   signal: Signal | null;
   onClose: () => void;
+  /** Seed coordinates for a new signal, e.g. from a click on the signals map. */
+  initialLocation?: { latitude: number; longitude: number } | null;
+  /** Fired after a signal is created, with its new ID. */
+  onCreated?: (signalId: string) => void;
 }
 
-export default function SignalModal({ signal, onClose }: SignalModalProps) {
+export default function SignalModal({
+  signal,
+  onClose,
+  initialLocation,
+  onCreated,
+}: SignalModalProps) {
   const { agency } = useGTSSStore();
   const { toast } = useToast();
   const signalHooks = useSignals();
@@ -73,11 +87,11 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
         agencyId: def,
         streetName1: "",
         streetName2: "",
-        latitude: 39.8283,
-        longitude: -98.5795,
+        latitude: initialLocation ? roundCoord(initialLocation.latitude) : 39.8283,
+        longitude: initialLocation ? roundCoord(initialLocation.longitude) : -98.5795,
       });
     }
-  }, [signal, form, agency]);
+  }, [signal, form, agency, initialLocation]);
 
   const onSubmit = async (data: InsertSignal) => {
     setIsLoading(true);
@@ -89,11 +103,16 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
           description: "Signal updated successfully",
         });
       } else {
-        signalHooks.save(data);
+        const created = signalHooks.save(data);
         toast({
           title: "Success",
           description: "Signal created successfully",
         });
+        onClose();
+        // Hand the user straight to the new signal so they can carry on with
+        // approaches and phases rather than landing back on the list.
+        onCreated?.(created.signalId);
+        return;
       }
       onClose();
     } catch {
@@ -116,6 +135,9 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
       return [signal.latitude, signal.longitude];
     }
     // Otherwise use agency coordinates if available
+    if (initialLocation) {
+      return [initialLocation.latitude, initialLocation.longitude];
+    }
     if (agency?.latitude != null && agency?.longitude != null) {
       return [agency.latitude, agency.longitude];
     }
@@ -139,8 +161,20 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
                   <FormItem>
                     <FormLabel>Signal ID</FormLabel>
                     <FormControl>
-                      <Input placeholder="Optional (e.g., SIG_001)" {...field} />
+                      <Input
+                        placeholder="Optional (e.g., SIG_001)"
+                        {...field}
+                        readOnly={!!signal}
+                        aria-readonly={!!signal}
+                        className={signal ? "bg-grey-100 text-grey-600 cursor-not-allowed" : ""}
+                      />
                     </FormControl>
+                    {signal && (
+                      <p className="text-xs text-grey-500">
+                        Signal ID can&apos;t be changed after creation — approaches and phases are
+                        keyed to it.
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -224,8 +258,8 @@ export default function SignalModal({ signal, onClose }: SignalModalProps) {
                         : undefined
                     }
                     onLocationSelect={(lat, lng) => {
-                      form.setValue("latitude", lat);
-                      form.setValue("longitude", lng);
+                      form.setValue("latitude", roundCoord(lat));
+                      form.setValue("longitude", roundCoord(lng));
                     }}
                     className="w-full"
                   />

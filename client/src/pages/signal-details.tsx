@@ -183,7 +183,7 @@ export default function SignalDetails() {
 
   const speedUnit = isMetric ? "km/h" : "mph";
   const qaSpeedMax = isMetric ? 200 : 100;
-  const qaSpeedPlaceholder = isMetric ? "120" : "35";
+  const qaSpeedFallback = isMetric ? "120" : "35";
   const signalId = currentSignalId;
   const isNewSignal = signalId === null;
   const signalHooks = useSignals();
@@ -223,6 +223,20 @@ export default function SignalDetails() {
   const [signalPhases, setSignalPhases] = useState<Phase[]>([]);
   const [signalDetectors, setSignalDetectors] = useState<Detector[]>([]);
   const [signalApproaches, setSignalApproaches] = useState<Approach[]>([]);
+
+  // The common case at a given intersection is "the same speed as the other
+  // legs", so suggest the most frequent posted speed already on this signal and
+  // only fall back to the agency-wide default when there is nothing to go on.
+  const qaSpeedPlaceholder = useMemo(() => {
+    const speeds = signalApproaches
+      .map((a) => a.postedSpeed)
+      .filter((v): v is number => typeof v === "number");
+    if (speeds.length === 0) return qaSpeedFallback;
+    const tally = new Map<number, number>();
+    speeds.forEach((v) => tally.set(v, (tally.get(v) ?? 0) + 1));
+    const [mostCommon] = Array.from(tally.entries()).sort((a, b) => b[1] - a[1] || a[0] - b[0])[0];
+    return String(mostCommon);
+  }, [signalApproaches, qaSpeedFallback]);
   const [signalTimings, setSignalTimings] = useState<BasicTiming[]>([]);
   const [isEditingSignal, setIsEditingSignal] = useState(false);
   const [showPhaseModal, setShowPhaseModal] = useState(false);
@@ -364,21 +378,6 @@ export default function SignalDetails() {
       return null;
     }
     return uniqueStreets.join(" & ");
-  }, [signalApproaches]);
-
-  // Get individual derived street names for display
-  const derivedStreetName1 = useMemo(() => {
-    const uniqueStreets = Array.from(
-      new Set(signalApproaches.map((a) => a.streetName).filter((name) => name && name.trim())),
-    );
-    return uniqueStreets[0] || null;
-  }, [signalApproaches]);
-
-  const derivedStreetName2 = useMemo(() => {
-    const uniqueStreets = Array.from(
-      new Set(signalApproaches.map((a) => a.streetName).filter((name) => name && name.trim())),
-    );
-    return uniqueStreets[1] || null;
   }, [signalApproaches]);
 
   useEffect(() => {
@@ -1053,8 +1052,19 @@ export default function SignalDetails() {
                           Signal ID
                         </FormLabel>
                         <FormControl>
-                          <Input {...field} className="h-7 text-sm font-mono" />
+                          {/* Read-only: approaches ("1-1") and phases are keyed to
+                              this value, so editing it would orphan them. */}
+                          <Input
+                            {...field}
+                            readOnly
+                            aria-readonly="true"
+                            title="Signal ID can't be changed after creation"
+                            className="h-7 text-sm font-mono bg-grey-100 text-grey-600 cursor-not-allowed"
+                          />
                         </FormControl>
+                        <p className="text-[10px] text-grey-500">
+                          Fixed after creation — approaches and phases are keyed to it.
+                        </p>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1302,8 +1312,8 @@ export default function SignalDetails() {
               className="absolute bottom-2 left-2 z-[1000] flex items-center gap-1 rounded-md border border-grey-300 bg-white px-2 py-1 text-xs shadow hover:bg-grey-50"
               title={
                 mapZoomLocked
-                  ? "Scroll-zoom locked — click to unlock"
-                  : "Scroll-zoom unlocked — click to lock"
+                  ? "Scroll-zoom is locked so scrolling the page doesn't accidentally zoom the map. Click to unlock, or use the + / − buttons."
+                  : "Scroll-zoom is unlocked — the wheel zooms the map instead of scrolling the page. Click to lock."
               }
               aria-pressed={mapZoomLocked}
             >
@@ -2895,176 +2905,9 @@ export default function SignalDetails() {
           the persistent main map isn't available until a signal exists, so
           the user needs the modal's own location-picker map. Existing-signal
           edits happen inline in the left panel instead. */}
-      <Dialog open={isEditingSignal && isNewSignal} onOpenChange={setIsEditingSignal}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{isNewSignal ? "New Signal" : "Edit Signal"}</DialogTitle>
-          </DialogHeader>
-          <Form {...signalForm}>
-            <form onSubmit={signalForm.handleSubmit(handleSignalSave)} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={signalForm.control}
-                  name="signalId"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-xs font-medium">Signal ID</FormLabel>
-                      <FormControl>
-                        <Input {...field} className="h-7 px-2 text-xs" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={signalForm.control}
-                  name="agencyId"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-xs font-medium">Agency ID</FormLabel>
-                      <FormControl>
-                        <Select
-                          value={
-                            field.value ||
-                            agenciesApi.data.find((a) => a.id === agenciesApi.defaultId)
-                              ?.agencyId ||
-                            ""
-                          }
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger className="h-7 px-2 text-xs">
-                            <SelectValue placeholder="Select agency" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {agenciesApi.data.map((a) => (
-                              <SelectItem key={a.id} value={a.agencyId}>
-                                {a.agencyName} ({a.agencyId})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="space-y-1">
-                  <label className="text-xs font-medium">Street Name 1</label>
-                  <div className="h-7 px-2 text-xs flex items-center bg-grey-50 border border-grey-200 rounded-md text-grey-600">
-                    {derivedStreetName1 || (
-                      <span className="text-grey-400 italic">From approaches</span>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium">Street Name 2</label>
-                  <div className="h-7 px-2 text-xs flex items-center bg-grey-50 border border-grey-200 rounded-md text-grey-600">
-                    {derivedStreetName2 || (
-                      <span className="text-grey-400 italic">From approaches</span>
-                    )}
-                  </div>
-                </div>
-                <FormField
-                  control={signalForm.control}
-                  name="latitude"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-xs font-medium">Latitude</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          step="any"
-                          className="h-7 px-2 text-xs"
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={signalForm.control}
-                  name="longitude"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1">
-                      <FormLabel className="text-xs font-medium">Longitude</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          step="any"
-                          className="h-7 px-2 text-xs"
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Interactive map for location selection */}
-              <div>
-                <h4 className="text-sm font-medium text-grey-700 mb-2">
-                  Click map to update location
-                </h4>
-                <div className="h-64 rounded-lg border overflow-hidden relative z-0">
-                  {isEditingSignal && (
-                    <MapContainer
-                      center={[
-                        signalForm.watch("latitude") || signal?.latitude || 0,
-                        signalForm.watch("longitude") || signal?.longitude || 0,
-                      ]}
-                      zoom={16}
-                      maxZoom={22}
-                      scrollWheelZoom={mapScrollZoom}
-                      style={{ height: "100%", width: "100%", zIndex: 1 }}
-                      key={`edit-map-${signalForm.watch("latitude")}-${signalForm.watch("longitude")}`}
-                    >
-                      <MapTileLayers />
-
-                      <LocationPicker
-                        onLocationSelect={(lat, lon) => {
-                          signalForm.setValue("latitude", lat);
-                          signalForm.setValue("longitude", lon);
-                        }}
-                      />
-                      <Marker
-                        position={[
-                          signalForm.watch("latitude") || signal?.latitude || 0,
-                          signalForm.watch("longitude") || signal?.longitude || 0,
-                        ]}
-                      />
-                    </MapContainer>
-                  )}
-                </div>
-                <p className="text-xs text-grey-500 mt-1">
-                  Current: {signalForm.watch("latitude")?.toFixed(6)},{" "}
-                  {signalForm.watch("longitude")?.toFixed(6)}
-                </p>
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsEditingSignal(false)}
-                  className="h-7 px-3 text-xs"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  className="h-7 px-3 text-xs bg-primary-600 hover:bg-primary-700"
-                >
-                  {isNewSignal ? "Create Signal" : "Save Changes"}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      {/* The "New Signal" dialog that used to live here is gone: creating a
+          signal is now a modal over the signals list (see signals-table.tsx),
+          so this page is only ever reached for a signal that already exists. */}
 
       {/* Delete Signal Section */}
       {!isNewSignal && signal && (
