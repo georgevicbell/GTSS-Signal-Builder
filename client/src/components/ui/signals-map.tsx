@@ -49,6 +49,34 @@ const highlightedSignalIcon = L.divIcon({
   iconAnchor: [11, 11],
 });
 
+// Same scale as the % Complete bar in the signals table and popup, so a marker
+// and its bar always agree.
+const completenessColor = (pct: number | undefined): string => {
+  if (pct === undefined) return "#6b7280"; // grey-500 — completeness unknown
+  if (pct === 100) return "#22c55e"; // green-500
+  if (pct >= 75) return "#3b82f6"; // blue-500
+  if (pct >= 50) return "#f59e0b"; // amber-500
+  if (pct >= 25) return "#f97316"; // orange-500
+  return "#d1d5db"; // grey-300
+};
+
+// A teardrop pin drawn inline so it can be tinted per signal. `role="img"` plus
+// aria-label gives each marker a real accessible name instead of "Marker".
+const signalMarkerIcon = (pct: number | undefined, label: string) =>
+  L.divIcon({
+    className: "gtss-signal-marker",
+    html:
+      `<div role="img" aria-label="${label.replace(/"/g, "&quot;")}" ` +
+      'style="width:24px;height:32px;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.35));">' +
+      '<svg viewBox="0 0 24 32" width="24" height="32" focusable="false" aria-hidden="true">' +
+      `<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20c0-6.6-5.4-12-12-12z" fill="${completenessColor(pct)}" stroke="#ffffff" stroke-width="2"/>` +
+      '<circle cx="12" cy="12" r="4.5" fill="#ffffff"/>' +
+      "</svg></div>",
+    iconSize: [24, 32],
+    iconAnchor: [12, 32],
+    popupAnchor: [0, -30],
+  });
+
 // Calculate endpoint for approach arrow based on bearing and distance
 function getApproachEndpoint(
   lat: number,
@@ -238,7 +266,20 @@ export default function SignalsMap({
 }: SignalsMapProps) {
   const mapScrollZoom = useMapScrollZoom();
   const agency = useGTSSStore((state) => state.agency);
-  const { navigateToSignalDetails, setTempNewSignalLocation } = useGTSSStore();
+  const { setTempNewSignalLocation } = useGTSSStore();
+
+  // What a screen reader announces for a pin. Street names fall back to the
+  // ones derived from the signal's approaches, same as everywhere else.
+  const signalMarkerLabel = (signal: Signal): string => {
+    const derived = getDerivedStreetNames(signal.signalId, approaches || []);
+    const s1 = derived.streetName1 || signal.streetName1;
+    const s2 = derived.streetName2 || signal.streetName2;
+    const streets = s1 && s2 ? `${s1} & ${s2}` : s1 || s2 || "";
+    const pct = getCompletenessPct?.(signal.signalId);
+    return [`Signal ${signal.signalId}`, streets, pct === undefined ? "" : `${pct}% complete`]
+      .filter(Boolean)
+      .join(", ");
+  };
 
   // Map click helper used for adding a signal (always enabled)
   function ClickToAdd({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
@@ -286,8 +327,10 @@ export default function SignalsMap({
           <ClickToAdd
             onMapClick={(lat, lng) => {
               // Save temporary coords and open the new-signal form
+              // Hand the coordinates to the signals list, which opens the Add
+              // Signal modal over the map. No navigation, so cancelling leaves
+              // the user exactly where they were.
               setTempNewSignalLocation({ latitude: lat, longitude: lng });
-              navigateToSignalDetails(null);
             }}
           />
         )}
@@ -298,10 +341,15 @@ export default function SignalsMap({
             <Marker
               key={signal.id}
               position={[signal.latitude, signal.longitude]}
+              alt={signalMarkerLabel(signal)}
+              title={signalMarkerLabel(signal)}
               icon={
                 highlightedSignalId === signal.signalId
                   ? highlightedSignalIcon
-                  : new L.Icon.Default()
+                  : signalMarkerIcon(
+                      getCompletenessPct?.(signal.signalId),
+                      signalMarkerLabel(signal),
+                    )
               }
               zIndexOffset={highlightedSignalId === signal.signalId ? 1000 : 0}
               eventHandlers={{

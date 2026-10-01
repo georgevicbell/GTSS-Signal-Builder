@@ -112,8 +112,8 @@ export default function SignalSearchBox({ className = "" }: SignalSearchBoxProps
         }}
         onFocus={() => setIsOpen(true)}
         onKeyDown={handleKeyDown}
-        placeholder="Go to signal ID…"
-        aria-label="Search for a signal by ID or street name"
+        placeholder="Jump to a signal…"
+        aria-label="Jump to a signal by ID or street name — opens that signal's page"
         className="h-7 pl-7 text-xs"
       />
 

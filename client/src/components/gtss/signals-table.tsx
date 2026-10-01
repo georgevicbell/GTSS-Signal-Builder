@@ -2,7 +2,14 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import SignalsMap from "@/components/ui/signals-map";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { getDerivedStreetNames, naturalCompare, useGTSSStore, useSignals } from "gtss";
 import type { Signal } from "gtss/schema";
@@ -12,10 +19,8 @@ import { useEffect, useRef, useState } from "react";
 import BulkSignalModal from "./bulk-signal-modal";
 import SignalModal from "./signal-modal";
 
-
-
-type SortField = 'signalId' | 'streetName1' | 'streetName2' | 'completeness';
-type SortDirection = 'asc' | 'desc';
+type SortField = "signalId" | "streetName1" | "streetName2" | "completeness";
+type SortDirection = "asc" | "desc";
 
 interface SignalsTableProps {
   triggerAdd?: number;
@@ -26,8 +31,8 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
   const [editingSignal, setEditingSignal] = useState<Signal | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
-  const [sortField, setSortField] = useState<SortField>('signalId');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortField, setSortField] = useState<SortField>("signalId");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   // Track which row is being hovered so the matching marker on the map can
   // be drawn with a distinct color.
   const [hoveredSignalId, setHoveredSignalId] = useState<string | null>(null);
@@ -35,12 +40,22 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
   // (both the stored names and the ones derived from approaches).
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { agency, signals, approaches, phases, detectors, basicTimings, navigateToSignalDetails } = useGTSSStore();
+  const {
+    agency,
+    signals,
+    approaches,
+    phases,
+    detectors,
+    basicTimings,
+    navigateToSignalDetails,
+    tempNewSignalLocation,
+    setTempNewSignalLocation,
+  } = useGTSSStore();
 
   // % complete: 25% for each of approaches, phases, detectors, timings that
   // has at least one row for the signal.
   const getCompletenessPct = (signalId: string): number => {
-    const has = (arr: { signalId: string }[]) => arr.some(x => x.signalId === signalId);
+    const has = (arr: { signalId: string }[]) => arr.some((x) => x.signalId === signalId);
     let n = 0;
     if (has(approaches)) n++;
     if (has(phases)) n++;
@@ -71,11 +86,6 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
     }
   }, [triggerBulk]);
 
-  const handleEdit = (signal: Signal) => {
-    setEditingSignal(signal);
-    setShowModal(true);
-  };
-
   const handleSignalUpdate = (signalId: string, updates: Partial<Signal>) => {
     try {
       const updatedSignal = signalHooks.update(signalId, updates);
@@ -85,30 +95,12 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
           description: "Signal updated successfully",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to update signal",
         variant: "destructive",
       });
-    }
-  };
-
-  const handleDelete = (signalId: string) => {
-    if (confirm("Are you sure you want to delete this signal? This will also delete all related phases and detectors.")) {
-      try {
-        signalHooks.delete(signalId);
-        toast({
-          title: "Success",
-          description: "Signal deleted successfully",
-        });
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to delete signal",
-          variant: "destructive",
-        });
-      }
     }
   };
 
@@ -121,23 +113,34 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
       });
       return;
     }
-    navigateToSignalDetails(null);
+    setEditingSignal(null);
+    setShowModal(true);
   };
+
+  // A click on the map seeds a location and opens the same modal, so map-add
+  // and button-add are one flow rather than two.
+  useEffect(() => {
+    if (tempNewSignalLocation) {
+      setEditingSignal(null);
+      setShowModal(true);
+    }
+  }, [tempNewSignalLocation]);
 
   const handleModalClose = () => {
     setShowModal(false);
     setEditingSignal(null);
+    // Cancelling must not leave a stale pending location behind.
+    if (tempNewSignalLocation) setTempNewSignalLocation(null);
   };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
-
 
   const matchesSearch = (signal: Signal): boolean => {
     const query = searchQuery.trim().toLowerCase();
@@ -149,36 +152,32 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
       signal.streetName2,
       derived.streetName1,
       derived.streetName2,
-    ].some(v => (v || "").toLowerCase().includes(query));
+    ].some((v) => (v || "").toLowerCase().includes(query));
   };
 
   const getSortedSignals = () => {
     return signals.filter(matchesSearch).sort((a, b) => {
-      let comparison = 0;
+      let comparison: number;
 
       switch (sortField) {
-        case 'signalId':
+        case "signalId":
           comparison = naturalCompare(a.signalId, b.signalId);
           break;
-        case 'streetName1':
+        case "streetName1":
           comparison = a.streetName1.localeCompare(b.streetName1);
           break;
-        case 'streetName2':
+        case "streetName2":
           comparison = a.streetName2.localeCompare(b.streetName2);
           break;
-        case 'completeness':
+        case "completeness":
           comparison = getCompletenessPct(a.signalId) - getCompletenessPct(b.signalId);
           break;
         default:
           comparison = naturalCompare(a.signalId, b.signalId);
       }
 
-      return sortDirection === 'asc' ? comparison : -comparison;
+      return sortDirection === "asc" ? comparison : -comparison;
     });
-  };
-
-  const handleRowClick = (signal: Signal) => {
-    handleEdit(signal);
   };
 
   const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
@@ -190,17 +189,15 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
         {children}
         <div className="flex flex-col ml-1">
           <ChevronUp
-            className={`w-2 h-2 ${sortField === field && sortDirection === 'asc' ? 'text-primary-600' : 'text-grey-300'}`}
+            className={`w-2 h-2 ${sortField === field && sortDirection === "asc" ? "text-primary-600" : "text-grey-300"}`}
           />
           <ChevronDown
-            className={`w-2 h-2 -mt-0.5 ${sortField === field && sortDirection === 'desc' ? 'text-primary-600' : 'text-grey-300'}`}
+            className={`w-2 h-2 -mt-0.5 ${sortField === field && sortDirection === "desc" ? "text-primary-600" : "text-grey-300"}`}
           />
         </div>
       </div>
     </TableHead>
   );
-
-
 
   const visibleSignals = getSortedSignals();
   const isFiltering = searchQuery.trim() !== "";
@@ -250,8 +247,8 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span className="text-sm font-medium text-grey-700 whitespace-nowrap">
                     {isFiltering
-                      ? `${visibleSignals.length} of ${signals.length} signal${signals.length !== 1 ? 's' : ''}`
-                      : `${signals.length} signal${signals.length !== 1 ? 's' : ''}`}
+                      ? `${visibleSignals.length} of ${signals.length} signal${signals.length !== 1 ? "s" : ""}`
+                      : `${signals.length} signal${signals.length !== 1 ? "s" : ""}`}
                   </span>
                 </div>
                 <div className="relative flex-1 max-w-sm">
@@ -259,7 +256,8 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
                   <Input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by ID or street name…"
+                    placeholder="Filter this list by ID or street…"
+                    aria-label="Filter the signals list by ID or street name"
                     className="h-8 pl-8 pr-8 text-sm"
                     data-testid="input-signal-search"
                   />
@@ -304,7 +302,9 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
                                 <>
                                   <MapPin className="w-8 h-8 text-grey-300" />
                                   <p>No traffic signals configured</p>
-                                  <p className="text-grey-400">Add your first signal to get started</p>
+                                  <p className="text-grey-400">
+                                    Add your first signal to get started
+                                  </p>
                                 </>
                               )}
                             </div>
@@ -314,42 +314,77 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
                         visibleSignals.map((signal) => (
                           <TableRow
                             key={signal.id}
-                            className="hover:bg-grey-50 cursor-pointer transition-colors"
+                            // Rows act as buttons: reachable by Tab, activated by
+                            // Enter or Space, not click-only.
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Open signal ${signal.signalId}`}
+                            className="hover:bg-grey-50 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset"
                             onClick={() => navigateToSignalDetails(signal.signalId)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                navigateToSignalDetails(signal.signalId);
+                              }
+                            }}
+                            onFocus={() => setHoveredSignalId(signal.signalId)}
+                            onBlur={() =>
+                              setHoveredSignalId((prev) => (prev === signal.signalId ? null : prev))
+                            }
                             onMouseEnter={() => setHoveredSignalId(signal.signalId)}
-                            onMouseLeave={() => setHoveredSignalId(prev => prev === signal.signalId ? null : prev)}
+                            onMouseLeave={() =>
+                              setHoveredSignalId((prev) => (prev === signal.signalId ? null : prev))
+                            }
                             data-testid={`row-signal-${signal.signalId}`}
                           >
-                            <TableCell className="font-medium text-grey-900 text-xs py-1.5 px-2">{signal.signalId}</TableCell>
-                            <TableCell className="text-grey-600 text-xs py-1.5 px-2">
-                              {getDerivedStreetNames(signal.signalId, approaches).streetName1 || signal.streetName1 || '-'}
+                            <TableCell className="font-medium text-grey-900 text-xs py-1.5 px-2">
+                              {signal.signalId}
                             </TableCell>
                             <TableCell className="text-grey-600 text-xs py-1.5 px-2">
-                              {getDerivedStreetNames(signal.signalId, approaches).streetName2 || signal.streetName2 || '-'}
+                              {getDerivedStreetNames(signal.signalId, approaches).streetName1 ||
+                                signal.streetName1 ||
+                                "-"}
+                            </TableCell>
+                            <TableCell className="text-grey-600 text-xs py-1.5 px-2">
+                              {getDerivedStreetNames(signal.signalId, approaches).streetName2 ||
+                                signal.streetName2 ||
+                                "-"}
                             </TableCell>
                             <TableCell className="text-xs py-1.5 px-2">
                               {(() => {
                                 const pct = getCompletenessPct(signal.signalId);
-                                const has = (arr: { signalId: string }[]) => arr.some(x => x.signalId === signal.signalId);
+                                const has = (arr: { signalId: string }[]) =>
+                                  arr.some((x) => x.signalId === signal.signalId);
                                 const parts = [
-                                  `${has(approaches) ? '✓' : '·'} approaches`,
-                                  `${has(phases) ? '✓' : '·'} phases`,
-                                  `${has(detectors) ? '✓' : '·'} detectors`,
-                                  `${has(basicTimings) ? '✓' : '·'} timings`,
-                                ].join('\n');
+                                  `${has(approaches) ? "✓" : "·"} approaches`,
+                                  `${has(phases) ? "✓" : "·"} phases`,
+                                  `${has(detectors) ? "✓" : "·"} detectors`,
+                                  `${has(basicTimings) ? "✓" : "·"} timings`,
+                                ].join("\n");
                                 const barColor =
-                                  pct === 100 ? 'bg-green-500'
-                                    : pct >= 75 ? 'bg-blue-500'
-                                      : pct >= 50 ? 'bg-amber-500'
-                                        : pct >= 25 ? 'bg-orange-500'
-                                          : 'bg-grey-300';
-                                const textColor = pct === 100 ? 'text-green-700' : 'text-grey-700';
+                                  pct === 100
+                                    ? "bg-green-500"
+                                    : pct >= 75
+                                      ? "bg-blue-500"
+                                      : pct >= 50
+                                        ? "bg-amber-500"
+                                        : pct >= 25
+                                          ? "bg-orange-500"
+                                          : "bg-grey-300";
+                                const textColor = pct === 100 ? "text-green-700" : "text-grey-700";
                                 return (
                                   <div className="flex items-center gap-2" title={parts}>
                                     <div className="w-20 h-1.5 bg-grey-200 rounded-full overflow-hidden flex-shrink-0">
-                                      <div className={`h-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
+                                      <div
+                                        className={`h-full ${barColor} transition-all`}
+                                        style={{ width: `${pct}%` }}
+                                      />
                                     </div>
-                                    <span className={`font-mono text-[11px] w-9 text-right ${textColor}`}>{pct}%</span>
+                                    <span
+                                      className={`font-mono text-[11px] w-9 text-right ${textColor}`}
+                                    >
+                                      {pct}%
+                                    </span>
                                   </div>
                                 );
                               })()}
@@ -370,14 +405,15 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
         <SignalModal
           signal={editingSignal}
           onClose={handleModalClose}
+          initialLocation={editingSignal ? null : tempNewSignalLocation}
+          onCreated={(newSignalId) => {
+            setTempNewSignalLocation(null);
+            navigateToSignalDetails(newSignalId);
+          }}
         />
       )}
 
-      {showBulkModal && (
-        <BulkSignalModal
-          onClose={() => setShowBulkModal(false)}
-        />
-      )}
+      {showBulkModal && <BulkSignalModal onClose={() => setShowBulkModal(false)} />}
     </div>
   );
 }
