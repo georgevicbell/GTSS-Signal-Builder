@@ -141,6 +141,13 @@
     z-index: 3 !important;
   }
 
+  /* Keep the library preview map beneath the import dialog but leave other maps alone. */
+  .library-map-container,
+  .library-map-container .leaflet-container {
+    position: relative;
+    z-index: 1 !important;
+  }
+
   /* Ensure dialog overlays have higher z-index */
   [data-radix-popper-content-wrapper] {
     z-index: 50 !important;

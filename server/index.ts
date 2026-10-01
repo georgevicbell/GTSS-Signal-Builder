@@ -2,6 +2,7 @@ import cors from "cors";
 import express, { NextFunction, type Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
+import path from "path";
 import { registerRoutes } from "./routes";
 import { log, serveStatic, setupVite } from "./vite";
 
@@ -62,6 +63,8 @@ app.use(apiLimiter);
 // Body parsers with size limits to prevent DoS
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false, limit: "1mb" }));
+
+app.use("/data", express.static(path.resolve(import.meta.dirname, "..", "data")));
 
 app.use((req, res, next) => {
   const start = Date.now();
