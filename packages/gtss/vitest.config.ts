@@ -7,13 +7,7 @@ export default defineConfig({
       provider: "v8",
       reportOnFailure: true,
       reporter: ["text", "html", "json-summary", "json"],
-      include: [
-        "src/localStorage.ts",
-        "src/localStorage/**/*.ts",
-        "store/gtss-store.ts",
-        "src/gtssValidation.ts",
-        "src/utils.ts",
-      ],
+      include: ["src/**/*.ts", "store/**/*.ts", "schema/**/*.ts"],
     },
   },
 });

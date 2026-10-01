@@ -29,6 +29,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import SignalDetails from "@/pages/signal-details";
@@ -58,9 +60,8 @@ import {
   Target,
   TrafficCone,
   Trash2,
-  X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type TabType =
   "agency" | "signals" | "approaches" | "phases" | "detectors" | "basic-timings" | "demo";
@@ -93,9 +94,15 @@ const tabTitles: Record<TabType, { title: string; desc: string }> = {
   },
 };
 
+// Typed confirmation for the one irreversible action in the app.
+const CLEAR_ALL_CONFIRM_PHRASE = "DELETE";
+
 export default function GTSSBuilder() {
   const [activeTab, setActiveTab] = useState<TabType>("signals");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showClearAllDialog, setShowClearAllDialog] = useState(false);
+  const [clearAllConfirmText, setClearAllConfirmText] = useState("");
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [showImportPanel, setShowImportPanel] = useState(false);
   const [showAgencyDefaults, setShowAgencyDefaults] = useState(false);
@@ -108,8 +115,10 @@ export default function GTSSBuilder() {
     detectors,
     basicTimings,
     currentView,
+    currentSignalId,
     loadFromStorage,
     navigateToSignalDetails,
+    navigateToMain,
   } = useGTSSStore();
   const { toast } = useToast();
   const { setSelectedSignalIdForTables, setDeepLinkTarget } = useGTSSStore();
@@ -122,6 +131,15 @@ export default function GTSSBuilder() {
     }
     return baseTabs;
   }, [showDemo]);
+
+  // Creating a signal is a modal over the list now, so a signal-details view
+  // with no ID is an orphan route (a stale bookmark, or the old "New Signal"
+  // scaffold). Send it back to the list instead of rendering an empty page.
+  useEffect(() => {
+    if (currentView === "signal-details" && !currentSignalId) {
+      navigateToMain();
+    }
+  }, [currentView, currentSignalId, navigateToMain]);
 
   // If active tab is demo and demo mode is disabled, revert to signals
   useEffect(() => {
@@ -159,7 +177,9 @@ export default function GTSSBuilder() {
       return <ExportPanel />;
     }
 
-    // If import panel is shown, render it regardless of active tab
+    // If import panel is shown, render it normally; the library preview flow
+    // opens a narrower modal for the post-import details while keeping the map
+    // and item list visible on the page.
     if (showImportPanel) {
       return <ImportPanel onImportComplete={() => setShowImportPanel(false)} />;
     }
@@ -201,7 +221,10 @@ export default function GTSSBuilder() {
       setActiveTab("agency");
       return;
     }
-    navigateToSignalDetails(null);
+    // The signals list owns the Add Signal modal; make sure it is on screen,
+    // then ask it to open.
+    setActiveTab("signals");
+    setTriggerAdd((prev) => prev + 1);
   };
 
   const handleAddMultiple = () => {
@@ -346,254 +369,247 @@ export default function GTSSBuilder() {
     window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
   }, [activeTab, currentView, navigateToSignalDetails]);
 
-  if (currentView === "signal-details") {
-    return <SignalDetails />;
-  }
-
-  return (
-    <div className="h-screen flex bg-grey-50">
-      {/* Mobile Overlay */}
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <div
-        className={cn(
-          "w-56 bg-white shadow-lg border-r border-grey-200 flex flex-col h-full transition-transform duration-300 z-50",
-          "fixed lg:static inset-y-0 left-0",
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
-        )}
-      >
-        {/* Header */}
-        <div className="flex-shrink-0 p-3 border-b border-grey-200">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-              <TrafficCone className="text-white" size={16} />
-            </div>
-            <div className="flex-1">
-              <h1 className="text-lg font-bold text-grey-800">GTSS Builder</h1>
-            </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 text-grey-400 hover:text-grey-600"
-                >
-                  <HelpCircle className="w-4 h-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="text-base">About GTSS Builder</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-3 text-sm text-grey-700">
-                  <p>
-                    <strong>GTSS Builder</strong> is a tool for configuring traffic signal systems
-                    and exporting data in the{" "}
-                    <strong>GTSS (General Traffic Signal Specification)</strong> format &mdash; an
-                    open standard for describing traffic signal configurations including signal
-                    locations, phases, detection equipment, and timing parameters.
-                  </p>
-                  <p>
-                    All data is stored locally in your browser using localStorage. Nothing is sent
-                    to a server. Your work persists between sessions on the same browser.
-                  </p>
-                  <p>
-                    Use the <strong>Export</strong> feature to download your configuration as
-                    GTSS-formatted files, and <strong>Import</strong> to load previously exported
-                    data or migrate between browsers.
-                  </p>
-                  <p>
-                    GTSS Builder is <strong>open source and free to use</strong>. The full source is
-                    on{" "}
-                    <a
-                      href="https://github.com/redmond2742/GTSS-Signal-Builder"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      GitHub
-                    </a>{" "}
-                    &mdash; you're welcome to fork it and adapt it for your own agency.
-                  </p>
-                  <p className="text-xs text-grey-500">
-                    Learn more about GTSS at{" "}
-                    <a
-                      href="https://gtss.dev"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      gtss.dev
-                    </a>
-                  </p>
-                </div>
-              </DialogContent>
-            </Dialog>
+  // One nav, two presentations: a permanent column from `lg` up, and a Sheet
+  // below it. Sheet is Radix Dialog underneath, so the drawer gets a portal, a
+  // backdrop, Escape-to-close, a focus trap and focus restored to the menu
+  // button without any of it being hand-rolled.
+  const renderSidebarNav = (inSheet: boolean) => (
+    <>
+      {/* Header */}
+      <div className={cn("flex-shrink-0 p-3 border-b border-grey-200", inSheet && "pr-10")}>
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+            <TrafficCone className="text-white" size={16} />
           </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 p-2 overflow-y-auto min-h-0">
-          <div className="space-y-1">
-            {navTabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              const count = counts[tab.id as keyof typeof counts] || 0;
-
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setTriggerAdd(0);
-                    setTriggerBulk(0);
-                    setTriggerAddApproach(0);
-                    setTriggerBulkApproach(0);
-                    setTriggerAddPhase(0);
-                    setTriggerBulkPhase(0);
-                    setTriggerAddDetector(0);
-                    setTriggerBulkDetector(0);
-                    setTriggerAddBasicTiming(0);
-                    setActiveTab(tab.id as TabType);
-                    setShowExportPanel(false);
-                    setShowImportPanel(false);
-                    setShowAgencyDefaults(false);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={cn(
-                    "w-full flex items-center space-x-2 px-2 py-2 rounded-md text-left transition-all duration-200",
-                    isActive
-                      ? "bg-primary-100 text-primary-700 border border-primary-200 shadow-sm"
-                      : "text-grey-600 hover:bg-grey-100 hover:text-grey-800",
-                  )}
-                >
-                  <Icon size={16} className={isActive ? "text-primary-600" : "text-grey-500"} />
-                  <div className="flex-1">
-                    <span className="text-xs font-medium">{tab.label}</span>
-                  </div>
-                  {count > 0 && tab.id === "signals" && (
-                    <Badge
-                      variant={isActive ? "default" : "secondary"}
-                      className="text-xs px-1.5 py-0 min-w-[18px] h-4"
-                    >
-                      {count}
-                    </Badge>
-                  )}
-                </button>
-              );
-            })}
+          <div className="flex-1">
+            <h1 className="text-lg font-bold text-grey-800">GTSS Builder</h1>
           </div>
-        </nav>
-
-        {/* Footer Actions - Always visible at bottom */}
-        <div className="flex-shrink-0 p-2 border-t border-grey-200">
-          {/* About GTSS section */}
-          <div className="mb-4 pb-3 border-b border-grey-200">
-            <p className="text-xs font-medium text-grey-600 mb-2 px-2">About GTSS</p>
-            <Button
-              size="sm"
-              className="w-full h-7 text-xs bg-blue-500 text-white hover:bg-blue-600 shadow-sm transition-all duration-200"
-              onClick={() => window.open("https://gtss.dev", "_blank")}
-              data-testid="button-about-gtss"
-            >
-              <ExternalLink className="w-3 h-3 mr-1" />
-              Learn More
-            </Button>
-          </div>
-
-          {/* Support this Tool section */}
-          <div className="mb-4 pb-3 border-b border-grey-200">
-            <p className="text-xs font-medium text-grey-600 mb-2 px-2">Support this Tool</p>
-            <Button
-              size="sm"
-              className="w-full h-7 text-xs bg-orange-500 text-white hover:bg-orange-600 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
-              onClick={() => window.open("https://buymeacoffee.com/mr2742", "_blank")}
-            >
-              <Coffee className="w-3 h-3 mr-1" />
-              Buy me a Coffee
-            </Button>
-          </div>
-
-          {/* Settings section */}
-          <div className="mb-4 pb-3 border-b border-grey-200">
-            <p className="text-xs font-medium text-grey-600 mb-2 px-2">Settings</p>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full h-7 text-xs",
-                showAgencyDefaults
-                  ? "bg-primary-100 text-primary-700 border-primary-200"
-                  : "bg-grey-100 text-grey-700 hover:bg-grey-200",
-              )}
-              onClick={() => {
-                setShowAgencyDefaults(true);
-                setShowImportPanel(false);
-                setShowExportPanel(false);
-                setIsMobileMenuOpen(false);
-              }}
-              data-testid="button-agency-defaults"
-            >
-              <SlidersHorizontal className="w-3 h-3 mr-1" />
-              Configuration
-            </Button>
-          </div>
-
-          {/* Import/Export section */}
-          <div className="mb-4 pb-3 border-b border-grey-200">
-            <p className="text-xs font-medium text-grey-600 mb-2 px-2">Data Management</p>
-            <div className="space-y-1">
+          <Dialog>
+            <DialogTrigger asChild>
               <Button
-                variant="outline"
-                className={cn(
-                  "w-full h-7 text-xs",
-                  showImportPanel
-                    ? "bg-primary-100 text-primary-700 border-primary-200"
-                    : "bg-grey-100 text-grey-700 hover:bg-grey-200",
-                )}
-                onClick={() => {
-                  setShowImportPanel(true);
-                  setShowExportPanel(false);
-                  setShowAgencyDefaults(false);
-                  setIsMobileMenuOpen(false);
-                }}
-                data-testid="button-import"
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 text-grey-400 hover:text-grey-600"
               >
-                <FolderInput className="w-3 h-3 mr-1" />
-                Import
+                <HelpCircle className="w-4 h-4" />
               </Button>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full h-7 text-xs",
-                  showExportPanel
-                    ? "bg-primary-100 text-primary-700 border-primary-200"
-                    : "bg-grey-100 text-grey-700 hover:bg-grey-200",
-                )}
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-base">About GTSS Builder</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 text-sm text-grey-700">
+                <p>
+                  <strong>GTSS Builder</strong> is a tool for configuring traffic signal systems and
+                  exporting data in the <strong>GTSS (General Traffic Signal Specification)</strong>{" "}
+                  format &mdash; an open standard for describing traffic signal configurations
+                  including signal locations, phases, detection equipment, and timing parameters.
+                </p>
+                <p>
+                  All data is stored locally in your browser using localStorage. Nothing is sent to
+                  a server. Your work persists between sessions on the same browser.
+                </p>
+                <p>
+                  Use the <strong>Export</strong> feature to download your configuration as
+                  GTSS-formatted files, and <strong>Import</strong> to load previously exported data
+                  or migrate between browsers.
+                </p>
+                <p>
+                  GTSS Builder is <strong>open source and free to use</strong>. The full source is
+                  on{" "}
+                  <a
+                    href="https://github.com/redmond2742/GTSS-Signal-Builder"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    GitHub
+                  </a>{" "}
+                  &mdash; you're welcome to fork it and adapt it for your own agency.
+                </p>
+                <p className="text-xs text-grey-500">
+                  Learn more about GTSS at{" "}
+                  <a
+                    href="https://gtss.dev"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    gtss.dev
+                  </a>
+                </p>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 p-2 overflow-y-auto min-h-0">
+        <div className="space-y-1">
+          {navTabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            const count = counts[tab.id as keyof typeof counts] || 0;
+
+            return (
+              <button
+                key={tab.id}
                 onClick={() => {
-                  setShowExportPanel(true);
+                  setTriggerAdd(0);
+                  setTriggerBulk(0);
+                  setTriggerAddApproach(0);
+                  setTriggerBulkApproach(0);
+                  setTriggerAddPhase(0);
+                  setTriggerBulkPhase(0);
+                  setTriggerAddDetector(0);
+                  setTriggerBulkDetector(0);
+                  setTriggerAddBasicTiming(0);
+                  setActiveTab(tab.id as TabType);
+                  setShowExportPanel(false);
                   setShowImportPanel(false);
                   setShowAgencyDefaults(false);
                   setIsMobileMenuOpen(false);
                 }}
-                data-testid="button-export"
+                className={cn(
+                  "w-full flex items-center space-x-2 px-2 py-2 rounded-md text-left transition-all duration-200",
+                  isActive
+                    ? "bg-primary-100 text-primary-700 border border-primary-200 shadow-sm"
+                    : "text-grey-600 hover:bg-grey-100 hover:text-grey-800",
+                )}
               >
-                <FolderOutput className="w-3 h-3 mr-1" />
-                Export
-              </Button>
-            </div>
-          </div>
+                <Icon size={16} className={isActive ? "text-primary-600" : "text-grey-500"} />
+                <div className="flex-1">
+                  <span className="text-xs font-medium">{tab.label}</span>
+                </div>
+                {count > 0 && tab.id === "signals" && (
+                  <Badge
+                    variant={isActive ? "default" : "secondary"}
+                    className="text-xs px-1.5 py-0 min-w-[18px] h-4"
+                  >
+                    {count}
+                  </Badge>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
-          {/* Clear All Data */}
-          <AlertDialog>
+      {/* Footer Actions - Always visible at bottom */}
+      <div className="flex-shrink-0 p-2 border-t border-grey-200">
+        {/* About GTSS section */}
+        <div className="mb-4 pb-3 border-b border-grey-200">
+          <p className="text-xs font-medium text-grey-600 mb-2 px-2">About GTSS</p>
+          <Button
+            size="sm"
+            className="w-full h-7 text-xs bg-blue-500 text-white hover:bg-blue-600 shadow-sm transition-all duration-200"
+            onClick={() => window.open("https://gtss.dev", "_blank")}
+            data-testid="button-about-gtss"
+          >
+            <ExternalLink className="w-3 h-3 mr-1" />
+            Learn More
+          </Button>
+        </div>
+
+        {/* Support this Tool section */}
+        <div className="mb-4 pb-3 border-b border-grey-200">
+          <p className="text-xs font-medium text-grey-600 mb-2 px-2">Support this Tool</p>
+          <Button
+            size="sm"
+            className="w-full h-7 text-xs bg-orange-500 text-white hover:bg-orange-600 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+            onClick={() => window.open("https://buymeacoffee.com/mr2742", "_blank")}
+          >
+            <Coffee className="w-3 h-3 mr-1" />
+            Buy me a Coffee
+          </Button>
+        </div>
+
+        {/* Settings section */}
+        <div className="mb-4 pb-3 border-b border-grey-200">
+          <p className="text-xs font-medium text-grey-600 mb-2 px-2">Settings</p>
+          <Button
+            variant="outline"
+            className={cn(
+              "w-full h-7 text-xs",
+              showAgencyDefaults
+                ? "bg-primary-100 text-primary-700 border-primary-200"
+                : "bg-grey-100 text-grey-700 hover:bg-grey-200",
+            )}
+            onClick={() => {
+              setShowAgencyDefaults(true);
+              setShowImportPanel(false);
+              setShowExportPanel(false);
+              setIsMobileMenuOpen(false);
+            }}
+            data-testid="button-agency-defaults"
+          >
+            <SlidersHorizontal className="w-3 h-3 mr-1" />
+            Configuration
+          </Button>
+        </div>
+
+        {/* Import/Export section */}
+        <div className="mb-4 pb-3 border-b border-grey-200">
+          <p className="text-xs font-medium text-grey-600 mb-2 px-2">Data Management</p>
+          <div className="space-y-1">
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full h-7 text-xs",
+                showImportPanel
+                  ? "bg-primary-100 text-primary-700 border-primary-200"
+                  : "bg-grey-100 text-grey-700 hover:bg-grey-200",
+              )}
+              onClick={() => {
+                setShowImportPanel(true);
+                setShowExportPanel(false);
+                setShowAgencyDefaults(false);
+                setIsMobileMenuOpen(false);
+              }}
+              data-testid="button-import"
+            >
+              <FolderInput className="w-3 h-3 mr-1" />
+              Import
+            </Button>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full h-7 text-xs",
+                showExportPanel
+                  ? "bg-primary-100 text-primary-700 border-primary-200"
+                  : "bg-grey-100 text-grey-700 hover:bg-grey-200",
+              )}
+              onClick={() => {
+                setShowExportPanel(true);
+                setShowImportPanel(false);
+                setShowAgencyDefaults(false);
+                setIsMobileMenuOpen(false);
+              }}
+              data-testid="button-export"
+            >
+              <FolderOutput className="w-3 h-3 mr-1" />
+              Export
+            </Button>
+          </div>
+        </div>
+
+        {/* Danger Zone — fenced off from the safe Import/Export actions above,
+            and gated behind typing the confirmation phrase. Mirrors the
+            Danger Zone on the signal detail page. */}
+        <div className="mt-4 pt-3 border-t-2 border-red-200">
+          <p className="text-xs font-semibold text-red-700 mb-2 px-2">Danger Zone</p>
+          <AlertDialog
+            open={showClearAllDialog}
+            onOpenChange={(open) => {
+              setShowClearAllDialog(open);
+              if (!open) setClearAllConfirmText("");
+            }}
+          >
             <AlertDialogTrigger asChild>
               <Button
                 variant="outline"
-                className="w-full h-7 text-xs mt-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300"
+                className="w-full h-7 text-xs border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400"
               >
                 <Trash2 className="w-3 h-3 mr-1" />
                 Clear All Data
@@ -601,17 +617,33 @@ export default function GTSSBuilder() {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Clear All Data</AlertDialogTitle>
+                <AlertDialogTitle className="text-red-700">Clear All Data</AlertDialogTitle>
                 <AlertDialogDescription>
                   This will permanently delete all agency information, signals, approaches, phases,
-                  timings, and detectors. This action cannot be undone.
+                  timings, and detectors. This action cannot be undone. Export your data first if
+                  you want to keep a copy.
                 </AlertDialogDescription>
               </AlertDialogHeader>
+              <div className="space-y-1">
+                <label htmlFor="clear-all-confirm" className="text-xs font-medium text-grey-700">
+                  Type <span className="font-mono font-semibold">{CLEAR_ALL_CONFIRM_PHRASE}</span>{" "}
+                  to confirm
+                </label>
+                <Input
+                  id="clear-all-confirm"
+                  value={clearAllConfirmText}
+                  onChange={(e) => setClearAllConfirmText(e.target.value)}
+                  placeholder={CLEAR_ALL_CONFIRM_PHRASE}
+                  autoComplete="off"
+                  className="h-8 text-sm font-mono"
+                />
+              </div>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleClearAllData}
-                  className="bg-red-600 hover:bg-red-700"
+                  disabled={clearAllConfirmText.trim() !== CLEAR_ALL_CONFIRM_PHRASE}
+                  className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:pointer-events-none"
                 >
                   Clear All Data
                 </AlertDialogAction>
@@ -620,25 +652,59 @@ export default function GTSSBuilder() {
           </AlertDialog>
         </div>
       </div>
+    </>
+  );
+
+  if (currentView === "signal-details" && currentSignalId) {
+    return <SignalDetails />;
+  }
+
+  return (
+    <div className="h-screen flex bg-grey-50">
+      {/* Sidebar — permanent column on large screens */}
+      <aside className="hidden lg:flex w-56 flex-shrink-0 bg-white shadow-lg border-r border-grey-200 flex-col h-full">
+        {renderSidebarNav(false)}
+      </aside>
+
+      {/* Sidebar — overlay drawer below `lg` */}
+      <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+        <SheetContent
+          side="left"
+          className="w-56 max-w-[85vw] p-0 flex flex-col gap-0 lg:hidden"
+          aria-label="Main navigation"
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            menuButtonRef.current?.focus();
+          }}
+        >
+          <SheetTitle className="sr-only">Main navigation</SheetTitle>
+          {renderSidebarNav(true)}
+        </SheetContent>
+      </Sheet>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
         <header className="bg-white border-b border-grey-200 px-4 py-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          {/* Wraps rather than clipping: at narrow widths the action cluster
+              drops onto its own line instead of running off the right edge. */}
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
+            <div className="flex min-w-0 items-center gap-2">
               {/* Mobile Menu Button */}
               <Button
+                ref={menuButtonRef}
                 variant="ghost"
                 size="sm"
                 className="lg:hidden h-8 w-8 p-0"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                onClick={() => setIsMobileMenuOpen(true)}
+                aria-label="Open navigation menu"
+                aria-expanded={isMobileMenuOpen}
                 data-testid="button-mobile-menu"
               >
-                {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                <Menu size={20} />
               </Button>
-              <div>
-                <h2 className="text-base lg:text-lg font-bold text-grey-800">
+              <div className="min-w-0">
+                <h2 className="truncate text-base lg:text-lg font-bold text-grey-800">
                   {showExportPanel
                     ? "Export Data"
                     : showImportPanel
@@ -663,8 +729,9 @@ export default function GTSSBuilder() {
               showImportPanel,
               showAgencyDefaults,
             }) && (
-              <div className="flex items-center gap-2">
-                <SignalSearchBox className="w-40 sm:w-52" />
+              <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
+                <SignalSearchBox className="w-36 sm:w-52" />
+
                 {activeTab === "signals" ? (
                   <div className="flex space-x-1">
                     <Button

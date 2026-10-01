@@ -40,8 +40,17 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
   // (both the stored names and the ones derived from approaches).
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { agency, signals, approaches, phases, detectors, basicTimings, navigateToSignalDetails } =
-    useGTSSStore();
+  const {
+    agency,
+    signals,
+    approaches,
+    phases,
+    detectors,
+    basicTimings,
+    navigateToSignalDetails,
+    tempNewSignalLocation,
+    setTempNewSignalLocation,
+  } = useGTSSStore();
 
   // % complete: 25% for each of approaches, phases, detectors, timings that
   // has at least one row for the signal.
@@ -77,11 +86,6 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
     }
   }, [triggerBulk]);
 
-  /* const handleEdit = (signal: Signal) => {
-     setEditingSignal(signal);
-     setShowModal(true);
-   };
- */
   const handleSignalUpdate = (signalId: string, updates: Partial<Signal>) => {
     try {
       const updatedSignal = signalHooks.update(signalId, updates);
@@ -99,25 +103,6 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
       });
     }
   };
-  /*
-    const handleDelete = (signalId: string) => {
-      if (confirm("Are you sure you want to delete this signal? This will also delete all related phases and detectors.")) {
-        try {
-          signalHooks.delete(signalId);
-          toast({
-            title: "Success",
-            description: "Signal deleted successfully",
-          });
-        } catch (error) {
-          toast({
-            title: "Error",
-            description: "Failed to delete signal",
-            variant: "destructive",
-          });
-        }
-      }
-    };
-  */
   const handleAdd = () => {
     if (!agency?.agencyId) {
       toast({
@@ -127,12 +112,24 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
       });
       return;
     }
-    navigateToSignalDetails(null);
+    setEditingSignal(null);
+    setShowModal(true);
   };
+
+  // A click on the map seeds a location and opens the same modal, so map-add
+  // and button-add are one flow rather than two.
+  useEffect(() => {
+    if (tempNewSignalLocation) {
+      setEditingSignal(null);
+      setShowModal(true);
+    }
+  }, [tempNewSignalLocation]);
 
   const handleModalClose = () => {
     setShowModal(false);
     setEditingSignal(null);
+    // Cancelling must not leave a stale pending location behind.
+    if (tempNewSignalLocation) setTempNewSignalLocation(null);
   };
 
   const handleSort = (field: SortField) => {
@@ -159,7 +156,7 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
 
   const getSortedSignals = () => {
     return signals.filter(matchesSearch).sort((a, b) => {
-      let comparison;
+      let comparison: number;
 
       switch (sortField) {
         case "signalId":
@@ -182,10 +179,6 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
     });
   };
 
-  /* const handleRowClick = (signal: Signal) => {
-     handleEdit(signal);
-   };
- */
   const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
     <TableHead
       className="text-xs font-medium text-grey-500 uppercase tracking-wider cursor-pointer hover:bg-grey-100 transition-colors py-1.5 px-2"
@@ -262,7 +255,8 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
                   <Input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by ID or street name…"
+                    placeholder="Filter this list by ID or street…"
+                    aria-label="Filter the signals list by ID or street name"
                     className="h-8 pl-8 pr-8 text-sm"
                     data-testid="input-signal-search"
                   />
@@ -319,8 +313,23 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
                         visibleSignals.map((signal) => (
                           <TableRow
                             key={signal.id}
-                            className="hover:bg-grey-50 cursor-pointer transition-colors"
+                            // Rows act as buttons: reachable by Tab, activated by
+                            // Enter or Space, not click-only.
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Open signal ${signal.signalId}`}
+                            className="hover:bg-grey-50 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset"
                             onClick={() => navigateToSignalDetails(signal.signalId)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                navigateToSignalDetails(signal.signalId);
+                              }
+                            }}
+                            onFocus={() => setHoveredSignalId(signal.signalId)}
+                            onBlur={() =>
+                              setHoveredSignalId((prev) => (prev === signal.signalId ? null : prev))
+                            }
                             onMouseEnter={() => setHoveredSignalId(signal.signalId)}
                             onMouseLeave={() =>
                               setHoveredSignalId((prev) => (prev === signal.signalId ? null : prev))
@@ -391,7 +400,17 @@ export default function SignalsTable({ triggerAdd, triggerBulk }: SignalsTablePr
         </ResizablePanel>
       </ResizablePanelGroup>
 
-      {showModal && <SignalModal signal={editingSignal} onClose={handleModalClose} />}
+      {showModal && (
+        <SignalModal
+          signal={editingSignal}
+          onClose={handleModalClose}
+          initialLocation={editingSignal ? null : tempNewSignalLocation}
+          onCreated={(newSignalId) => {
+            setTempNewSignalLocation(null);
+            navigateToSignalDetails(newSignalId);
+          }}
+        />
+      )}
 
       {showBulkModal && <BulkSignalModal onClose={() => setShowBulkModal(false)} />}
     </div>

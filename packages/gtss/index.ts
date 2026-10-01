@@ -58,6 +58,12 @@ export type {
   LaneToken,
   LaneTypeInfo,
 } from "./src/laneConfig";
+export {
+  flattenLibraryEntries,
+  getLibrarySourceUrls,
+  resolveLibraryResourceUrl,
+} from "./src/library";
+export type { LibraryBounds, LibraryEntry, LibrarySource } from "./src/library";
 export { isLhtForSignalId, isMetricForSignalId } from "./src/localStorage/agency-units";
 export { clearAllData } from "./src/localStorage/clearAll";
 export {
