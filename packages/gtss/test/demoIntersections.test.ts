@@ -77,6 +77,25 @@ describe("demoIntersections", () => {
     getAllDemoIntersections().forEach(expectValidLaneConfigs);
   });
 
+  it("includes dedicated streetcar and LRT demo intersections", () => {
+    const demos = getAllDemoIntersections();
+    const streetcar = demos.find((demo) => demo.id === "demo-4-streetcar");
+    const lrt = demos.find((demo) => demo.id === "demo-4-lrt");
+
+    expect(streetcar).toBeDefined();
+    expect(
+      streetcar?.approaches.some((approach) =>
+        tokenizeLaneConfig(approach.laneConfig).some((lane) => lane.parts.includes("R")),
+      ),
+    ).toBe(true);
+    expect(lrt).toBeDefined();
+    expect(
+      lrt?.approaches.some((approach) =>
+        tokenizeLaneConfig(approach.laneConfig).some((lane) => lane.parts.includes("L")),
+      ),
+    ).toBe(true);
+  });
+
   it("gives procedural approaches valid lane configs", () => {
     for (let seed = 0; seed < 20; seed++) {
       const proc = generateProceduralIntersection({

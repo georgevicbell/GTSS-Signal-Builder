@@ -27,7 +27,16 @@ interface RoadSpec {
   sidewalk?: number;
 }
 
-const LANE_WIDTHS: Record<string, number> = { C: 132, A: 132, B: 60, P: 72, K: 96, "C+R": 132 };
+const LANE_WIDTHS: Record<string, number> = {
+  C: 132,
+  A: 132,
+  B: 60,
+  P: 72,
+  K: 96,
+  R: 132,
+  L: 144,
+  "C+R": 168,
+};
 
 /**
  * Builds an RHT laneConfig/laneWidth/laneDirection triple (widths in inches), read left-to-right
@@ -163,6 +172,99 @@ function makeTiming(
     leadingPedInterval,
     vehRecallType,
     pedRecall,
+  };
+}
+
+function makeRailTransitDemo(mode: "streetcar" | "lrt"): DemoIntersection {
+  const isStreetcar = mode === "streetcar";
+  const signalId = isStreetcar ? "DEMO-4C" : "DEMO-4D";
+  const route = isStreetcar
+    ? road({ inbound: ["C", "C+R"], outbound: ["C+R", "C"] })
+    : road({ inbound: ["C", "C", "L"], outbound: ["L", "C", "C"] });
+  const crossStreet = road({ inbound: ["C", "C"], outbound: ["C", "C"] });
+  const routeName = isStreetcar ? "Market Street" : "Central Avenue";
+  const crossStreetName = isStreetcar ? "Union Street" : "University Boulevard";
+  const approachSpecs = [
+    { bearing: 0, street: `${routeName} NB`, lanes: route },
+    { bearing: 90, street: `${crossStreetName} EB`, lanes: crossStreet },
+    { bearing: 180, street: `${routeName} SB`, lanes: route },
+    { bearing: 270, street: `${crossStreetName} WB`, lanes: crossStreet },
+  ];
+  const approaches = approachSpecs.map((spec, index) =>
+    makeApproach(
+      `demo-app-${signalId.toLowerCase()}-${index + 1}`,
+      `${signalId}-${index + 1}`,
+      signalId,
+      spec.street,
+      spec.bearing,
+      30,
+      0,
+      1,
+      spec.lanes,
+    ),
+  );
+  const phases = approaches.map((approach, index) =>
+    makePhase(
+      `demo-ph-${signalId.toLowerCase()}-${index + 1}`,
+      signalId,
+      (index + 1) * 2,
+      "Through",
+      approach.approachId,
+      1,
+      2,
+      48,
+    ),
+  );
+
+  return {
+    id: isStreetcar ? "demo-4-streetcar" : "demo-4-lrt",
+    name: isStreetcar ? "4-Way Streetcar in Mixed Traffic" : "4-Way Median LRT Crossing",
+    description: isStreetcar
+      ? "Signalized urban intersection with streetcars sharing curbside lanes with general traffic, plus conventional cross-street approaches."
+      : "Signalized urban intersection with dedicated median LRT lanes continuing through the junction and conventional cross-street approaches.",
+    approachCount: 4,
+    category: "4-approach",
+    signal: {
+      id: `demo-sig-${signalId.toLowerCase()}`,
+      signalId,
+      agencyId: "DEMO_AGENCY",
+      streetName1: routeName,
+      streetName2: crossStreetName,
+      latitude: isStreetcar ? 37.769 : 37.761,
+      longitude: isStreetcar ? -122.416 : -122.414,
+    },
+    approaches,
+    phases,
+    detectors: approaches.map((approach, index) =>
+      makeDetector(
+        `demo-det-${signalId.toLowerCase()}-${index + 1}`,
+        signalId,
+        String(index + 1),
+        "Stop Bar",
+        "Video",
+        (index + 1) * 2,
+        approach.approachId,
+        isStreetcar && (index === 0 || index === 2) ? "Streetcar lane" : "Through lane",
+        0,
+        `${approach.streetName} stop bar`,
+        isStreetcar && (index === 0 || index === 2) ? "Streetcar" : null,
+      ),
+    ),
+    basicTimings: phases.map((phase, index) =>
+      makeTiming(
+        `demo-bt-${signalId.toLowerCase()}-${index + 1}`,
+        signalId,
+        phase.phase,
+        12,
+        40,
+        4,
+        2,
+        7,
+        15,
+        null,
+        index === 0 ? "Min" : "None",
+      ),
+    ),
   };
 }
 
@@ -902,6 +1004,9 @@ export const PRESET_DEMO_INTERSECTIONS: DemoIntersection[] = [
       makeTiming("demo-bt-4b-8", "DEMO-4B", 8, 10, 30, 4, 2, 7, 14, null, "None"),
     ],
   },
+
+  makeRailTransitDemo("streetcar"),
+  makeRailTransitDemo("lrt"),
 
   // 7. Five Approaches: Complex 5-Leg Multi-Way Star Intersection
   {
