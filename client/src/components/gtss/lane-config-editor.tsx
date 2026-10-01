@@ -19,7 +19,7 @@ import {
   type LaneDirection,
   type LaneSegment,
 } from "gtss";
-import { Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 interface LaneConfigEditorProps {
@@ -187,8 +187,13 @@ function segmentDecals(segment: LaneSegment, rectX: number, width: number) {
   if (segment.parts.length === 2) {
     return (
       <>
-        {laneDecal(segment.parts[0], rectX + width / 4, DECAL_Y, "decal-0")}
-        {laneDecal(segment.parts[1], rectX + (3 * width) / 4, DECAL_Y, "decal-1")}
+        {laneDecal(segment.parts[0], rectX + width / 2, RECT_TOP + RECT_HEIGHT / 4, "decal-0")}
+        {laneDecal(
+          segment.parts[1],
+          rectX + width / 2,
+          RECT_TOP + (3 * RECT_HEIGHT) / 4,
+          "decal-1",
+        )}
       </>
     );
   }
@@ -399,6 +404,7 @@ export default function LaneConfigEditor({
   );
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [roadChoiceIndex, setRoadChoiceIndex] = useState<number | null>(null);
+  const [combineLaneIndex, setCombineLaneIndex] = useState<number | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [emptyAddOpen, setEmptyAddOpen] = useState(false);
   const [insertPosition, setInsertPosition] = useState<{
@@ -418,6 +424,19 @@ export default function LaneConfigEditor({
   const updateSegment = (index: number, updates: Partial<LaneSegment>) => {
     const next = segments.map((segment, i) => (i === index ? { ...segment, ...updates } : segment));
     commit(next);
+  };
+
+  const addLaneMode = (code: string) => {
+    if (combineLaneIndex === null || !(code in LANE_TYPE_CODES)) return;
+    const current = segments[combineLaneIndex];
+    if (current?.kind !== "lane" || current.parts.length !== 1) return;
+    const parts = [...current.parts, code];
+    const next = segments.map((segment, index) =>
+      index === combineLaneIndex ? { ...segment, raw: parts.join("+"), parts } : segment,
+    );
+    commit(next);
+    setSelectedIndex(combineLaneIndex);
+    setCombineLaneIndex(null);
   };
 
   const chooseRoadSegment = (code: string) => {
@@ -541,22 +560,22 @@ export default function LaneConfigEditor({
                     }}
                     onMouseEnter={() => !readOnly && setHoveredIndex(index)}
                     onMouseLeave={() => !readOnly && setHoveredIndex(null)}
-                    className={readOnly ? undefined : "cursor-pointer"}
+                    className={readOnly ? undefined : "group cursor-pointer"}
                   >
                     {colors.length === 2 ? (
                       <>
                         <rect
                           x={rectX}
                           y={RECT_TOP}
-                          width={width / 2}
-                          height={RECT_HEIGHT}
+                          width={width}
+                          height={RECT_HEIGHT / 2}
                           fill={colors[0]}
                         />
                         <rect
-                          x={rectX + width / 2}
-                          y={RECT_TOP}
-                          width={width / 2}
-                          height={RECT_HEIGHT}
+                          x={rectX}
+                          y={RECT_TOP + RECT_HEIGHT / 2}
+                          width={width}
+                          height={RECT_HEIGHT / 2}
                           fill={colors[1]}
                         />
                       </>
@@ -598,6 +617,34 @@ export default function LaneConfigEditor({
                       strokeWidth={2}
                     />
                     {segmentDecals(segment, rectX, width)}
+                    {!readOnly && segment.kind === "lane" && segment.parts.length === 1 && (
+                      <foreignObject
+                        x={rectX + width / 2 - 12}
+                        y={0}
+                        width={24}
+                        height={24}
+                        className="pointer-events-none opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setRoadChoiceIndex(null);
+                          setInsertPosition(null);
+                          setCombineLaneIndex(index);
+                        }}
+                      >
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-6 w-6 rounded-full border-blue-500 bg-white p-0 text-blue-600 shadow-sm hover:bg-blue-50"
+                          aria-label={`Add a mode to ${segment.parts
+                            .map((part) => LANE_TYPE_CODES[part]?.label ?? part)
+                            .join(" + ")}`}
+                          title="Add another lane mode"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      </foreignObject>
+                    )}
                     {!readOnly && segment.kind === "lane" && (
                       <foreignObject
                         x={rectX + width / 2 - Math.max(width, 52) / 2}
@@ -719,6 +766,46 @@ export default function LaneConfigEditor({
           )}
         </svg>
       </div>
+      <Dialog
+        open={combineLaneIndex !== null}
+        onOpenChange={(open) => {
+          if (!open) setCombineLaneIndex(null);
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Choose another lane mode</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Select a mode to combine with{" "}
+            {combineLaneIndex !== null
+              ? segments[combineLaneIndex]?.parts
+                  .map((part) => LANE_TYPE_CODES[part]?.label ?? part)
+                  .join(" + ")
+              : "this lane"}
+            .
+          </p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {Object.values(LANE_TYPE_CODES)
+              .filter((type) => {
+                const segment = combineLaneIndex === null ? undefined : segments[combineLaneIndex];
+                return segment?.kind === "lane" && !segment.parts.includes(type.code);
+              })
+              .map((type) => (
+                <Button
+                  key={type.code}
+                  type="button"
+                  variant="outline"
+                  className="justify-start gap-2"
+                  onClick={() => addLaneMode(type.code)}
+                >
+                  <LaneTypeIcon code={type.code} />
+                  <span>{type.label}</span>
+                </Button>
+              ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
