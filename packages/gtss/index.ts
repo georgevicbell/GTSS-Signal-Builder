@@ -37,7 +37,6 @@ export {
 } from "./src/fieldDefaults";
 export { evaluateGTSSCompleteness } from "./src/gtssValidation";
 export type { ValidationResult, ValidationSummary } from "./src/gtssValidation";
-export { shouldShowHeaderActions } from "./src/headerConfig";
 export {
   computeDefaultDirections,
   DIVIDER_CODES,
