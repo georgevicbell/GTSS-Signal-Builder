@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import SignalDetails from "@/pages/signal-details";
@@ -99,6 +100,8 @@ export default function GTSSBuilder() {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [showImportPanel, setShowImportPanel] = useState(false);
+  const [showDataManagement, setShowDataManagement] = useState(false);
+  const [dataManagementTab, setDataManagementTab] = useState("export");
   const [showAgencyDefaults, setShowAgencyDefaults] = useState(false);
   const {
     agency,
@@ -166,6 +169,10 @@ export default function GTSSBuilder() {
   const [triggerAddBasicTiming, setTriggerAddBasicTiming] = useState(0);
 
   const renderTabContent = () => {
+    if (showDataManagement) {
+      return <DataManagementPanel />;
+    }
+
     // If export panel is shown, render it regardless of active tab
     if (showExportPanel) {
       return <ExportPanel />;
@@ -274,6 +281,103 @@ export default function GTSSBuilder() {
         "All signal, approach, phase, detector, timing, and agency data has been cleared",
     });
   };
+
+  const DataManagementPanel = () => (
+    <div className="space-y-6 p-4 md:p-6">
+      <Tabs
+        value={dataManagementTab}
+        onValueChange={setDataManagementTab}
+        className="w-full"
+      >
+        <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsTrigger value="export" className="gap-2">
+            <FolderOutput className="h-4 w-4" />
+            Export
+          </TabsTrigger>
+          <TabsTrigger value="import" className="gap-2">
+            <FolderInput className="h-4 w-4" />
+            Import
+          </TabsTrigger>
+          <TabsTrigger value="clear" className="gap-2 text-red-700 data-[state=active]:text-red-700">
+            <Trash2 className="h-4 w-4" />
+            Clear Data
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="export" className="mt-6">
+          <ExportPanel />
+        </TabsContent>
+
+        <TabsContent value="import" className="mt-6">
+          <ImportPanel onImportComplete={() => setShowDataManagement(false)} />
+        </TabsContent>
+
+        <TabsContent value="clear" className="mt-6">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-red-700">Clear All Data</h3>
+                <p className="text-sm text-red-700/80">
+                  Permanently delete all agencies, signals, approaches, phases, timings, and detectors.
+                </p>
+              </div>
+              <AlertDialog
+                open={showClearAllDialog}
+                onOpenChange={(open) => {
+                  setShowClearAllDialog(open);
+                  if (!open) setClearAllConfirmText("");
+                }}
+              >
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400"
+                  >
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    Clear All Data
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-red-700">Clear All Data</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete all agency information, signals, approaches,
+                      phases, timings, and detectors. This action cannot be undone. Export your data
+                      first if you want to keep a copy.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <div className="space-y-1">
+                    <label htmlFor="clear-all-confirm" className="text-xs font-medium text-grey-700">
+                      Type <span className="font-mono font-semibold">{CLEAR_ALL_CONFIRM_PHRASE}</span>{" "}
+                      to confirm
+                    </label>
+                    <Input
+                      id="clear-all-confirm"
+                      value={clearAllConfirmText}
+                      onChange={(e) => setClearAllConfirmText(e.target.value)}
+                      placeholder={CLEAR_ALL_CONFIRM_PHRASE}
+                      autoComplete="off"
+                      className="h-8 text-sm font-mono"
+                    />
+                  </div>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleClearAllData}
+                      disabled={clearAllConfirmText.trim() !== CLEAR_ALL_CONFIRM_PHRASE}
+                      className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                      Clear All Data
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
 
   // Conditionally render signal details view or main view
   // NOTE: `currentView` rendering is handled after all hooks to avoid
@@ -460,6 +564,7 @@ export default function GTSSBuilder() {
                   setTriggerBulkDetector(0);
                   setTriggerAddBasicTiming(0);
                   setActiveTab(tab.id as TabType);
+                  setShowDataManagement(false);
                   setShowExportPanel(false);
                   setShowImportPanel(false);
                   setShowAgencyDefaults(false);
@@ -491,160 +596,68 @@ export default function GTSSBuilder() {
       </nav>
 
       {/* Footer Actions - Always visible at bottom */}
-      <div className="flex-shrink-0 p-2 border-t border-grey-200">
-        {/* About GTSS section */}
-        <div className="mb-4 pb-3 border-b border-grey-200">
-          <p className="text-xs font-medium text-grey-600 mb-2 px-2">About GTSS</p>
-          <Button
-            size="sm"
-            className="w-full h-7 text-xs bg-blue-500 text-white hover:bg-blue-600 shadow-sm transition-all duration-200"
-            onClick={() => window.open("https://gtss.dev", "_blank")}
-            data-testid="button-about-gtss"
-          >
-            <ExternalLink className="w-3 h-3 mr-1" />
-            Learn More
-          </Button>
-        </div>
+      <div className="flex-shrink-0 p-2 border-t border-grey-200 space-y-2">
+        <Button
+          variant="outline"
+          className={cn(
+            "w-full h-7 text-xs",
+            showAgencyDefaults
+              ? "bg-primary-100 text-primary-700 border-primary-200"
+              : "bg-grey-100 text-grey-700 hover:bg-grey-200",
+          )}
+          onClick={() => {
+            setShowAgencyDefaults(true);
+            setShowDataManagement(false);
+            setShowImportPanel(false);
+            setShowExportPanel(false);
+            setIsMobileMenuOpen(false);
+          }}
+          data-testid="button-agency-defaults"
+        >
+          <SlidersHorizontal className="w-3 h-3 mr-1" />
+          Configuration
+        </Button>
 
-        {/* Support this Tool section */}
-        <div className="mb-4 pb-3 border-b border-grey-200">
-          <p className="text-xs font-medium text-grey-600 mb-2 px-2">Support this Tool</p>
-          <Button
-            size="sm"
-            className="w-full h-7 text-xs bg-orange-500 text-white hover:bg-orange-600 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
-            onClick={() => window.open("https://buymeacoffee.com/mr2742", "_blank")}
-          >
-            <Coffee className="w-3 h-3 mr-1" />
-            Buy me a Coffee
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          className={cn(
+            "w-full h-7 text-xs",
+            showDataManagement
+              ? "bg-primary-100 text-primary-700 border-primary-200"
+              : "bg-grey-100 text-grey-700 hover:bg-grey-200",
+          )}
+          onClick={() => {
+            setShowDataManagement(true);
+            setShowAgencyDefaults(false);
+            setShowImportPanel(false);
+            setShowExportPanel(false);
+            setIsMobileMenuOpen(false);
+          }}
+          data-testid="button-data-management"
+        >
+          <FolderInput className="w-3 h-3 mr-1" />
+          Data Management
+        </Button>
 
-        {/* Settings section */}
-        <div className="mb-4 pb-3 border-b border-grey-200">
-          <p className="text-xs font-medium text-grey-600 mb-2 px-2">Settings</p>
-          <Button
-            variant="outline"
-            className={cn(
-              "w-full h-7 text-xs",
-              showAgencyDefaults
-                ? "bg-primary-100 text-primary-700 border-primary-200"
-                : "bg-grey-100 text-grey-700 hover:bg-grey-200",
-            )}
-            onClick={() => {
-              setShowAgencyDefaults(true);
-              setShowImportPanel(false);
-              setShowExportPanel(false);
-              setIsMobileMenuOpen(false);
-            }}
-            data-testid="button-agency-defaults"
-          >
-            <SlidersHorizontal className="w-3 h-3 mr-1" />
-            Configuration
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          className="w-full h-7 text-xs bg-blue-500 text-white hover:bg-blue-600 shadow-sm transition-all duration-200"
+          onClick={() => window.open("https://gtss.dev", "_blank")}
+          data-testid="button-about-gtss"
+        >
+          <ExternalLink className="w-3 h-3 mr-1" />
+          About GTSS
+        </Button>
 
-        {/* Import/Export section */}
-        <div className="mb-4 pb-3 border-b border-grey-200">
-          <p className="text-xs font-medium text-grey-600 mb-2 px-2">Data Management</p>
-          <div className="space-y-1">
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full h-7 text-xs",
-                showImportPanel
-                  ? "bg-primary-100 text-primary-700 border-primary-200"
-                  : "bg-grey-100 text-grey-700 hover:bg-grey-200",
-              )}
-              onClick={() => {
-                setShowImportPanel(true);
-                setShowExportPanel(false);
-                setShowAgencyDefaults(false);
-                setIsMobileMenuOpen(false);
-              }}
-              data-testid="button-import"
-            >
-              <FolderInput className="w-3 h-3 mr-1" />
-              Import
-            </Button>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full h-7 text-xs",
-                showExportPanel
-                  ? "bg-primary-100 text-primary-700 border-primary-200"
-                  : "bg-grey-100 text-grey-700 hover:bg-grey-200",
-              )}
-              onClick={() => {
-                setShowExportPanel(true);
-                setShowImportPanel(false);
-                setShowAgencyDefaults(false);
-                setIsMobileMenuOpen(false);
-              }}
-              data-testid="button-export"
-            >
-              <FolderOutput className="w-3 h-3 mr-1" />
-              Export
-            </Button>
-          </div>
-        </div>
-
-        {/* Danger Zone — fenced off from the safe Import/Export actions above,
-            and gated behind typing the confirmation phrase. Mirrors the
-            Danger Zone on the signal detail page. */}
-        <div className="mt-4 pt-3 border-t-2 border-red-200">
-          <p className="text-xs font-semibold text-red-700 mb-2 px-2">Danger Zone</p>
-          <AlertDialog
-            open={showClearAllDialog}
-            onOpenChange={(open) => {
-              setShowClearAllDialog(open);
-              if (!open) setClearAllConfirmText("");
-            }}
-          >
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full h-7 text-xs border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400"
-              >
-                <Trash2 className="w-3 h-3 mr-1" />
-                Clear All Data
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle className="text-red-700">Clear All Data</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently delete all agency information, signals, approaches, phases,
-                  timings, and detectors. This action cannot be undone. Export your data first if
-                  you want to keep a copy.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <div className="space-y-1">
-                <label htmlFor="clear-all-confirm" className="text-xs font-medium text-grey-700">
-                  Type <span className="font-mono font-semibold">{CLEAR_ALL_CONFIRM_PHRASE}</span>{" "}
-                  to confirm
-                </label>
-                <Input
-                  id="clear-all-confirm"
-                  value={clearAllConfirmText}
-                  onChange={(e) => setClearAllConfirmText(e.target.value)}
-                  placeholder={CLEAR_ALL_CONFIRM_PHRASE}
-                  autoComplete="off"
-                  className="h-8 text-sm font-mono"
-                />
-              </div>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleClearAllData}
-                  disabled={clearAllConfirmText.trim() !== CLEAR_ALL_CONFIRM_PHRASE}
-                  className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  Clear All Data
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
+        <Button
+          size="sm"
+          className="w-full h-7 text-xs bg-orange-500 text-white hover:bg-orange-600 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105"
+          onClick={() => window.open("https://buymeacoffee.com/mr2742", "_blank")}
+          data-testid="button-buy-me-a-coffee"
+        >
+          <Coffee className="w-3 h-3 mr-1" />
+          Buy me a Coffee
+        </Button>
       </div>
     </>
   );
@@ -699,26 +712,30 @@ export default function GTSSBuilder() {
               </Button>
               <div className="min-w-0">
                 <h2 className="truncate text-base lg:text-lg font-bold text-grey-800">
-                  {showExportPanel
-                    ? "Export Data"
-                    : showImportPanel
-                      ? "Import Data"
-                      : showAgencyDefaults
-                        ? "Configuration"
-                        : tabTitles[activeTab].title}
+                  {showDataManagement
+                    ? "Data Management"
+                    : showExportPanel
+                      ? "Export Data"
+                      : showImportPanel
+                        ? "Import Data"
+                        : showAgencyDefaults
+                          ? "Configuration"
+                          : tabTitles[activeTab].title}
                 </h2>
                 <p className="text-xs text-grey-500 hidden sm:block">
-                  {showExportPanel
-                    ? "Export your traffic signal data to files"
-                    : showImportPanel
-                      ? "Import traffic signal data from files or paste"
-                      : showAgencyDefaults
-                        ? "Configure default phase-to-direction standards for your agency"
-                        : tabTitles[activeTab].desc}
+                  {showDataManagement
+                    ? "Import, export, or clear all GTSS data for this workspace"
+                    : showExportPanel
+                      ? "Export your traffic signal data to files"
+                      : showImportPanel
+                        ? "Import traffic signal data from files or paste"
+                        : showAgencyDefaults
+                          ? "Configure default phase-to-direction standards for your agency"
+                          : tabTitles[activeTab].desc}
                 </p>
               </div>
             </div>
-            {!showExportPanel && !showImportPanel && (
+            {!showDataManagement && !showExportPanel && !showImportPanel && !showAgencyDefaults && (
               <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
                 <SignalSearchBox className="w-36 sm:w-52" />
                 {activeTab === "signals" ? (
